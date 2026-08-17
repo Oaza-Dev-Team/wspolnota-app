@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<template id="__bundler_thumbnail" data-bg-color="#0d2439">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+    <rect width="200" height="200" fill="#0d2439"></rect>
+    <rect x="60" y="60" width="80" height="80" rx="16" fill="#ffffff"></rect>
+    <text x="100" y="115" text-anchor="middle" font-family="Georgia, serif" font-size="34" fill="#10365c">ŚŻ</text>
+  </svg>
+</template>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: #eef1f5; color: #101c2b; font-family: 'Source Sans 3', Helvetica, sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #1c5f96; text-decoration: none; }
+  a:hover { color: #10365c; text-decoration: underline; }
+  input, select, textarea, button { font: inherit; color: inherit; }
+  ::placeholder { color: #9aa6b4; }
+  table { border-collapse: collapse; }
+  @keyframes slidein { from { transform: translateX(30px); opacity: 0 } to { transform: none; opacity: 1 } }
+  @keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+</style>
+</helmet>
+
+<sc-if value="{{ loggedOut }}" hint-placeholder-val="{{ true }}">
+  <div style="{{ loginGrid }}">
+    <div style="{{ loginLeft }}">
+      <div style="display: flex; align-items: center; gap: 14px">
+        <span style="width: 46px; height: 46px; flex: none; border-radius: 9px; background: #fff; color: #10365c; display: grid; place-items: center; font-family: 'Source Serif 4', Georgia, serif; font-size: 19px; letter-spacing: -0.02em">ŚŻ</span>
+        <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; line-height: 1.5; color: #9dbdd8">Ruch Światło-Życie<br />Archidiecezja Gdańska</span>
+      </div>
+      <div>
+        <h1 style="{{ loginTitle }}">Kartoteka<br /><em style="color: #e2b04a">Domowego Kościoła</em></h1>
+        <p style="max-width: 45ch; font-size: 17px; line-height: 1.55; color: #b8cbdc; margin: 0; text-wrap: pretty">Dwanaście rejonów, jedna wspólna baza. Pary rejonowe prowadzą swoją część kartoteki, para odpowiedzialna za wspólnotę widzi całość.</p>
+      </div>
+      <div style="font-size: 13px; color: #7d97ad">Prototyp — dane przykładowe, wygenerowane</div>
+    </div>
+    <div style="{{ loginRight }}">
+      <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: #6c7d8f; margin-bottom: 8px">Zaloguj się jako</div>
+      <sc-for list="{{ accounts }}" as="acc" hint-placeholder-count="4">
+        <button onClick="{{ acc.login }}" style="display: flex; align-items: center; gap: 15px; width: 100%; text-align: left; background: #fff; border: 1px solid #d5dde6; border-radius: 10px; padding: 15px 17px; cursor: pointer; transition: all 0.15s" style-hover="border-color: #10365c; box-shadow: 0 4px 14px rgba(16,54,92,0.1); transform: translateY(-1px)">
+          <span style="{{ acc.tagStyle }}">{{ acc.tag }}</span>
+          <span style="display: flex; flex-direction: column; gap: 2px">
+            <span style="font-weight: 600; font-size: 15px">{{ acc.name }}</span>
+            <span style="font-size: 13px; color: #6c7d8f">{{ acc.role }}</span>
+          </span>
+        </button>
+      </sc-for>
+      <div style="font-size: 12px; color: #8b99a8; margin-top: 12px; line-height: 1.55">W wersji docelowej: logowanie e-mailem i hasłem. Role nadaje para odpowiedzialna za wspólnotę.</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+  <div style="{{ shellStyle }}">
+    <aside style="{{ asideStyle }}">
+      <div style="display: flex; align-items: center; gap: 11px; padding: 0 6px">
+        <span style="width: 34px; height: 34px; flex: none; border-radius: 7px; background: #fff; color: #10365c; display: grid; place-items: center; font-family: 'Source Serif 4', Georgia, serif; font-size: 15px; letter-spacing: -0.02em">ŚŻ</span>
+        <span style="display: flex; flex-direction: column">
+          <span style="font-family: 'Source Serif 4', Georgia, serif; font-size: 18px; line-height: 1.1">Kartoteka DK</span>
+          <span style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #7d97ad; margin-top: 2px">Archidiec. Gdańska</span>
+        </span>
+      </div>
+      <nav style="{{ navStyle }}">
+        <sc-for list="{{ nav }}" as="n" hint-placeholder-count="5">
+          <button onClick="{{ n.go }}" style="{{ n.style }}" style-hover="background: rgba(255,255,255,0.08)">
+            <span>{{ n.label }}</span>
+            <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; opacity: 0.65">{{ n.badge }}</span>
+          </button>
+        </sc-for>
+      </nav>
+      <div style="{{ userBoxStyle }}">
+        <div style="display: flex; align-items: center; gap: 10px; padding: 0 6px; flex: 1; min-width: 0">
+          <span style="width: 32px; height: 32px; flex: none; border-radius: 6px; background: rgba(226,176,74,0.18); color: #e2b04a; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px">{{ me.tag }}</span>
+          <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+            <span style="display: flex; flex-direction: column; min-width: 0">
+              <span style="font-size: 13px; font-weight: 600">{{ me.name }}</span>
+              <span style="font-size: 11px; color: #7d97ad">{{ me.role }}</span>
+            </span>
+          </sc-if>
+        </div>
+        <button onClick="{{ logout }}" style="background: none; border: 1px solid rgba(255,255,255,0.2); color: #c3d3e1; border-radius: 7px; padding: 8px; font-size: 12px; cursor: pointer" style-hover="background: rgba(255,255,255,0.08)">Wyloguj</button>
+      </div>
+    </aside>
+
+    <main style="{{ mainStyle }}">
+      <header style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+        <div>
+          <h1 style="{{ h1Style }}">{{ viewTitle }}</h1>
+          <div style="font-size: 14px; color: #6c7d8f; margin-top: 3px">{{ viewSub }}</div>
+        </div>
+        <sc-if value="{{ onList }}" hint-placeholder-val="{{ true }}">
+          <div style="{{ actionsStyle }}">
+            <button onClick="{{ exportCsv }}" style="background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 15px; font-size: 14px; font-weight: 500; cursor: pointer; min-height: 44px; flex: 1" style-hover="border-color: #10365c">Eksport CSV</button>
+            <button onClick="{{ exportXlsx }}" style="background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 15px; font-size: 14px; font-weight: 500; cursor: pointer; min-height: 44px" style-hover="border-color: #10365c">XLSX</button>
+            <button onClick="{{ addNew }}" style="background: #10365c; border: 1px solid #10365c; color: #fff; border-radius: 8px; padding: 12px 17px; font-size: 14px; font-weight: 600; cursor: pointer; min-height: 44px; flex: 1; white-space: nowrap" style-hover="background: #0d2439">+ Dodaj parę</button>
+          </div>
+        </sc-if>
+      </header>
+
+      <sc-if value="{{ onList }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 15px">
+          <div style="display: flex; gap: 9px; flex-wrap: wrap; align-items: center">
+            <input value="{{ query }}" onChange="{{ setQuery }}" placeholder="Szukaj: nazwisko, imię, e-mail…" style="flex: 1; min-width: 100%; max-width: 100%; background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 14px; font-size: 15px; min-height: 44px" style-focus="outline: none; border-color: #1c5f96; box-shadow: 0 0 0 3px rgba(28,95,150,0.12)" />
+            <select value="{{ fRejon }}" onChange="{{ setRejon }}" style="flex: 1; min-width: 130px; background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 12px; font-size: 14px; cursor: pointer; min-height: 44px">
+              <sc-for list="{{ rejonOptions }}" as="o" hint-placeholder-count="3">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </select>
+            <select value="{{ fParafia }}" onChange="{{ setParafia }}" style="flex: 2; min-width: 190px; background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 12px; font-size: 14px; cursor: pointer; min-height: 44px">
+              <sc-for list="{{ parafiaOptions }}" as="o" hint-placeholder-count="3">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </select>
+            <select value="{{ fKrag }}" onChange="{{ setKrag }}" style="flex: 2; min-width: 180px; background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 12px; font-size: 14px; cursor: pointer; min-height: 44px">
+              <sc-for list="{{ kragOptions }}" as="o" hint-placeholder-count="3">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </select>
+            <select value="{{ fRek }}" onChange="{{ setRek }}" style="flex: 1; min-width: 165px; background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 12px 12px; font-size: 14px; cursor: pointer; min-height: 44px">
+              <sc-for list="{{ rekFiltr }}" as="o" hint-placeholder-count="4">
+                <option value="{{ o.value }}">{{ o.label }}</option>
+              </sc-for>
+            </select>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6c7d8f; padding-left: 3px">{{ countLabel }}</div>
+          </div>
+
+          <sc-if value="{{ mobile }}" hint-placeholder-val="{{ false }}">
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+                <div onClick="{{ r.open }}" style="background: #fff; border: 1px solid #dfe5ec; border-radius: 11px; padding: 14px; display: flex; flex-direction: column; gap: 9px; cursor: pointer" style-active="background: #f7f9fc">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+                    <span style="font-size: 16px; font-weight: 700">{{ r.nazwisko }}</span>
+                    <span style="{{ r.rejonStyle }}">{{ r.rejonKrag }}</span>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                    <span style="font-size: 14px; color: #3c4b5c">{{ r.imiona }}</span>
+                    <span style="{{ r.formacjaStyle }}">{{ r.formacja }}</span>
+                  </div>
+                  <div style="display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #6c7d8f; border-top: 1px solid #f0f3f7; padding-top: 9px">
+                    <span>{{ r.telefon }}</span>
+                    <span style="overflow-wrap: anywhere">{{ r.email }}</span>
+                    <span>{{ r.parafia }}</span>
+                  </div>
+                </div>
+              </sc-for>
+              <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+                <div style="background: #fff; border: 1px solid #dfe5ec; border-radius: 11px; padding: 34px; text-align: center; color: #6c7d8f; font-size: 14px">Brak wyników dla podanych kryteriów.</div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ desktop }}" hint-placeholder-val="{{ true }}">
+          <div style="background: #fff; border: 1px solid #dfe5ec; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(16,54,92,0.04)">
+            <div style="overflow-x: auto">
+              <table style="width: 100%; min-width: 1060px; font-size: 14px">
+                <thead>
+                  <tr style="background: #f4f7fa; border-bottom: 1px solid #dfe5ec">
+                    <sc-for list="{{ columns }}" as="c" hint-placeholder-count="7">
+                      <th onClick="{{ c.sort }}" style="{{ c.style }}">{{ c.label }}</th>
+                    </sc-for>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ rows }}" as="r" hint-placeholder-count="9">
+                    <tr onClick="{{ r.open }}" style="border-bottom: 1px solid #f0f3f7; cursor: pointer" style-hover="background: #f7f9fc">
+                      <td style="padding: 12px 15px; font-weight: 600; white-space: nowrap">{{ r.nazwisko }}</td>
+                      <td style="padding: 12px 15px; color: #3c4b5c; white-space: nowrap">{{ r.imiona }}</td>
+                      <td style="padding: 12px 15px; color: #3c4b5c">{{ r.email }}</td>
+                      <td style="padding: 12px 15px; color: #3c4b5c; font-family: 'IBM Plex Mono', monospace; font-size: 13px; white-space: nowrap">{{ r.telefon }}</td>
+                      <td style="padding: 12px 15px"><span style="{{ r.rejonStyle }}">{{ r.rejon }}</span></td>
+                      <td style="padding: 12px 15px; color: #3c4b5c">{{ r.parafia }}</td>
+                      <td style="padding: 12px 15px; color: #3c4b5c; font-family: 'IBM Plex Mono', monospace; font-size: 13px">{{ r.krag }}</td>
+                      <td style="padding: 12px 15px"><span style="{{ r.formacjaStyle }}">{{ r.formacja }}</span></td>
+                      <td style="padding: 12px 15px; text-align: right; color: #8b99a8; white-space: nowrap; font-size: 13px">{{ r.action }}</td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+            <sc-if value="{{ empty }}" hint-placeholder-val="{{ false }}">
+              <div style="padding: 46px; text-align: center; color: #6c7d8f; font-size: 14px">Brak wyników dla podanych kryteriów.</div>
+            </sc-if>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ onRejony }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(264px, 1fr)); gap: 13px">
+          <sc-for list="{{ rejony }}" as="rj" hint-placeholder-count="12">
+            <div onClick="{{ rj.open }}" style="{{ rj.cardStyle }}" style-hover="border-color: #10365c; box-shadow: 0 4px 14px rgba(16,54,92,0.08)">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+                <span style="{{ rj.titleStyle }}">Rejon {{ rj.rzym }}</span>
+                <span style="{{ rj.countStyle }}">{{ rj.count }}</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 3px">
+                <span style="font-size: 12px; color: #8b99a8; text-transform: uppercase; letter-spacing: 0.06em">Para odpowiedzialna</span>
+                <span style="font-size: 14px; font-weight: 600">{{ rj.para }}</span>
+                <span style="font-size: 13px; color: #6c7d8f; margin-top: 2px">{{ rj.meta }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ onKonta }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #fff; border: 1px solid #dfe5ec; border-radius: 12px; overflow: hidden">
+          <sc-for list="{{ konta }}" as="k" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 16px; padding: 14px 18px; border-bottom: 1px solid #f0f3f7; flex-wrap: wrap">
+              <span style="{{ k.tagStyle }}">{{ k.tag }}</span>
+              <span style="display: flex; flex-direction: column; min-width: 140px; flex: 1">
+                <span style="font-size: 14px; font-weight: 600">{{ k.name }}</span>
+                <span style="font-size: 13px; color: #6c7d8f; overflow-wrap: anywhere">{{ k.email }}</span>
+              </span>
+              <span style="font-size: 13px; color: #3c4b5c; min-width: 104px">{{ k.scope }}</span>
+              <sc-if value="{{ wide }}" hint-placeholder-val="{{ true }}">
+                <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b99a8; min-width: 128px">{{ k.last }}</span>
+              </sc-if>
+              <span style="{{ k.badgeStyle }}">{{ k.status }}</span>
+              <button onClick="{{ k.toggle }}" style="background: #fff; border: 1px solid #d5dde6; border-radius: 7px; padding: 9px 14px; font-size: 13px; cursor: pointer; min-height: 40px" style-hover="border-color: #10365c">{{ k.action }}</button>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ onAudyt }}" hint-placeholder-val="{{ false }}">
+        <div style="background: #fff; border: 1px solid #dfe5ec; border-radius: 12px; overflow: hidden">
+          <sc-for list="{{ audyt }}" as="a" hint-placeholder-count="9">
+            <div style="display: flex; gap: 16px; padding: 13px 18px; border-bottom: 1px solid #f0f3f7; align-items: baseline; flex-wrap: wrap">
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b99a8; width: 128px; flex: none">{{ a.when }}</span>
+              <span style="{{ a.kindStyle }}">{{ a.kind }}</span>
+              <span style="font-size: 14px; flex: 1; min-width: 200px">{{ a.what }}</span>
+              <span style="font-size: 13px; color: #6c7d8f">{{ a.who }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </main>
+
+    <sc-if value="{{ panelOpen }}" hint-placeholder-val="{{ false }}">
+      <div style="position: fixed; inset: 0; background: rgba(13,36,57,0.35); display: flex; justify-content: flex-end; z-index: 50; animation: fadein 0.15s">
+        <div onClick="{{ closePanel }}" style="flex: 1"></div>
+        <div style="{{ drawerStyle }}">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px">
+            <div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: #8b99a8">{{ panelKicker }}</div>
+              <div style="font-family: 'Source Serif 4', Georgia, serif; font-size: 28px; line-height: 1.15; margin-top: 3px">{{ panelTitle }}</div>
+            </div>
+            <button onClick="{{ closePanel }}" style="background: none; border: 1px solid #d5dde6; border-radius: 7px; width: 32px; height: 32px; cursor: pointer; color: #6c7d8f; flex: none" style-hover="border-color: #10365c">✕</button>
+          </div>
+
+          <sc-if value="{{ readOnly }}" hint-placeholder-val="{{ false }}">
+            <div style="background: #fdf6e6; border: 1px solid #f0dcae; border-radius: 8px; padding: 11px 13px; font-size: 13px; color: #6b5418">Tylko podgląd — ta para należy do innego rejonu, edytować może para rejonowa lub odpowiedzialni za wspólnotę.</div>
+          </sc-if>
+
+          <div style="{{ formGrid }}">
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">Imię żony
+              <input value="{{ d.imieZ }}" onChange="{{ h.imieZ }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">Imię męża
+              <input value="{{ d.imieM }}" onChange="{{ h.imieM }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="{{ wideLabel }}">Nazwisko
+              <input value="{{ d.nazwisko }}" onChange="{{ h.nazwisko }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">E-mail
+              <input value="{{ d.email }}" onChange="{{ h.email }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">Telefon
+              <input value="{{ d.telefon }}" onChange="{{ h.telefon }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">Rejon
+              <select value="{{ d.rejon }}" onChange="{{ h.rejon }}" disabled="{{ lockRejon }}" style="{{ inputStyle }}">
+                <sc-for list="{{ rejonPick }}" as="o" hint-placeholder-count="12">
+                  <option value="{{ o.value }}">{{ o.label }}</option>
+                </sc-for>
+              </select>
+            </label>
+            <label style="display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f">Krąg — numer i patron
+              <input value="{{ d.krag }}" onChange="{{ h.krag }}" disabled="{{ readOnly }}" placeholder="np. 3 · św. Rity" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="{{ wideLabel }}">Parafia
+              <input value="{{ d.parafia }}" onChange="{{ h.parafia }}" disabled="{{ readOnly }}" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="{{ wideLabel }}">Dzieci — imiona i roczniki
+              <input value="{{ d.dzieci }}" onChange="{{ h.dzieci }}" disabled="{{ readOnly }}" placeholder="np. Marysia 2014, Antek 2017" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+            </label>
+            <label style="{{ wideLabel }}">Notatki
+              <textarea value="{{ d.notatki }}" onChange="{{ h.notatki }}" disabled="{{ readOnly }}" rows="3" style="{{ inputStyle }}" style-focus="outline: none; border-color: #1c5f96"></textarea>
+            </label>
+          </div>
+
+          <div style="border-top: 1px solid #eef1f5; padding-top: 16px; display: flex; flex-direction: column; gap: 11px">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px">
+              <span style="font-family: 'Source Serif 4', Georgia, serif; font-size: 20px">Formacja — przebyte rekolekcje</span>
+              <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8b99a8">{{ rekCount }}</span>
+            </div>
+            <sc-for list="{{ rekolekcje }}" as="rk" hint-placeholder-count="3">
+              <div style="{{ rk.rowStyle }}">
+                <select value="{{ rk.typ }}" onChange="{{ rk.setTyp }}" disabled="{{ readOnly }}" style="{{ rk.selStyle }}">
+                  <sc-for list="{{ rekTypy }}" as="t" hint-placeholder-count="8">
+                    <option value="{{ t.value }}">{{ t.label }}</option>
+                  </sc-for>
+                </select>
+                <input value="{{ rk.rok }}" onChange="{{ rk.setRok }}" disabled="{{ readOnly }}" placeholder="rok" style="{{ rk.rokStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+                <input value="{{ rk.miejsce }}" onChange="{{ rk.setMiejsce }}" disabled="{{ readOnly }}" placeholder="miejsce" style="{{ rk.miejsceStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+                <sc-if value="{{ rk.inne }}" hint-placeholder-val="{{ false }}">
+                  <input value="{{ rk.nazwa }}" onChange="{{ rk.setNazwa }}" disabled="{{ readOnly }}" placeholder="nazwa rekolekcji" style="{{ rk.nazwaStyle }}" style-focus="outline: none; border-color: #1c5f96" />
+                </sc-if>
+                <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ rk.remove }}" style="background: none; border: 1px solid #e6ebf1; border-radius: 7px; width: 34px; height: 38px; flex: none; cursor: pointer; color: #9aa6b4" style-hover="border-color: #c98d8d; color: #9c3a3a">✕</button>
+                </sc-if>
+              </div>
+            </sc-for>
+            <sc-if value="{{ rekEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="font-size: 13px; color: #8b99a8; padding: 6px 0">Brak wpisów o rekolekcjach.</div>
+            </sc-if>
+            <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+              <button onClick="{{ addRek }}" style="align-self: flex-start; background: #f4f7fa; border: 1px dashed #c3d0dd; border-radius: 8px; padding: 10px 15px; font-size: 13px; font-weight: 600; color: #10365c; cursor: pointer; min-height: 42px" style-hover="border-color: #10365c; background: #eaf0f6">+ Dodaj rekolekcje</button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; gap: 9px; align-items: center; border-top: 1px solid #eef1f5; padding-top: 16px; flex-wrap: wrap">
+              <button onClick="{{ save }}" style="background: #10365c; border: 1px solid #10365c; color: #fff; border-radius: 8px; padding: 11px 20px; font-size: 14px; font-weight: 600; cursor: pointer" style-hover="background: #0d2439">Zapisz</button>
+              <button onClick="{{ closePanel }}" style="background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 11px 16px; font-size: 14px; cursor: pointer" style-hover="border-color: #10365c">Anuluj</button>
+              <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}">
+                <button onClick="{{ remove }}" style="margin-left: auto; background: none; border: 1px solid #e3c4c4; color: #9c3a3a; border-radius: 8px; padding: 11px 16px; font-size: 14px; cursor: pointer" style-hover="background: #fdf1f1">Usuń parę</button>
+              </sc-if>
+            </div>
+          </sc-if>
+          <div style="font-size: 12px; color: #8b99a8; line-height: 1.5">{{ panelFoot }}</div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+      <div style="position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: #0d2439; color: #e7edf4; padding: 12px 20px; border-radius: 9px; font-size: 14px; box-shadow: 0 8px 24px rgba(13,36,57,0.28); z-index: 90; animation: fadein 0.15s">{{ toast }}</div>
+    </sc-if>
+  </div>
+</sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{}">
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const PAR = ['św. Brygidy, Gdańsk','NMP Gwiazdy Morza, Sopot','św. Andrzeja Boboli, Gdynia','Chrystusa Króla, Gdańsk','św. Maksymiliana, Gdynia','Bożego Ciała, Gdańsk','św. Jadwigi, Rumia','NSPJ, Gdynia','św. Anny, Gdańsk','Matki Bożej Fatimskiej, Gdańsk','św. Wojciecha, Wejherowo','Podwyższenia Krzyża, Pruszcz Gd.'];
+const NZ = ['Kowalscy','Nowakowie','Wiśniewscy','Wójcikowie','Kamińscy','Lewandowscy','Zielińscy','Szymańscy','Woźniakowie','Dąbrowscy','Kozłowscy','Jankowscy','Mazurowie','Krawczykowie','Piotrowscy','Grabowscy','Nowiccy','Pawłowscy','Michalscy','Adamczykowie','Dudkowie','Zającowie','Wieczorkowie','Jabłońscy','Królowie','Majewscy','Olszewscy','Stępniowie','Malinowscy','Górscy','Rutkowscy','Sikorscy','Ostrowscy','Baranowie','Czarneccy','Sadowscy','Bąkowie','Chmielewscy','Borkowscy','Sokołowscy','Szczepańscy','Kucharscy','Wesołowscy','Sawiccy','Kubiakowie','Maciejewscy','Zawadzcy','Głowaccy','Zakrzewscy','Wróblowie',
+'Cichoccy','Zarembowie','Reszkowie','Kaniowie','Rogalowie','Sowowie','Wilkowie','Sikorowie','Dudowie','Bielawscy','Konarscy','Miszewscy','Trzebiatowscy','Rybakowie','Lipińscy','Klimkowie','Grzelakowie','Świątkowie','Marcinkowscy','Radomscy','Tomaszewscy','Włodarczykowie','Kaczmarkowie','Zdunkowie','Ptakowie','Wenta','Formela','Labuda','Bulczakowie','Miotke','Pieprzykowie','Serafinowie','Kuligowscy','Domagalscy','Kwiatkowscy','Jaworscy','Karpińscy','Sobolewscy','Modrzejewscy','Wysoccy','Turowscy','Bartoszewscy','Nadolscy','Gierszewscy','Byczkowscy','Roszkowscy','Wilczyńscy','Owczarkowie','Rybińscy','Sroczyńscy','Damps','Kwidzińscy','Pobłoccy','Detlaff','Konkolowie','Lademann','Bianga','Struck','Selin','Hinz','Pallach','Kruk','Sowińscy','Malottkowie','Andryskowscy','Warmowscy','Bochniakowie','Cieślakowie','Fenrych','Gniewkowscy','Hebel','Idziak','Jankiewicz','Kędzior','Litwin','Marszałkowie','Nawrot','Okoń','Pastuszak','Ruciński','Stolarczyk','Tuszyński','Ulatowscy','Wawrzyniak','Zabłoccy','Żurek','Antczak','Bagiński','Cybulski','Drzewiecki','Ewertowski','Fularczyk','Gorczyca','Halman','Iwaszkiewicz','Jędrzejczak','Kołodziej','Lubowiecki','Miklas','Niedziela','Osowski','Pomierski','Radke','Sobiech','Tyloch','Urban','Wolski','Zielke','Żmuda','Barzowski','Chojnacki','Dettlaff','Elwart','Fierek','Gajewski','Hałas','Iskra','Jarzyna','Kalinowski','Lorenc','Mielewczyk','Nowosielski','Ostapiuk','Płotka','Rejer','Sawicki','Trojanowski','Uzarek','Wróblewski','Zaleski','Ziemann','Bugaj','Cierocki','Deja','Emerling','Fedorowicz','Grabarczyk','Hoppe','Imiołczyk','Jodłowski','Kotwica','Lachowicz','Machola','Neumann','Ordon','Pikuła','Rzepka','Szewczyk','Trybowski','Ustarbowski','Więcek','Zapadka','Bemke','Chwedczuk','Dorawa','Eichler','Feliksiak','Gburczyk','Hopa','Ilnicki','Jaskuła','Kwaśny','Leszczyński','Mokwa','Nakielski','Osiński','Pryba','Rompa','Sychowski','Tobiasz','Ubowski','Wróbel','Zdrojewski','Bochenek','Cirocki','Dybowski','Engler','Frankowski','Górnik','Hryniewicz','Ircha','Jankowiak','Kuchnowski','Lisiecki','Miętki','Nagórski','Obiegły','Perzyński','Rudnik','Skwierawski','Tarnowski','Uścinowicz','Wolniewicz','Zbrzeźniak','Bieszke','Czoska','Dolny','Ekiert','Filipiak','Gostomski','Hincke','Iwicki','Jankowski','Kuczkowski','Lemke','Mianowski','Nierzwicki','Ossowski','Pintal','Rybicki','Stenka','Trocki','Urbaniak','Wąs','Zwara','Bystry','Chmiel','Domański','Erdmann','Furman','Grzenkowicz','Hass','Izdebski','Jelinek','Kropidłowski','Lipski','Miller','Niklas','Okrój','Piechowski','Rzeszewicz','Szuta','Tomczak','Ulewicz','Weiher','Zawadzki'];
+const PATRONI = ['św. Dominika', 'św. Charbela', 'św. Rity', 'św. Moniki', 'św. Józefa', 'św. Jana Pawła II', 'św. Faustyny', 'św. Teresy', 'św. Franciszka', 'św. Klary', 'św. Andrzeja Boboli', 'św. Jadwigi', 'św. Brygidy', 'św. Anny', 'św. Joachima', 'św. Michała', 'św. Rafała', 'św. Gabriela', 'bł. Karoliny', 'św. Antoniego', 'św. Maksymiliana', 'św. Barbary', 'św. Marty', 'św. Łazarza', 'św. Piotra', 'św. Pawła', 'św. Tomasza', 'św. Filipa', 'św. Szczepana', 'św. Wojciecha', 'św. Stanisława', 'św. Kazimierza', 'św. Wincentego', 'św. Bernadety', 'św. Weroniki', 'św. Zyty', 'bł. Rodziny Ulmów', 'św. Ludwika', 'św. Zelii', 'św. Elżbiety'];
+const REK_TYPY = [
+  { kod: 'ONŻ I', nazwa: 'Oaza Nowego Życia I stopnia' },
+  { kod: 'ONŻ II', nazwa: 'Oaza Nowego Życia II stopnia' },
+  { kod: 'ONŻ III', nazwa: 'Oaza Nowego Życia III stopnia' },
+  { kod: 'ORAR I', nazwa: 'Oaza Rekolekcyjna Animatorów Rodzin I stopnia' },
+  { kod: 'ORAR II', nazwa: 'Oaza Rekolekcyjna Animatorów Rodzin II stopnia' },
+  { kod: 'Pilotowanie', nazwa: 'Sesja o pilotowaniu kręgów' },
+  { kod: 'ORD', nazwa: 'Oaza Rekolekcyjna Diakonii' },
+  { kod: 'Inne', nazwa: 'Inne rekolekcje' }
+];
+const MIEJSCA = ['Krościenko n. Dunajcem', 'Zakopane', 'Wisła', 'Ustroń', 'Szczyrk', 'Kalwaria Zebrzydowska', 'Częstochowa', 'Licheń', 'Niepokalanów', 'Rokitno', 'Gietrzwałd', 'Święta Lipka', 'Sianowo', 'Wejherowo', 'Piaseczno', 'Swarzewo', 'Poczernin', 'Stary Wiśnicz', 'Zaborów', 'Tuchola', 'Bytów', 'Chmielno', 'Wieżyca', 'Sulęczyno'];
+function mnoga(s) {
+  if (/(scy|ccy|dzcy|owie)$/.test(s)) return s;
+  if (/dzki$/.test(s)) return s.slice(0, -4) + 'dzcy';
+  if (/ski$/.test(s)) return s.slice(0, -3) + 'scy';
+  if (/cki$/.test(s)) return s.slice(0, -3) + 'ccy';
+  if (/[aeęioóuy]$/.test(s)) return s;
+  return s + 'owie';
+}
+const ZN = ['Anna','Maria','Katarzyna','Agnieszka','Magdalena','Joanna','Ewa','Beata','Monika','Dorota','Barbara','Iwona','Justyna','Aleksandra','Renata','Małgorzata','Elżbieta','Teresa','Halina','Bożena','Jolanta','Sylwia','Karolina','Weronika','Marta','Paulina','Natalia','Emilia','Klaudia','Alicja','Danuta'];
+const MN = ['Piotr','Tomasz','Marek','Andrzej','Jan','Paweł','Krzysztof','Michał','Grzegorz','Wojciech','Adam','Rafał','Jacek','Łukasz','Dariusz','Sławomir','Zbigniew','Robert','Maciej','Bartosz','Kamil','Sebastian','Mateusz','Artur','Janusz','Waldemar','Przemysław'];
+
+const KOLORY = ['#1c5f96', '#2f7d6a', '#7a6ca8', '#b07d2b', '#a3524f', '#3f7d3a', '#4f6fbd', '#96603f', '#2b7f8f', '#8a5b8f', '#6b7d2f', '#b05c7d'];
+// per rejon: [liczba kręgów, liczba parafii] — rejony różnią się wielkością
+const UKLAD = [[8, 6], [3, 2], [6, 5], [2, 2], [7, 5], [4, 3], [3, 3], [6, 4], [5, 4], [2, 2], [5, 4], [4, 3]];
+const PARAFIE = ['św. Brygidy, Gdańsk','NMP Gwiazdy Morza, Sopot','św. Andrzeja Boboli, Gdynia','Chrystusa Króla, Gdańsk','św. Maksymiliana, Gdynia','Bożego Ciała, Gdańsk','św. Jadwigi, Rumia','NSPJ, Gdynia','św. Anny, Gdańsk','MB Fatimskiej, Gdańsk','św. Wojciecha, Wejherowo','Podwyższenia Krzyża, Pruszcz Gd.','św. Mikołaja, Gdańsk','Opatrzności Bożej, Gdańsk','św. Franciszka, Gdynia','NMP Królowej Polski, Gdynia','św. Jana Bosko, Rumia','Bł. Doroty, Gdańsk','św. Krzysztofa, Gdańsk','MB Nieustającej Pomocy, Gdynia','św. Piotra i Pawła, Puck','św. Rodziny, Gdańsk','Zmartwychwstania, Gdańsk','św. Józefa, Gdynia','Chrystusa Zbawiciela, Gdańsk','św. Kazimierza, Gdańsk','MB Bolesnej, Gdynia','św. Jakuba, Gdańsk','św. Stanisława, Gdańsk','Trójcy Świętej, Gdańsk'];
+
+function seeded(i, arr) { return arr[(i * 7 + 3) % arr.length]; }
+function makeData() {
+  const out = [];
+  const wolne = NZ.map(mnoga).filter((v, ix, a) => a.indexOf(v) === ix);
+  const emaile = {};
+  let i = -1;
+  for (let rej = 1; rej <= 12; rej++) {
+    const [nKregi, nParafie] = UKLAD[rej - 1];
+    const parafie = [];
+    for (let p = 0; p < nParafie; p++) parafie.push(PARAFIE[(rej * 7 + p * 3) % PARAFIE.length]);
+    for (let k = 1; k <= nKregi; k++) {
+      const wielkosc = 4 + ((rej * 5 + k * 3) % 4); // 4–7 małżeństw w kręgu
+      const parKregu = parafie[(k + rej) % nParafie];
+      const patron = PATRONI[(rej * 13 + k * 7) % PATRONI.length];
+      for (let j = 0; j < wielkosc; j++) {
+        i++;
+        const nz = wolne.length ? wolne.splice((i * 31 + rej * 7) % wolne.length, 1)[0] : NZ[i % NZ.length];
+        const imieZ = ZN[(i * 7 + 3) % ZN.length], imieM = MN[(i * 11 + 5) % MN.length];
+        let slug = nz.toLowerCase().replace(/[ąćęłńóśźż]/g, c => 'acelnoszz'['ąćęłńóśźż'.indexOf(c)]).replace(/[^a-z]/g, '');
+        if (emaile[slug]) slug = imieM.charAt(0).toLowerCase() + '.' + slug;
+        emaile[slug] = 1;
+        out.push({
+          id: 'p' + (i + 1), imieZ, imieM, nazwisko: nz,
+          email: slug + '@example.pl',
+          telefon: '+48 ' + (500 + (i * 13) % 400) + ' ' + String(100 + (i * 37) % 900) + ' ' + String(100 + (i * 71) % 900),
+          rejon: rej,
+          parafia: parKregu,
+          krag: k + ' · ' + patron,
+          rekolekcje: (() => {
+            const r = [];
+            // ~9% par jeszcze bez rekolekcji (nowe w kręgu)
+            if ((i * 7 + k * 3) % 11 === 0) return (i % 23 === 0)
+              ? [{ typ: 'Inne', rok: String(2021 + (i % 5)), miejsce: MIEJSCA[(i * 3) % MIEJSCA.length], nazwa: 'Rekolekcje ewangelizacyjne' }]
+              : r;
+            const start = 2009 + (i % 14);
+            const ile = 1 + ((i * 3 + k) % 7); // do ORD włącznie
+            for (let n = 0; n < ile; n++) {
+              // luki w formacji: część par pomija pojedynczy stopień
+              if (n > 0 && (i * 5 + n * 13) % 9 === 0) continue;
+              r.push({ typ: REK_TYPY[n].kod, rok: String(Math.min(start + n * (1 + (n + i) % 2), 2025)), miejsce: MIEJSCA[(i * 5 + n * 7) % MIEJSCA.length], nazwa: '' });
+            }
+            if (i % 11 === 0) r.push({ typ: 'Inne', rok: String(2018 + (i % 7)), miejsce: MIEJSCA[(i * 3) % MIEJSCA.length], nazwa: ['Rekolekcje ewangelizacyjne', 'Triduum Paschalne', 'Kurs Alpha', 'Szkoła Modlitwy'][i % 4] });
+            return r;
+          })(),
+          dzieci: i % 5 === 0 ? '' : ['Marysia 2014, Antek 2017', 'Jaś 2011', 'Zosia 2009, Kuba 2013, Hania 2019', 'Franek 2016, Ola 2020'][i % 4],
+          notatki: i % 17 === 0 ? 'Para pilotująca nowy krąg.' : ''
+        });
+      }
+    }
+  }
+  return out;
+}
+const BLANK = { imieZ: '', imieM: '', nazwisko: '', email: '', telefon: '', rejon: 1, parafia: '', krag: '', rekolekcje: [], dzieci: '', notatki: '' };
+
+class Component extends DCLogic {
+  state = {
+    w: typeof window === 'undefined' ? 1280 : window.innerWidth,
+    user: null, view: 'lista', query: '', fRejon: 'all', fParafia: 'all', fKrag: 'all', fRek: 'all',
+    sortKey: 'nazwisko', sortDir: 1, panel: null, draft: null, toast: '',
+    people: makeData(),
+    disabled: {},
+    audyt: [
+      { when: '13.08.2026 21:12', kind: 'edycja', what: 'Zmieniono telefon — Kowalscy (rejon III)', who: 'Anna i Marek Sowa' },
+      { when: '13.08.2026 20:40', kind: 'dodanie', what: 'Dodano parę — Wesołowscy (rejon VII)', who: 'Ewa i Jan Cichy' },
+      { when: '12.08.2026 19:05', kind: 'eksport', what: 'Eksport CSV — cała wspólnota', who: 'Maria i Piotr Lewandowscy' },
+      { when: '12.08.2026 18:22', kind: 'edycja', what: 'Zmieniono krąg — Nowakowie: 2 · św. Rity → 3 · św. Moniki', who: 'Beata i Adam Wilk' },
+      { when: '11.08.2026 09:47', kind: 'konto', what: 'Nadano dostęp do rejonu XI', who: 'Maria i Piotr Lewandowscy' },
+      { when: '10.08.2026 21:33', kind: 'usunięcie', what: 'Usunięto parę — Baranowie (rejon II, przeprowadzka)', who: 'Dorota i Tomasz Zaremba' },
+      { when: '10.08.2026 17:10', kind: 'edycja', what: 'Dodano ORAR II 2025, Krościenko — Szymańscy (rejon IV)', who: 'Iwona i Rafał Bąk' },
+      { when: '09.08.2026 20:58', kind: 'dodanie', what: 'Dodano parę — Sawiccy (rejon IX)', who: 'Joanna i Michał Duda' },
+      { when: '08.08.2026 08:15', kind: 'eksport', what: 'Eksport XLSX — 13 rekordów, rejon VI', who: 'Katarzyna i Paweł Nowak' }
+    ]
+  };
+
+  paryRejonowe() {
+    const n = ['Hanna i Wojciech Reszka', 'Dorota i Tomasz Zaremba', 'Anna i Marek Sowa', 'Iwona i Rafał Bąk', 'Beata i Adam Wilk', 'Katarzyna i Paweł Nowak', 'Ewa i Jan Cichy', 'Magdalena i Jacek Rogala', 'Joanna i Michał Duda', 'Renata i Grzegorz Sikora', null, 'Monika i Łukasz Kania'];
+    return n.map((name, i) => ({ id: 'r' + (i + 1), name, rejon: i + 1, tag: ROMAN[i], role_: 'rejon', role: 'Para rejonowa · Rejon ' + ROMAN[i] }));
+  }
+  accountsList() {
+    return [{ id: 'adm', name: 'Maria i Piotr Lewandowscy', role: 'Para odpowiedzialna za wspólnotę · admin', role_: 'admin', rejon: null, tag: 'ADM' }]
+      .concat(this.paryRejonowe().filter(p => p.name))
+      .concat([{ id: 'mod', name: 'ks. Marek Górzyński', role: 'Moderator · tylko podgląd całości', role_: 'podglad', rejon: null, tag: 'MOD' }]);
+  }
+  odmiana(n, forms) { const a = n % 10, b = n % 100; return n + ' ' + (n === 1 ? forms[0] : (a >= 2 && a <= 4 && (b < 10 || b > 20) ? forms[1] : forms[2])); }
+  componentDidMount() {
+    this._r = () => { const w = window.innerWidth; if ((w < 860) !== (this.state.w < 860)) this.setState({ w }); else this.setState({ w }); };
+    window.addEventListener('resize', this._r);
+    this._r();
+    this.setState({ people: makeData() });
+  }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); clearTimeout(this._t); }
+  isAdmin() { return this.state.user && this.state.user.role_ === 'admin'; }
+  canEditRejon(r) {
+    const u = this.state.user; if (!u) return false;
+    if (u.role_ === 'admin') return true;
+    if (u.role_ === 'rejon') return r === u.rejon;
+    return false;
+  }
+  flash(t) { this.setState({ toast: t }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2600); }
+
+  visible() {
+    const u = this.state.user;
+    return u && u.role_ === 'rejon' ? this.state.people.filter(p => p.rejon === u.rejon) : this.state.people;
+  }
+  filtered() {
+    const s = this.state, q = s.query.trim().toLowerCase();
+    let list = this.visible();
+    if (s.fRejon !== 'all') list = list.filter(p => String(p.rejon) === s.fRejon);
+    if (s.fParafia !== 'all') list = list.filter(p => p.parafia === s.fParafia);
+    if (s.fKrag !== 'all') list = list.filter(p => p.krag === s.fKrag);
+    if (s.fRek === 'brak') list = list.filter(p => !(p.rekolekcje || []).length);
+    else if (s.fRek.indexOf('bez:') === 0) list = list.filter(p => !(p.rekolekcje || []).some(r => r.typ === s.fRek.slice(4)));
+    else if (s.fRek !== 'all') list = list.filter(p => (p.rekolekcje || []).some(r => r.typ === s.fRek));
+    if (q) list = list.filter(p => [p.nazwisko, p.imieZ, p.imieM, p.email, p.telefon, p.parafia, p.krag].join(' ').toLowerCase().includes(q));
+    const k = s.sortKey, d = s.sortDir;
+    return list.slice().sort((a, b) => {
+      const av = k === 'rejon' ? a.rejon : String(a[k] || '').toLowerCase();
+      const bv = k === 'rejon' ? b.rejon : String(b[k] || '').toLowerCase();
+      return av > bv ? d : av < bv ? -d : 0;
+    });
+  }
+  csv(rows) {
+    const stopnie = REK_TYPY.slice(0, 7);
+    const head = ['Nazwisko', 'Imię żony', 'Imię męża', 'E-mail', 'Telefon', 'Rejon', 'Parafia', 'Krąg']
+      .concat(stopnie.map(t => t.kod + ' (rok / miejsce)'))
+      .concat(['Inne rekolekcje', 'Dzieci', 'Notatki']);
+    const esc = v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    return [head.join(';')].concat(rows.map(p => {
+      const rek = p.rekolekcje || [];
+      const cols = stopnie.map(t => {
+        const r = rek.find(x => x.typ === t.kod);
+        return r ? r.rok + ' / ' + r.miejsce : '';
+      });
+      const inne = rek.filter(x => x.typ === 'Inne').map(x => (x.nazwa || 'Inne') + ' ' + x.rok + ' / ' + x.miejsce).join(' | ');
+      return [p.nazwisko, p.imieZ, p.imieM, p.email, p.telefon, ROMAN[p.rejon - 1], p.parafia, p.krag]
+        .concat(cols).concat([inne, p.dzieci, p.notatki]).map(esc).join(';');
+    })).join('\r\n');
+  }
+  formacjaLabel(p) {
+    const rek = (p.rekolekcje || []).filter(r => r.typ !== 'Inne');
+    if (!rek.length) return '—';
+    const order = REK_TYPY.map(t => t.kod);
+    const last = rek.slice().sort((a, b) => order.indexOf(a.typ) - order.indexOf(b.typ)).pop();
+    return last.typ + (rek.length > 1 ? ' +' + (rek.length - 1) : '');
+  }
+  download(name, text, mime) {
+    const blob = new Blob(['\ufeff' + text], { type: mime });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
+  openRow(p) { this.setState({ panel: p.id, draft: Object.assign({}, p) }); }
+
+  renderVals() {
+    const s = this.state, u = s.user, admin = this.isAdmin();
+    const m = s.w < 860;
+    const inputStyle = 'background: #fff; border: 1px solid #d5dde6; border-radius: 8px; padding: 10px 12px; font-size: 14px; color: #101c2b; width: 100%; font-family: inherit';
+    const navItem = (id, label, badge) => ({
+      label, badge, go: () => this.setState({ view: id }),
+      style: 'display: flex; align-items: center; justify-content: space-between; gap: 8px; ' + (m ? 'flex: none; white-space: nowrap; min-height: 44px;' : 'width: 100%;') + ' text-align: left; border: none; cursor: pointer; border-radius: 8px; padding: 10px 13px; font-size: 14px; font-weight: ' + (s.view === id ? '600' : '400') + '; background: ' + (s.view === id ? 'rgba(226,176,74,0.16)' : 'transparent') + '; color: ' + (s.view === id ? '#e2b04a' : '#c3d3e1')
+    });
+
+    if (!u) {
+      return {
+        loggedOut: true, loggedIn: false, mobile: m, desktop: !m,
+        loginGrid: 'min-height: 100vh; display: grid; background: #0d2439; ' + (m ? 'grid-template-rows: auto 1fr' : 'grid-template-columns: 1.05fr 1fr'),
+        loginLeft: 'display: flex; flex-direction: column; color: #e7edf4; ' + (m ? 'padding: 26px 22px 30px; gap: 26px' : 'padding: 64px 60px; justify-content: space-between; min-width: 360px'),
+        loginTitle: "font-family: 'Source Serif 4', Georgia, serif; font-weight: 400; line-height: 1.05; margin: 0 0 14px; letter-spacing: -0.015em; font-size: " + (m ? '38px' : '62px'),
+        loginRight: 'background: #f7f9fb; display: flex; flex-direction: column; gap: 10px; ' + (m ? 'padding: 26px 20px 40px' : 'padding: 64px 52px; justify-content: center'),
+        accounts: this.accountsList().filter(a => ['adm', 'r3', 'r7', 'mod'].indexOf(a.id) >= 0).map(a => Object.assign({}, a, {
+          login: () => this.setState({ user: a, view: 'lista', fRejon: 'all', query: '' }),
+          tagStyle: 'width: 42px; height: 42px; flex: none; border-radius: 8px; background: ' + (a.role_ === 'admin' ? '#10365c' : '#eaf0f6') + '; color: ' + (a.role_ === 'admin' ? '#e2b04a' : '#10365c') + '; display: grid; place-items: center; font-family: "IBM Plex Mono", monospace; font-size: 13px'
+        }))
+      };
+    }
+
+    const list = this.filtered(), total = this.visible().length;
+    const wRejonie = this.visible().filter(p => s.fRejon === 'all' || String(p.rejon) === s.fRejon);
+    const parafie = Array.from(new Set(wRejonie.map(p => p.parafia))).sort((a, b) => a.localeCompare(b, 'pl'));
+    const kregi = Array.from(new Set(wRejonie.filter(p => s.fParafia === 'all' || p.parafia === s.fParafia).map(p => p.krag)))
+      .sort((a, b) => a.localeCompare(b, 'pl', { numeric: true }));
+    const col = (key, label) => ({
+      label: label + (s.sortKey === key ? (s.sortDir === 1 ? '  ↑' : '  ↓') : ''),
+      sort: () => this.setState({ sortKey: key, sortDir: s.sortKey === key ? -s.sortDir : 1 }),
+      style: 'text-align: left; padding: 11px 15px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: ' + (s.sortKey === key ? '#10365c' : '#6c7d8f') + '; cursor: pointer; white-space: nowrap'
+    });
+
+    const nav = [navItem('lista', u.role_ === 'rejon' ? 'Mój rejon' : 'Wszystkie pary', String(total))];
+    if (u.role_ !== 'rejon') nav.push(navItem('rejony', 'Rejony', '12'));
+    if (admin) nav.push(navItem('konta', 'Konta rejonów', '13'));
+    if (admin) nav.push(navItem('audyt', 'Historia zmian', ''));
+
+    const counts = {};
+    s.people.forEach(p => { counts[p.rejon] = (counts[p.rejon] || 0) + 1; });
+    const max = Math.max.apply(null, Object.values(counts));
+    const accs = this.accountsList();
+
+    const d = s.draft || BLANK;
+    const isNew = s.panel === 'new';
+    const canEdit = isNew ? true : (s.draft ? this.canEditRejon(s.draft.rejon) : false);
+
+    const vals = {
+      loggedOut: false, loggedIn: true, me: u, nav, inputStyle, mobile: m, desktop: !m, wide: s.w >= 1120,
+      shellStyle: 'min-height: 100vh; display: flex; background: #eef1f5; ' + (m ? 'flex-direction: column' : 'align-items: stretch'),
+      asideStyle: 'background: #0d2439; color: #dce6ef; ' + (m
+        ? 'display: grid; grid-template-columns: 1fr auto; grid-template-areas: "brand user" "nav nav"; align-items: center; gap: 10px 10px; padding: 11px 14px 9px; position: sticky; top: 0; z-index: 40'
+        : 'display: flex; width: 244px; flex: none; padding: 20px 14px; flex-direction: column; gap: 24px; position: sticky; top: 0; height: 100vh'),
+      navStyle: m ? 'grid-area: nav; display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none' : 'display: flex; flex-direction: column; gap: 2px',
+      userBoxStyle: m
+        ? 'grid-area: user; display: flex; align-items: center; gap: 8px; justify-self: end'
+        : 'margin-top: auto; border-top: 1px solid rgba(255,255,255,0.13); padding-top: 15px; display: flex; flex-direction: column; gap: 10px',
+      mainStyle: 'flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 18px; ' + (m ? 'padding: 18px 16px 56px' : 'padding: 26px 32px 64px'),
+      h1Style: "font-family: 'Source Serif 4', Georgia, serif; font-weight: 400; margin: 0; letter-spacing: -0.01em; font-size: " + (m ? '27px' : '36px'),
+      actionsStyle: m ? 'display: flex; gap: 8px; flex-wrap: wrap; width: 100%' : 'display: flex; gap: 9px',
+      drawerStyle: 'background: #fff; overflow-y: auto; animation: slidein 0.22s ease-out; display: flex; flex-direction: column; gap: 18px; box-shadow: -18px 0 50px rgba(13,36,57,0.2); ' + (m ? 'width: 100%; height: 100%; padding: 18px 16px 44px' : 'width: 540px; max-width: 94vw; height: 100%; padding: 24px 28px 40px'),
+      formGrid: 'display: grid; gap: 13px; grid-template-columns: ' + (m ? '1fr' : '1fr 1fr'),
+      wideLabel: 'display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: #6c7d8f;' + (m ? '' : ' grid-column: span 2'),
+      logout: () => this.setState({ user: null, panel: null, view: 'lista' }),
+      viewTitle: { lista: u.role_ === 'rejon' ? 'Rejon ' + ROMAN[u.rejon - 1] : 'Pary wspólnoty', rejony: 'Rejony I–XII', konta: 'Konta rejonów', audyt: 'Historia zmian' }[s.view],
+      viewSub: { lista: u.role_ === 'rejon' ? 'Twoje pary — możesz dodawać i edytować dane' : 'Cała wspólnota — ' + this.odmiana(s.people.length, ['para', 'pary', 'par']) + ' w 12 rejonach', rejony: 'Kliknij rejon, aby przejść do jego listy par', konta: 'Dostępy par rejonowych i moderatora', audyt: 'Kto, co i kiedy zmienił' }[s.view],
+      onList: s.view === 'lista', onRejony: s.view === 'rejony', onKonta: s.view === 'konta', onAudyt: s.view === 'audyt',
+      query: s.query, fRejon: s.fRejon, fParafia: s.fParafia, fKrag: s.fKrag, fRek: s.fRek, toast: s.toast,
+      setRek: e => this.setState({ fRek: e.target.value }),
+      rekFiltr: [{ value: 'all', label: 'Formacja — dowolna' }]
+        .concat(REK_TYPY.filter(t => t.kod !== 'Inne').map(t => ({ value: t.kod, label: 'Ma ' + t.kod })))
+        .concat(REK_TYPY.filter(t => t.kod !== 'Inne').map(t => ({ value: 'bez:' + t.kod, label: 'Bez ' + t.kod })))
+        .concat([{ value: 'Inne', label: 'Ma inne rekolekcje' }, { value: 'brak', label: 'Bez żadnych rekolekcji' }]),
+      setQuery: e => this.setState({ query: e.target.value }),
+      setRejon: e => this.setState({ fRejon: e.target.value, fParafia: 'all', fKrag: 'all' }),
+      setParafia: e => this.setState({ fParafia: e.target.value, fKrag: 'all' }),
+      setKrag: e => this.setState({ fKrag: e.target.value }),
+      rejonOptions: [{ value: 'all', label: 'Wszystkie rejony' }].concat(ROMAN.map((r, i) => ({ value: String(i + 1), label: 'Rejon ' + r }))),
+      parafiaOptions: [{ value: 'all', label: 'Wszystkie — ' + this.odmiana(parafie.length, ['parafia', 'parafie', 'parafii']) }].concat(parafie.map(p => ({ value: p, label: p }))),
+      kragOptions: [{ value: 'all', label: 'Wszystkie — ' + this.odmiana(kregi.length, ['krąg', 'kręgi', 'kręgów']) }].concat(kregi.map(k => ({ value: k, label: 'Krąg ' + k }))),
+      countLabel: list.length + ' / ' + total + (s.query || s.fRejon !== 'all' || s.fParafia !== 'all' || s.fKrag !== 'all' || s.fRek !== 'all' ? ' (filtr)' : ''),
+      columns: [col('nazwisko', 'Nazwisko'), col('imieZ', 'Imiona'), col('email', 'E-mail'), col('telefon', 'Telefon'), col('rejon', 'Rejon'), col('parafia', 'Parafia'), col('krag', 'Krąg'), { label: 'Formacja', sort: () => {}, style: 'text-align: left; padding: 11px 15px; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: #6c7d8f; white-space: nowrap' }, { label: '', sort: () => {}, style: 'padding: 11px 15px' }],
+      rows: list.slice(0, 60).map(p => ({
+        nazwisko: p.nazwisko, imiona: p.imieZ + ' i ' + p.imieM, email: p.email, telefon: p.telefon,
+        rejon: ROMAN[p.rejon - 1], parafia: p.parafia, krag: p.krag,
+        rejonKrag: ROMAN[p.rejon - 1] + ' · krąg ' + p.krag,
+        formacja: this.formacjaLabel(p),
+        formacjaStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: 5px; padding: 3px 8px; white-space: nowrap; background: " + ((p.rekolekcje || []).length ? '#e9f4ec; color: #2c6b41' : '#f4f7fa; color: #9aa6b4'),
+        rejonStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: 5px; padding: 3px 8px; flex: none; white-space: nowrap; background: " + KOLORY[p.rejon - 1] + '1a; color: ' + KOLORY[p.rejon - 1],
+        action: this.canEditRejon(p.rejon) ? 'Edytuj →' : 'Podgląd →',
+        open: () => this.openRow(p)
+      })),
+      empty: list.length === 0,
+      exportCsv: () => { this.download('wspolnota-' + list.length + '.csv', this.csv(list), 'text/csv;charset=utf-8'); this.flash('Wyeksportowano ' + list.length + ' rekordów do CSV'); },
+      exportXlsx: () => { this.download('wspolnota-' + list.length + '.xls', this.csv(list).replace(/;/g, '\t'), 'application/vnd.ms-excel'); this.flash('Wyeksportowano ' + list.length + ' rekordów do arkusza'); },
+      addNew: () => this.setState({ panel: 'new', draft: Object.assign({}, BLANK, { rejon: u.role_ === 'rejon' ? u.rejon : 1 }) }),
+      rejony: ROMAN.map((r, i) => ({
+        rzym: r, count: this.odmiana(counts[i + 1] || 0, ['para', 'pary', 'par']),
+        para: this.paryRejonowe()[i].name || 'Do obsadzenia',
+        meta: this.odmiana(Array.from(new Set(s.people.filter(p => p.rejon === i + 1).map(p => p.krag))).length, ['krąg', 'kręgi', 'kręgów']) + ' · ' + this.odmiana(Array.from(new Set(s.people.filter(p => p.rejon === i + 1).map(p => p.parafia))).length, ['parafia', 'parafie', 'parafii']),
+        cardStyle: 'background: #fff; border: 1px solid #dfe5ec; border-left: 5px solid ' + KOLORY[i] + '; border-radius: 12px; padding: 16px 17px; cursor: pointer; display: flex; flex-direction: column; gap: 12px',
+        titleStyle: "font-family: 'Source Serif 4', Georgia, serif; font-size: 26px; line-height: 1; color: " + KOLORY[i],
+        countStyle: "font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-radius: 20px; padding: 3px 9px; background: " + KOLORY[i] + '18; color: ' + KOLORY[i],
+        open: () => this.setState({ view: 'lista', fRejon: String(i + 1), fKrag: 'all', query: '' })
+      })),
+      konta: ROMAN.map((r, i) => {
+        const acc = this.paryRejonowe()[i].name ? this.paryRejonowe()[i] : null;
+        const off = !!s.disabled['r' + (i + 1)];
+        const named = !!acc;
+        return {
+          tag: r, name: named ? acc.name : 'Rejon ' + r + ' — brak pary',
+          tagStyle: "width: 38px; height: 38px; flex: none; border-radius: 8px; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 12px; background: " + KOLORY[i] + '1a; color: ' + KOLORY[i],
+          email: named ? 'rejon' + (i + 1) + '@dk-gdansk.pl' : 'zaproszenie niewysłane',
+          scope: 'Rejon ' + r + ' · ' + this.odmiana(counts[i + 1] || 0, ['para', 'pary', 'par']),
+          last: named ? 'ost. logowanie 12.08' : '—',
+          status: !named ? 'oczekuje' : off ? 'wyłączone' : 'aktywne',
+          badgeStyle: 'font-size: 12px; font-weight: 600; border-radius: 20px; padding: 4px 10px; min-width: 78px; text-align: center; flex: none; background: ' + (!named ? '#fdf6e6' : off ? '#f4f7fa' : '#e9f4ec') + '; color: ' + (!named ? '#8a6a1c' : off ? '#8b99a8' : '#2c6b41'),
+          action: !named ? 'Zaproś' : off ? 'Włącz' : 'Wyłącz',
+          toggle: () => {
+            if (!named) return this.flash('Zaproszenie wysłane na adres rejonu ' + r);
+            const nd = Object.assign({}, s.disabled); nd['r' + (i + 1)] = !off;
+            this.setState({ disabled: nd }); this.flash('Dostęp rejonu ' + r + (off ? ' włączony' : ' wyłączony'));
+          }
+        };
+      }).concat([{
+        tag: 'MOD', name: 'ks. Marek Górzyński', email: 'moderator@dk-gdansk.pl', scope: 'Cała wspólnota · podgląd',
+        last: 'ost. logowanie 09.08', status: 'aktywne',
+        badgeStyle: 'font-size: 12px; font-weight: 600; border-radius: 20px; padding: 4px 11px; min-width: 92px; text-align: center; background: #e9f4ec; color: #2c6b41',
+        tagStyle: "width: 38px; height: 38px; flex: none; border-radius: 8px; display: grid; place-items: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: #eaf0f6; color: #10365c",
+        action: 'Wyłącz', toggle: () => this.flash('Dostęp moderatora wyłączony')
+      }]),
+      audyt: s.audyt.map(a => ({
+        when: a.when, kind: a.kind, what: a.what, who: a.who,
+        kindStyle: 'font-family: "IBM Plex Mono", monospace; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; border-radius: 4px; padding: 3px 8px; width: 88px; text-align: center; flex: none; background: ' + ({ edycja: '#eaf0f6', dodanie: '#e9f4ec', 'usunięcie': '#fdf1f1', eksport: '#fdf6e6', konto: '#f0ecf7' }[a.kind] || '#f4f7fa') + '; color: ' + ({ edycja: '#10365c', dodanie: '#2c6b41', 'usunięcie': '#9c3a3a', eksport: '#8a6a1c', konto: '#57407a' }[a.kind] || '#6c7d8f')
+      })),
+      panelOpen: !!s.panel,
+      panelKicker: isNew ? 'Nowy wpis' : 'Karta pary · rejon ' + ROMAN[(d.rejon || 1) - 1],
+      panelTitle: isNew ? 'Dodaj parę' : (d.imieZ + ' i ' + d.imieM + ' ' + d.nazwisko),
+      panelFoot: canEdit ? 'Każdy zapis trafia do historii zmian z Twoim kontem i datą.' : 'Podgląd bez możliwości edycji.',
+      readOnly: !canEdit, canEdit, canDelete: !isNew && canEdit,
+      lockRejon: !canEdit || u.role_ === 'rejon',
+      rejonPick: ROMAN.map((r, i) => ({ value: i + 1, label: 'Rejon ' + r })),
+      rekTypy: REK_TYPY.map(t => ({ value: t.kod, label: t.kod === 'Inne' ? 'Inne rekolekcje' : t.nazwa })),
+      rekCount: this.odmiana((d.rekolekcje || []).length, ['wpis', 'wpisy', 'wpisów']),
+      rekEmpty: !(d.rekolekcje || []).length,
+      rekolekcje: (d.rekolekcje || []).map((rk, ix) => {
+        const inne = rk.typ === 'Inne';
+        const base = 'background: #fff; border: 1px solid #d5dde6; border-radius: 7px; padding: 8px 10px; font-size: 13px; color: #101c2b; min-height: 38px; font-family: inherit';
+        const set = (key) => (e) => {
+          const lista = (this.state.draft.rekolekcje || []).map((x, n) => n === ix ? Object.assign({}, x, { [key]: e.target.value }) : x);
+          this.setState({ draft: Object.assign({}, this.state.draft, { rekolekcje: lista }) });
+        };
+        return {
+          typ: rk.typ, rok: rk.rok, miejsce: rk.miejsce, nazwa: rk.nazwa || '', inne,
+          rowStyle: 'display: flex; gap: 7px; flex-wrap: wrap; align-items: center; background: #f9fbfc; border: 1px solid #eef1f5; border-radius: 9px; padding: 8px',
+          selStyle: base + '; flex: 1 1 100%; cursor: pointer',
+          rokStyle: base + '; width: 72px; flex: none; font-family: "IBM Plex Mono", monospace',
+          miejsceStyle: base + '; flex: 1; min-width: 120px',
+          nazwaStyle: base + '; flex: 1 1 100%',
+          setTyp: set('typ'), setRok: set('rok'), setMiejsce: set('miejsce'), setNazwa: set('nazwa'),
+          remove: () => this.setState({ draft: Object.assign({}, this.state.draft, { rekolekcje: (this.state.draft.rekolekcje || []).filter((x, n) => n !== ix) }) })
+        };
+      }),
+      addRek: () => {
+        const uzyte = (this.state.draft.rekolekcje || []).map(r => r.typ);
+        const next = (REK_TYPY.find(t => t.kod !== 'Inne' && uzyte.indexOf(t.kod) < 0) || REK_TYPY[REK_TYPY.length - 1]).kod;
+        this.setState({ draft: Object.assign({}, this.state.draft, { rekolekcje: (this.state.draft.rekolekcje || []).concat([{ typ: next, rok: '', miejsce: '', nazwa: '' }]) }) });
+      },
+      d, h: {}, closePanel: () => this.setState({ panel: null, draft: null }),
+      save: () => {
+        const dr = s.draft;
+        if (!dr.nazwisko.trim()) return this.flash('Podaj nazwisko');
+        let people = s.people.slice();
+        let entry;
+        if (isNew) {
+          const np = Object.assign({}, dr, { id: 'p' + Date.now() });
+          people.push(np);
+          entry = { when: 'teraz', kind: 'dodanie', what: 'Dodano parę — ' + np.nazwisko + ' (rejon ' + ROMAN[np.rejon - 1] + ')', who: u.name };
+        } else {
+          people = people.map(p => p.id === dr.id ? Object.assign({}, dr) : p);
+          entry = { when: 'teraz', kind: 'edycja', what: 'Zmieniono dane — ' + dr.nazwisko + ' (rejon ' + ROMAN[dr.rejon - 1] + ')', who: u.name };
+        }
+        this.setState({ people, panel: null, draft: null, audyt: [entry].concat(s.audyt) });
+        this.flash('Zapisano zmiany');
+      },
+      remove: () => {
+        const dr = s.draft;
+        this.setState({
+          people: s.people.filter(p => p.id !== dr.id), panel: null, draft: null,
+          audyt: [{ when: 'teraz', kind: 'usunięcie', what: 'Usunięto parę — ' + dr.nazwisko + ' (rejon ' + ROMAN[dr.rejon - 1] + ')', who: u.name }].concat(s.audyt)
+        });
+        this.flash('Para usunięta z kartoteki');
+      }
+    };
+    ['imieZ', 'imieM', 'nazwisko', 'email', 'telefon', 'parafia', 'krag', 'dzieci', 'notatki'].forEach(k => {
+      vals.h[k] = e => this.setState({ draft: Object.assign({}, this.state.draft, { [k]: e.target.value }) });
+    });
+    vals.h.rejon = e => this.setState({ draft: Object.assign({}, this.state.draft, { rejon: Number(e.target.value) }) });
+    return vals;
+  }
+}
+</script>
+</body>
+</html>
