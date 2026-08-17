@@ -2,8 +2,9 @@
 
 **Data:** 2026-08-18
 **Status:** zatwierdzony do planu implementacji
-**Źródło wymagań:** `Zarządzanie wspólnotą członkowskiej/design_handoff_kartoteka_dk/`
-(`README.md` — specyfikacja wizualna, `IMPLEMENTATION.md` — plan i lista odbioru)
+**Źródło wymagań:** `docs/handoff/`
+(`README.md` — specyfikacja wizualna, `IMPLEMENTATION.md` — plan i lista odbioru,
+`screenshots/` — 9 zrzutów widoków, `Wspolnota.dc.html` — prototyp referencyjny)
 
 Ten dokument opisuje **jak** zbudować aplikację. Wygląd i zachowanie definiuje
 `README.md` z handoffu i pozostaje nadrzędny — tutaj zapisane są wyłącznie decyzje
