@@ -1,0 +1,32 @@
+.naglowek {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tytul {
+  font-family: var(--font-naglowek), Georgia, serif;
+  font-size: 36px;
+  font-weight: 400;
+  letter-spacing: -.01em;
+  line-height: 1.1;
+}
+
+.podtytul {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 4px 0 0;
+}
+
+.akcje {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 860px) {
+  .tytul { font-size: 27px; }
+  .akcje { width: 100%; }
+}
