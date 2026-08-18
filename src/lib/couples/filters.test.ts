@@ -27,8 +27,14 @@ describe('parseFilters', () => {
     expect(parseFilters({})).toEqual({
       q: '', region: null, parish: null, circle: null,
       formation: { kind: 'any' },
-      sort: 'surname', dir: 'asc', page: 1,
+      sort: 'surname', dir: 'asc', page: 1, deleted: false,
     });
+  });
+
+  // The bin is admin-only, but parsing does not decide that; listScope does.
+  it('reads the request to see deleted records', () => {
+    expect(parseFilters({ deleted: '1' }).deleted).toBe(true);
+    expect(parseFilters({ deleted: 'tak' }).deleted).toBe(false);
   });
 
   it('reads every filter from the query string', () => {

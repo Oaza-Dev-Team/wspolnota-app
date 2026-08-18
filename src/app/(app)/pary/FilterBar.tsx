@@ -21,6 +21,7 @@ export function FilterBar({
   total,
   active,
   showRegion,
+  showDeleted,
 }: {
   // ClientFilters, not Filters: bigint does not survive the server/client
   // boundary, so parish and circle ids travel as strings.
@@ -30,6 +31,7 @@ export function FilterBar({
   total: number;
   active: boolean;
   showRegion: boolean;
+  showDeleted: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -132,6 +134,17 @@ export function FilterBar({
           <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
+
+      {showDeleted && (
+        <label className={style.toggle}>
+          <input
+            type="checkbox"
+            checked={filters.deleted}
+            onChange={(e) => apply({ deleted: e.currentTarget.checked })}
+          />
+          Usunięte
+        </label>
+      )}
 
       <span className={style.counter} role="status">
         {found} / {total}{active ? ' (filtr)' : ''}

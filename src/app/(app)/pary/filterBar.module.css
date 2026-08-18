@@ -37,3 +37,16 @@
   color: var(--text-muted);
   white-space: nowrap;
 }
+
+/* The bin is a mode, not a filter, so it reads as a switch rather than as one
+   more dropdown in the row. */
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  color: var(--text-muted);
+  min-height: 44px;
+  cursor: pointer;
+  white-space: nowrap;
+}

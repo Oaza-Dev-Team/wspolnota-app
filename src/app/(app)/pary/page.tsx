@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { Toast } from '@/components/Toast';
-import { canChangeRegion } from '@/lib/auth/permissions';
+import { canChangeRegion, canPurge } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { blankCard, cardOptions, loadCard } from '@/lib/couples/card';
 import { type ClientFilters, hasActiveFilter, parseFilters, toSearchParams } from '@/lib/couples/filters';
@@ -52,6 +52,8 @@ export default async function CouplesPage({
         editable
         options={await cardOptions(blank.regionId)}
         regionChangeable={canChangeRegion(u)}
+        deleted={false}
+        purgeable={false}
       />
     );
   } else if (cardParam && /^\d+$/.test(cardParam)) {
@@ -65,6 +67,8 @@ export default async function CouplesPage({
           editable={result.editable}
           options={await cardOptions(result.card.regionId)}
           regionChangeable={canChangeRegion(u)}
+          deleted={result.deleted}
+          purgeable={canPurge(u)}
         />
       );
     }
@@ -102,6 +106,9 @@ export default async function CouplesPage({
         // A region account has exactly one region; the selector would be a
         // single-option control that cannot change anything.
         showRegion={u.role !== 'region'}
+        // Only whoever may erase a record for good has a reason to see the
+        // ones already taken off the lists.
+        showDeleted={canPurge(u)}
       />
 
       <div className={style.desktopOnly}>
@@ -116,6 +123,7 @@ export default async function CouplesPage({
       {drawer}
       {params['saved'] && <Toast text="Zapisano zmiany" />}
       {params['deleted'] && <Toast text="Para usunięta z kartoteki" />}
+      {params['purged'] && <Toast text="Dane usunięte trwale" />}
     </>
   );
 }

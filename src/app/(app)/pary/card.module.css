@@ -283,3 +283,68 @@
   .form { grid-template-columns: 1fr; }
   .wide { grid-column: auto; }
 }
+
+/* --- irreversible zone --- */
+.dangerZone {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-8);
+  padding: 14px;
+}
+
+.dangerToggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 11px 0;
+  min-height: 44px;
+  font-size: 13px;
+  color: var(--danger-fg);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.dangerText {
+  font-size: 13px;
+  color: var(--text-body);
+  margin: 0;
+}
+
+.dangerLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dangerInput {
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  padding: 11px 12px;
+  font-size: 14px;
+  min-height: 44px;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.dangerActions {
+  display: flex;
+  gap: 10px;
+}
+
+.purge {
+  background: var(--danger-fg);
+  border: none;
+  border-radius: var(--r-8);
+  padding: 11px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+  color: var(--surface);
+  cursor: pointer;
+}
+
+.purge:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

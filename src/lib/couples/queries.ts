@@ -67,7 +67,7 @@ export function whereForExport(u: User, f: Filters): Prisma.CoupleWhereInput {
   const conditions: Prisma.CoupleWhereInput[] = [
     // Always first and never optional: this is what keeps a region account
     // inside its region and soft-deleted couples out of every list.
-    listScope(u),
+    listScope(u, { deleted: f.deleted }),
     searchCondition(f.q),
     formationCondition(f.formation),
   ];
@@ -125,7 +125,7 @@ export async function queryCouples(
       },
     }),
     prisma.couple.count({ where: condition }),
-    prisma.couple.count({ where: listScope(u) }),
+    prisma.couple.count({ where: listScope(u, { deleted: f.deleted }) }),
   ]);
 
   const rows: CoupleRow[] = records.map((r) => {
@@ -160,7 +160,7 @@ export async function filterOptions(
   circles: { id: bigint; label: string }[];
 }> {
   const scope: Prisma.CoupleWhereInput = {
-    AND: [listScope(u), f.region !== null ? { regionId: f.region } : {}],
+    AND: [listScope(u, { deleted: f.deleted }), f.region !== null ? { regionId: f.region } : {}],
   };
 
   const couples = await prisma.couple.findMany({
