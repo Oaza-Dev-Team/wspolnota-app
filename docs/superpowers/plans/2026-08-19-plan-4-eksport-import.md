@@ -72,7 +72,7 @@ Jedno miejsce definiujące układ. Eksport pisze wg niego, import czyta wg niego
   - `parseParishCell(text: string): { name: string; city: string } | null`
   - `parseCircleCell(text: string): { number: number; patron: string | null } | null`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 `src/lib/couples/columns.test.ts`:
 
@@ -211,12 +211,12 @@ describe('parseCircleCell', () => {
 });
 ```
 
-- [ ] **Step 2: Uruchom test — musi się wywalić**
+- [x] **Step 2: Uruchom test — musi się wywalić**
 
 Run: `npm test -- columns`
 Expected: FAIL — brak modułu
 
-- [ ] **Step 3: Zaimplementuj**
+- [x] **Step 3: Zaimplementuj**
 
 `src/lib/couples/columns.ts`:
 
@@ -358,12 +358,12 @@ export function parseCircleCell(text: string): { number: number; patron: string 
 }
 ```
 
-- [ ] **Step 4: Uruchom test — musi przejść**
+- [x] **Step 4: Uruchom test — musi przejść**
 
 Run: `npm test -- columns`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -385,13 +385,13 @@ git commit -m "feat: add the shared sheet column contract"
   - `buildWorkbook(rows: SheetRow[]): Promise<Buffer>`
   - `exportFileName(now: Date): string`
 
-- [ ] **Step 1: Zainstaluj exceljs**
+- [x] **Step 1: Zainstaluj exceljs**
 
 ```bash
 npm i exceljs
 ```
 
-- [ ] **Step 2: Napisz test integracyjny**
+- [x] **Step 2: Napisz test integracyjny**
 
 `src/lib/couples/export.int.test.ts`:
 
@@ -504,12 +504,12 @@ describe('exportFileName', () => {
 });
 ```
 
-- [ ] **Step 3: Uruchom test — musi się wywalić**
+- [x] **Step 3: Uruchom test — musi się wywalić**
 
 Run: `npm run test:int -- export`
 Expected: FAIL — brak modułu
 
-- [ ] **Step 4: Zaimplementuj**
+- [x] **Step 4: Zaimplementuj**
 
 `src/lib/couples/export.ts`:
 
@@ -604,7 +604,7 @@ export function exportFileName(now: Date): string {
 }
 ```
 
-- [ ] **Step 5: Wynieś warunek `where` z `queries.ts`**
+- [x] **Step 5: Wynieś warunek `where` z `queries.ts`**
 
 `exportRows` potrzebuje tego samego `where` co lista. Dziś jest on prywatny w `queries.ts`. Wyeksportuj go pod nazwą `whereForExport` i użyj w obu miejscach — inaczej powstaną dwie definicje zakresu, a to jest dokładnie ta klasa błędu, której cały projekt unika.
 
@@ -623,12 +623,12 @@ export function whereForExport(u: User, f: Filters): Prisma.CoupleWhereInput {
 
 i podmień wywołanie wewnątrz `queryCouples`. Wyeksportuj też typ: `export type { Filters }` już jest dostępny z `filters.ts`, więc w `export.ts` importuj `Filters` stamtąd, a `whereForExport` z `queries.ts`.
 
-- [ ] **Step 6: Uruchom test — musi przejść**
+- [x] **Step 6: Uruchom test — musi przejść**
 
 Run: `npm run test:int -- export`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A
@@ -646,7 +646,7 @@ git commit -m "feat: build the xlsx export workbook"
 **Interfaces:**
 - Produces: `GET /eksport?<parametry listy>` → plik XLSX + wpis do audytu
 
-- [ ] **Step 1: Napisz trasę**
+- [x] **Step 1: Napisz trasę**
 
 `src/app/eksport/route.ts`:
 
@@ -688,7 +688,7 @@ export async function GET(request: Request) {
 }
 ```
 
-- [ ] **Step 2: Dodaj przycisk do nagłówka listy**
+- [x] **Step 2: Dodaj przycisk do nagłówka listy**
 
 Eksport musi nieść **aktualne filtry**, więc link buduje się z tych samych `searchParams`.
 
@@ -723,7 +723,7 @@ Dopisz import `toSearchParams` z `@/lib/couples/filters` i styl:
 .exportButton:hover { border-color: var(--navy-700); }
 ```
 
-- [ ] **Step 3: Sprawdź ręcznie**
+- [x] **Step 3: Sprawdź ręcznie**
 
 ```bash
 npm run dev
@@ -731,7 +731,7 @@ npm run dev
 
 Zaloguj się jako admin, przefiltruj listę (np. `?region=3`), kliknij „Eksport XLSX". Plik ma się pobrać, otworzyć w Excelu bez ostrzeżeń, mieć nagłówki po polsku i tylko pary z rejonu III.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -755,7 +755,7 @@ git commit -m "feat: add the xlsx export route with an audit entry"
   - `applyImport(u: User, plan: ImportPlan): Promise<{ created: number; updated: number }>`
   - `templateWorkbook(): Promise<Buffer>`
 
-- [ ] **Step 1: Napisz test integracyjny**
+- [x] **Step 1: Napisz test integracyjny**
 
 `src/lib/couples/import.int.test.ts`:
 
@@ -923,12 +923,12 @@ describe('templateWorkbook', () => {
 });
 ```
 
-- [ ] **Step 2: Uruchom test — musi się wywalić**
+- [x] **Step 2: Uruchom test — musi się wywalić**
 
 Run: `npm run test:int -- import`
 Expected: FAIL — brak modułu
 
-- [ ] **Step 3: Zaimplementuj**
+- [x] **Step 3: Zaimplementuj**
 
 `src/lib/couples/import.ts`:
 
@@ -1125,12 +1125,12 @@ export async function templateWorkbook(): Promise<Buffer> {
 
 **Uwaga o `newCircle.parishId`:** schemat wymaga identyfikatora parafii dla nowego kręgu, a przy imporcie parafia też dopiero powstaje. Rozwiąż to w warstwie zapisu: `resolveRelations` tworzy najpierw parafię, więc `newCircle.parishId` może wskazywać na „tę, którą właśnie utworzyłem". **Popraw `save.ts`** tak, żeby `newCircle.parishId === '0'` znaczyło „użyj parafii z `newParish`". Dopisz test tego zachowania w `save.int.test.ts`.
 
-- [ ] **Step 4: Uruchom test — musi przejść**
+- [x] **Step 4: Uruchom test — musi przejść**
 
 Run: `npm run test:int -- import`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1145,7 +1145,7 @@ git commit -m "feat: add workbook import analysis and application"
 - Create: `src/app/(app)/import/page.tsx`, `actions.ts`, `ImportForm.tsx`, `import.module.css`
 - Modify: `src/lib/navigation.ts` — pozycja „Import" dla admina
 
-- [ ] **Step 1: Dodaj pozycję nawigacji**
+- [x] **Step 1: Dodaj pozycję nawigacji**
 
 W `navigation.ts`, w gałęzi dla ról innych niż `region`, po `accounts`:
 
@@ -1157,7 +1157,7 @@ W `navigation.ts`, w gałęzi dla ról innych niż `region`, po `accounts`:
 
 Rozszerz `ViewKey` o `'import'` i dopisz przypadek do testu `navItems` — admin ma teraz **pięć** pozycji, nie cztery. **Zaktualizuj też `e2e/list.spec.ts`**, gdzie liczba pozycji jest asercją.
 
-- [ ] **Step 2: Napisz server actions**
+- [x] **Step 2: Napisz server actions**
 
 `src/app/(app)/import/actions.ts`:
 
@@ -1231,7 +1231,7 @@ export async function applyAction(_state: ImportState, formData: FormData): Prom
 
 **Dlaczego plik czytany dwa razy:** plan importu zawiera `bigint` i `SaveInput`, więc nie przejdzie przez `FormData` z powrotem do serwera. Trzymanie go w pamięci serwera między żądaniami wymagałoby stanu sesyjnego. Ponowne wczytanie tego samego pliku jest tańsze i **bezpieczniejsze**: użytkownik zatwierdza to, co jest w pliku teraz, a nie to, co widział pięć minut temu.
 
-- [ ] **Step 3: Napisz szablon do pobrania**
+- [x] **Step 3: Napisz szablon do pobrania**
 
 `src/app/eksport/szablon/route.ts`:
 
@@ -1256,7 +1256,7 @@ export async function GET() {
 }
 ```
 
-- [ ] **Step 4: Napisz widok**
+- [x] **Step 4: Napisz widok**
 
 `src/app/(app)/import/page.tsx` — server component, sprawdza uprawnienie i renderuje formularz:
 
@@ -1285,7 +1285,7 @@ export default async function ImportPage() {
 
 `ImportForm.tsx` — komponent kliencki z dwoma etapami: analiza, potem zatwierdzenie. Pełny kod w Kroku 5.
 
-- [ ] **Step 5: Napisz formularz**
+- [x] **Step 5: Napisz formularz**
 
 `src/app/(app)/import/ImportForm.tsx`:
 
@@ -1411,7 +1411,7 @@ export function ImportForm() {
 
 Jeśli przenoszenie pliku między formularzami okaże się kruche, **zamień oba etapy na jeden formularz z polem `intent`** (`sprawdz` / `zatwierdz`) i jedną akcją, która rozgałęzia się na tej wartości. To prostsze i nie wymaga `DataTransfer`. Rozstrzygnij po pierwszym uruchomieniu w przeglądarce i zapisz wybór w komentarzu.
 
-- [ ] **Step 6: Napisz style**
+- [x] **Step 6: Napisz style**
 
 `src/app/(app)/import/import.module.css`:
 
@@ -1550,13 +1550,13 @@ Jeśli przenoszenie pliku między formularzami okaże się kruche, **zamień oba
 .link { color: var(--navy-700); }
 ```
 
-- [ ] **Step 7: Sprawdź w przeglądarce**
+- [x] **Step 7: Sprawdź w przeglądarce**
 
 Zaloguj się jako admin, wejdź na `/import`, pobierz szablon, wypełnij dwa wiersze, wgraj. Podgląd ma pokazać „Do dodania: 2". Zatwierdź — pary pojawiają się na liście. Wgraj plik z pustym nazwiskiem — podgląd pokazuje błąd z numerem wiersza i **nie da się zatwierdzić**.
 
 Jako para rejonowa: `/import` przekierowuje na `/pary`, a w nawigacji nie ma pozycji „Import".
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add -A
@@ -1570,7 +1570,7 @@ git commit -m "feat: add the import view with a preview before saving"
 **Files:**
 - Create: `e2e/export-import.spec.ts`
 
-- [ ] **Step 1: Napisz testy**
+- [x] **Step 1: Napisz testy**
 
 `e2e/export-import.spec.ts`:
 
@@ -1636,14 +1636,14 @@ test('the template downloads for admin', async ({ page }) => {
 });
 ```
 
-- [ ] **Step 2: Uruchom**
+- [x] **Step 2: Uruchom**
 
 Run: `npm run e2e`
 Expected: PASS — 34 z poprzednich planów + 5 nowych
 
 Testy eksportu i importu **nie zmieniają danych**, więc nie psują asercji `300 / 300` w `list.spec.ts`. Testy zapisu przez import zostają w warstwie integracyjnej, gdzie sprzątanie jest tanie i pewne.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A
