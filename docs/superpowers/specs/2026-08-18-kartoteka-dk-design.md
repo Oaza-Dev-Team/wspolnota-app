@@ -104,6 +104,9 @@ Po polsku:
 - **Ścieżki tras** — `/pary`, `/logowanie`, `/rejony`. To zapamiętywalna część adresu,
   którą użytkownik widzi i wysyła dalej. W Next.js katalog trasy **jest** adresem,
   więc `src/app/(app)/pary/` pozostaje polskie mimo reguły o nazwach plików.
+  **Decyzja potwierdzona 18.08.2026 — nie wracamy do niej.** Adres `/pary?card=5`
+  czyta się naturalnie dla polskiego użytkownika, a niespójność ze ścieżką angielską
+  (`?sort=surname`) jest ceną, którą świadomie płacimy.
 - **Kody rekolekcji** — `ONŻ I`, `ORAR II`. To nazwy własne, nie do tłumaczenia.
 
 Historia: kod powstawał początkowo z polskimi identyfikatorami domenowymi
