@@ -5,6 +5,13 @@ import {
 import { prisma } from '@/lib/db';
 import type { SaveInput } from './schema';
 
+export class MissingParish extends Error {
+  constructor(message = 'Nowy krąg wymaga parafii') {
+    super(message);
+    this.name = 'MissingParish';
+  }
+}
+
 export class NotFound extends Error {
   constructor(message = 'Nie znaleziono pary') {
     super(message);
@@ -48,6 +55,14 @@ async function resolveRelations(
   let circleId = c.circleId === null ? null : BigInt(c.circleId);
 
   if (c.newCircle) {
+    // A circle must belong to a parish. When the row does not name one, it
+    // inherits the parish this same save just resolved or created.
+    const circleParishId =
+      c.newCircle.parishId !== null ? BigInt(c.newCircle.parishId) : parishId;
+    if (circleParishId === null) {
+      throw new MissingParish();
+    }
+
     const circle = await tx.circle.upsert({
       where: { regionId_number: { regionId: c.regionId, number: c.newCircle.number } },
       update: {},
@@ -55,7 +70,7 @@ async function resolveRelations(
         regionId: c.regionId,
         number: c.newCircle.number,
         patron: c.newCircle.patron,
-        parishId: BigInt(c.newCircle.parishId),
+        parishId: circleParishId,
       },
     });
     circleId = circle.id;
