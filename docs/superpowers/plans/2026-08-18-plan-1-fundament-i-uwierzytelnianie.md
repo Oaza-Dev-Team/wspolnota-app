@@ -820,11 +820,24 @@ DROP INDEX IF EXISTS "para_rejon_id_idx";
 CREATE INDEX "para_rejon_id_idx" ON "para" ("rejon_id") WHERE "usuniete_at" IS NULL;
 ```
 
-Zastosuj:
+Zastosuj — **i przegeneruj klienta jawnie**:
 
 ```bash
 npx prisma migrate reset --force
+npx prisma generate
 ```
+
+**Dwie pulapki tej komendy.**
+
+Po pierwsze, `migrate dev` i `migrate reset` **nie odswiezaja wygenerowanego klienta**
+w Prismie 7 — `src/generated/prisma/models/` zostaje pusty, a testy wywalaja sie na
+`Cannot read properties of undefined (reading 'upsert')`. `prisma generate` po kazdej
+zmianie schematu, bez wyjatkow.
+
+Po drugie, Prisma 7 **blokuje `migrate reset` uruchamiany przez agenta AI** i zada
+wyraznej zgody uzytkownika. Komenda kasuje baze nieodwracalnie i nie wolno jej
+uruchamiac na produkcji. Po uzyskaniu zgody przekaz ja w zmiennej
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
 
 - [ ] **Step 4: Skonfiguruj testy integracyjne**
 

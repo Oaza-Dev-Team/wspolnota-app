@@ -6,3 +6,94 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum RodzajRekolekcji {
+  ONZ_I
+  ONZ_II
+  ONZ_III
+  ORAR_I
+  ORAR_II
+  PILOTOWANIE
+  ORD
+  INNE
+}
+
+model Rejon {
+  id        Int    @id @db.SmallInt
+  numerRzym String @map("numer_rzym")
+
+  kregi Krag[]
+  pary  Para[]
+
+  @@map("rejon")
+}
+
+model Parafia {
+  id     BigInt @id @default(autoincrement())
+  nazwa  String
+  miasto String
+
+  kregi Krag[]
+  pary  Para[]
+
+  @@unique([nazwa, miasto])
+  @@map("parafia")
+}
+
+model Krag {
+  id        BigInt  @id @default(autoincrement())
+  rejonId   Int     @map("rejon_id") @db.SmallInt
+  numer     Int     @db.SmallInt
+  patron    String?
+  parafiaId BigInt  @map("parafia_id")
+
+  rejon   Rejon   @relation(fields: [rejonId], references: [id])
+  parafia Parafia @relation(fields: [parafiaId], references: [id])
+  pary    Para[]
+
+  @@unique([rejonId, numer])
+  @@map("krag")
+}
+
+model Para {
+  id         BigInt    @id @default(autoincrement())
+  imieZony   String    @map("imie_zony")
+  imieMeza   String    @map("imie_meza")
+  nazwisko   String
+  email      String?
+  telefon    String?
+  rejonId    Int       @map("rejon_id") @db.SmallInt
+  kragId     BigInt?   @map("krag_id")
+  /// Only set when the couple belongs to a parish other than its circle's.
+  /// Effective parish is COALESCE(para.parafia_id, krag.parafia_id) — see spec 4.2.
+  parafiaId  BigInt?   @map("parafia_id")
+  dzieci     String?
+  notatki    String?
+  utworzono  DateTime  @default(now()) @db.Timestamptz(6)
+  zmieniono  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  usunieteAt DateTime? @map("usuniete_at") @db.Timestamptz(6)
+
+  rejon      Rejon        @relation(fields: [rejonId], references: [id])
+  krag       Krag?        @relation(fields: [kragId], references: [id])
+  parafia    Parafia?     @relation(fields: [parafiaId], references: [id])
+  rekolekcje Rekolekcje[]
+
+  @@index([rejonId])
+  @@index([nazwisko])
+  @@map("para")
+}
+
+model Rekolekcje {
+  id      BigInt           @id @default(autoincrement())
+  paraId  BigInt           @map("para_id")
+  rodzaj  RodzajRekolekcji
+  rok     Int              @db.SmallInt
+  miejsce String?
+  nazwa   String?
+
+  para Para @relation(fields: [paraId], references: [id], onDelete: Cascade)
+
+  @@index([paraId])
+  @@index([rodzaj])
+  @@map("rekolekcje")
+}
