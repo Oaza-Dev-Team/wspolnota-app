@@ -864,6 +864,14 @@ wyraznej zgody uzytkownika. Komenda kasuje baze nieodwracalnie i nie wolno jej
 uruchamiac na produkcji. Po uzyskaniu zgody przekaz ja w zmiennej
 `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION`.
 
+**Zasada dla wszystkich testow integracyjnych w tym planie: sprzataj w `afterEach`,
+nie na koncu ciala testu, i odpytuj wylacznie wlasne rekordy po `id`.**
+
+Sprzatanie na koncu testu **nie wykona sie, gdy asercja rzuci** — smieci zostaja w bazie
+i wywracaja pozniejszy test seeda liczacy dokladnie 300 par. Kasowanie po nazwisku tez
+zawodzi: slownik seeda zawiera `Mazurowie`, wiec `deleteMany({ nazwisko: { in: [...] } })`
+skasowalby rekordy seeda, a `findMany` po nazwisku zwrocilby jego pary obok wlasnych.
+
 - [ ] **Step 4: Skonfiguruj testy integracyjne**
 
 `vitest.int.config.mts`:
