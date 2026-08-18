@@ -90,5 +90,11 @@ npm run db:reset
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts`). Ścieżka to
   `prisma → @prisma/config`, czyli devDependency; `@prisma/client` jest czysty.
   **Nie uruchamiaj `npm audit fix --force`** — cofa do Prismy 6 i łamie konfigurację.
+- **`prisma migrate dev` potrafi zawisnąć po zastosowaniu migracji.** Zanim uznasz, że
+  padła, sprawdź `prisma migrate status` — jeśli mówi "up to date", migracja przeszła
+  i wystarczy ubić proces. Wiszący proces trzyma blokadę advisory i zablokuje kolejne
+  migracje.
+- **Kolumny `szukajka` są `GENERATED ALWAYS`** — Postgres je wylicza, aplikacja nigdy
+  nie zapisuje. Pomijaj je w `data` przy tworzeniu i edycji pary, inaczej baza odrzuci zapis.
 - Konfiguracje Vitest mają rozszerzenie `.mts` i używają natywnego
   `resolve.tsconfigPaths` zamiast wtyczki.

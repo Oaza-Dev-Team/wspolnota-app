@@ -33,6 +33,8 @@ model Parafia {
   id     BigInt @id @default(autoincrement())
   nazwa  String
   miasto String
+  /// Generated column; see Para.szukajka.
+  szukajka String?
 
   kregi Krag[]
   pary  Para[]
@@ -47,6 +49,8 @@ model Krag {
   numer     Int     @db.SmallInt
   patron    String?
   parafiaId BigInt  @map("parafia_id")
+  /// Generated column; see Para.szukajka.
+  szukajka  String?
 
   rejon   Rejon   @relation(fields: [rejonId], references: [id])
   parafia Parafia @relation(fields: [parafiaId], references: [id])
@@ -70,6 +74,9 @@ model Para {
   parafiaId  BigInt?   @map("parafia_id")
   dzieci     String?
   notatki    String?
+  /// Generated column: lower-case, unaccented text of the searchable fields.
+  /// Written by Postgres, never by the application — writing to it errors.
+  szukajka   String?
   utworzono  DateTime  @default(now()) @db.Timestamptz(6)
   zmieniono  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
   usunieteAt DateTime? @map("usuniete_at") @db.Timestamptz(6)
