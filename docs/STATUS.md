@@ -1,4 +1,4 @@
-# Stan projektu — 18.08.2026
+# Stan projektu — 19.08.2026
 
 Dokument do wznowienia pracy po przerwie. Aktualizuj przy każdym zatrzymaniu.
 
@@ -12,14 +12,9 @@ lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka
 
 ## Gałąź i commity
 
-**Aktualna gałąź: `plan-3-couple-card`** — drzewo czyste, 2 commity ponad `main`:
+**Aktualna gałąź: `main`** — drzewo czyste, plany 1–5 scalone.
 
-```
-11123e9  feat: add couple and retreat validation schema
-93690db  Add couple write layer with transactional audit
-```
-
-`main` jest **6 commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
+`main` jest **31 commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
 (`github.com/Oaza-Dev-Team/wspolnota-app`). To świadoma decyzja, czeka na Twoją zgodę.
 
 ## Postęp planów
@@ -29,24 +24,23 @@ lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka
 | 1 | fundament, uwierzytelnianie, uprawnienia, seed | ✅ scalony do `main` |
 | 2 | powłoka, lista par, filtry | ✅ scalony do `main` |
 | — | refactor na angielski + squash migracji | ✅ scalony do `main` |
-| **3** | **karta pary i formacja** | **w toku — zadania 1–2 z 9 gotowe** |
-| 4 | eksport CSV/XLSX i import z Excela | niezaplanowany |
-| 5 | rejony, konta rejonów, historia zmian | niezaplanowany |
-| 6 | RODO i lista odbioru | niezaplanowany |
+| 3 | karta pary i formacja | ✅ scalony do `main` |
+| 4 | eksport i import XLSX | ✅ scalony do `main` |
+| 5 | rejony, konta rejonów, historia zmian | ✅ scalony do `main` |
+| **6** | **RODO i lista odbioru** | **niezaplanowany ← TU WZNAWIAMY** |
 
-### Plan 3 — szczegółowo
+### Co działa
 
-Plan: `docs/superpowers/plans/2026-08-18-plan-3-karta-pary.md`
-
-- [x] **Zadanie 1** — schemat walidacji (`src/lib/couples/schema.ts`), 11 testów
-- [x] **Zadanie 2** — warstwa zapisu (`src/lib/couples/save.ts`), 13 testów integracyjnych
-- [ ] **Zadanie 3** — odczyt karty (`src/lib/couples/card.ts`) ← **TU WZNAWIAMY**
-- [ ] Zadanie 4 — server actions
-- [ ] Zadanie 5 — toast
-- [ ] Zadanie 6 — panel karty (`<dialog>`)
-- [ ] Zadanie 7 — sekcja formacji
-- [ ] Zadanie 8 — podpięcie do listy
-- [ ] Zadanie 9 — testy e2e
+- logowanie hasłem, sesje w bazie, limit prób, trzy role
+- lista par z filtrami, wyszukiwaniem bez znaków diakrytycznych, paginacją i kartami
+  poniżej 860 px
+- karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie, audyt
+  w tej samej transakcji
+- eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
+- import XLSX z podglądem przed zapisem i szablonem do pobrania
+- kafelki rejonów ze statystykami, konta rejonów (włącz / wyłącz / zaproś),
+  historia zmian z paginacją
+- strona ustawienia hasła z jednorazowego linku zaproszenia
 
 ## Jak wznowić
 
@@ -71,11 +65,11 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 ## Weryfikacja
 
 ```bash
-npm test          # 96 testów jednostkowych
-npm run test:int  # 63 integracyjne (wymagają bazy)
+npm test          # 116 testów jednostkowych
+npm run test:int  # 130 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 22 testy Playwright, na buildzie produkcyjnym
+npm run e2e       # 54 testy Playwright, na buildzie produkcyjnym
 ```
 
 ## Decyzje, do których nie wracamy
@@ -90,9 +84,16 @@ npm run e2e       # 22 testy Playwright, na buildzie produkcyjnym
 - **Nazewnictwo:** po polsku wyłącznie to, co czyta człowiek — interfejs, formy odmiany,
   ścieżki tras (`/pary`), kody rekolekcji. Reszta po angielsku, łącznie ze schematem bazy.
 - **Ścieżki tras zostają polskie** — potwierdzone, nie otwieramy ponownie.
-- **Logowanie Google** — rozważane, decyzja odłożona do Planu 5 (spec §6.1). Do tego
-  czasu **nie budujemy przepływu zaproszeń ani resetu hasła**, bo to jedyna część,
-  która przy zmianie decyzji byłaby stratą.
+- **Import tylko XLSX.** CSV wypadł z zakresu 19.08.2026 na Twoją prośbę. Punkty
+  listy odbioru mówiące o CSV są nieaktualne.
+- **Zaproszenia bez SMTP.** „Zaproś" generuje jednorazowy link ważny 7 dni, który
+  administrator kopiuje i przekazuje sam. Poczta nie jest w tym projekcie skonfigurowana,
+  a przy piętnastu kontach zakładanych raz serwer poczty kosztowałby więcej, niż daje.
+  Odwracalne: gdy SMTP się pojawi, wysyłka to jedno wywołanie w tej samej akcji.
+- **Logowanie Google — nadal odłożone.** Spec §6.1 wyznaczał Plan 5 jako moment decyzji,
+  ale wariant z linkiem zaproszenia działa tak samo przy haśle i przy Google, więc
+  odłożenie nic nie kosztuje. **Potrzebna Twoja wiedza:** czy te piętnaście osób ma
+  konta Google?
 
 ## Pułapki tego środowiska
 
@@ -104,15 +105,20 @@ npm run e2e       # 22 testy Playwright, na buildzie produkcyjnym
 - **`tsx` nie ładuje `.env`** — skrypty zaczynają się od `import 'dotenv/config'`.
 - **Kolumny `search_text` są `GENERATED ALWAYS`** — nigdy nie wymieniaj ich w `data`.
 - **E2E tylko na buildzie produkcyjnym** — na `next dev` kompilacja tras na żądanie
-  daje losowo padające testy.
+  daje losowo padające testy. Uruchamiaj `npm run e2e`, nie `npx playwright test`:
+  bez `e2e/prepare.ts` limiter prób logowania zablokuje konto testowe.
+- **Testy integracyjne muszą zawężać zapytania do własnych danych.** Dwa razy złapaliśmy
+  test, który liczył wiersze cudzej roboty albo kasował je przy sprzątaniu.
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts` przez `prisma` → devDependency).
   **Nie naprawiaj** — `audit fix --force` cofa do Prismy 6.
 
 ## Otwarte pytania do Ciebie
 
-1. **Push na GitHuba** — 6 commitów czeka lokalnie. Repozytorium jest w organizacji,
+1. **Push na GitHuba** — 31 commitów czeka lokalnie. Repozytorium jest w organizacji,
    więc push je upublicznia jej członkom.
-2. **Format Excela do importu** — zdefiniowany w spec §11 (szablon = układ eksportu).
-   Przy Planie 4 przyda się próbka Twoich rzeczywistych danych.
+2. **Próbka rzeczywistych danych** — układ arkusza jest ustalony (szablon do pobrania
+   pod `/eksport/szablon`), ale warto go skonfrontować z Twoim prawdziwym plikiem,
+   zanim zrobimy import produkcyjny.
 3. **Hosting** — ustalone „VPS w UE + Docker", ale bez konkretów. Do rozstrzygnięcia
-   przed Planem 6.
+   przy Planie 6 (klauzula informacyjna musi wskazać administratora danych).
+4. **Logowanie Google** — patrz wyżej.
