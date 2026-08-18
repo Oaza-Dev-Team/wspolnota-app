@@ -25,19 +25,19 @@ test('redirects an anonymous visitor to the login screen', async ({ page }) => {
 test('admin signs in and sees the whole community', async ({ page }) => {
   await zaloguj(page, 'admin@example.pl');
   await expect(page).toHaveURL(/\/pary$/);
-  await expect(page.getByText('cała wspólnota')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Pary wspólnoty' })).toBeVisible();
 });
 
 test('a region account is scoped to its own region', async ({ page }) => {
   await zaloguj(page, 'rejon7@example.pl');
   await expect(page).toHaveURL(/\/pary$/);
-  await expect(page.getByText('rejon VII')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Rejon VII' })).toBeVisible();
 });
 
 test('the moderator signs in with the view-only role', async ({ page }) => {
   await zaloguj(page, 'moderator@example.pl');
   await expect(page).toHaveURL(/\/pary$/);
-  await expect(page.getByText('podglad')).toBeVisible();
+  await expect(page.getByText('Moderator — podgląd')).toBeVisible();
 });
 
 test('rejects a wrong password without revealing whether the account exists', async ({ page }) => {
