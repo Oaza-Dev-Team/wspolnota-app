@@ -1,4 +1,7 @@
 .container {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r-12);
@@ -72,6 +75,9 @@
 }
 
 .empty {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
   padding: 28px 18px;
   font-size: 14px;
   color: var(--text-muted);

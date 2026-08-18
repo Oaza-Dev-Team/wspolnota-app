@@ -16,11 +16,11 @@ export default async function AccountsPage() {
   return (
     <>
       <ViewHeader title="Konta rejonów" subtitle="Dostępy par rejonowych i moderatora" />
-      <div className={style.container}>
+      <ul className={style.container} aria-label="Konta">
         {rows.map((row) => (
           <AccountRow key={row.id} row={row} />
         ))}
-      </div>
+      </ul>
     </>
   );
 }

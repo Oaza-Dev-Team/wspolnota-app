@@ -38,7 +38,7 @@ export function AccountRow({ row }: { row: Row }) {
   const error = toggleState.error ?? inviteState.error;
 
   return (
-    <div className={style.row}>
+    <li className={style.row}>
       <span
         className={style.badge}
         style={{ '--region-color': color } as React.CSSProperties}
@@ -86,6 +86,6 @@ export function AccountRow({ row }: { row: Row }) {
           <code className={style.inviteLink}>{inviteState.inviteLink}</code>
         </p>
       )}
-    </div>
+    </li>
   );
 }

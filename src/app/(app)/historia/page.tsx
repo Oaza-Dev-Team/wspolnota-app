@@ -41,20 +41,20 @@ export default async function AuditPage({
         subtitle={`Kto, co i kiedy — ${plural(total, ENTRIES)}`}
       />
 
-      <div className={style.container}>
-        {rows.length === 0 ? (
-          <p className={style.empty}>Ta strona historii jest pusta.</p>
-        ) : (
-          rows.map((r) => (
-            <div key={r.id} className={style.entry}>
+      {rows.length === 0 ? (
+        <p className={style.empty}>Ta strona historii jest pusta.</p>
+      ) : (
+        <ul className={style.container} aria-label="Wpisy historii">
+          {rows.map((r) => (
+            <li key={r.id} className={style.entry}>
               <span className={style.at}>{r.at}</span>
               <span className={`${style.kind} ${style[r.kind]}`}>{KIND_LABEL[r.kind]}</span>
               <span className={style.description}>{r.description}</span>
               <span className={style.author}>{r.author}</span>
-            </div>
-          ))
-        )}
-      </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {pages > 1 && (
         <nav className={style.pagination} aria-label="Strony historii">
