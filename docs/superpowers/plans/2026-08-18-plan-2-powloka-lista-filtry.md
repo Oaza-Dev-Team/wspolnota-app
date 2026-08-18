@@ -1,5 +1,10 @@
 # Kartoteka DK — Plan 2: Powłoka, lista par, filtry
 
+> **Uwaga: ten plan opisuje stan sprzed refactoru na angielski.** Identyfikatory,
+> nazwy plikow i schemat bazy zostaly pozniej przemianowane — patrz spec §3.
+> Plan zostaje jako zapis tego, co i w jakiej kolejnosci zbudowano; nie odtwarzaj
+> z niego nazw.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Zastąpić zaślepkę `/pary` prawdziwym widokiem kartoteki: powłoka z nawigacją zależną od roli, lista par jako tabela na desktopie i karty na mobile, sortowanie, paginacja i kaskada filtrów — wszystko ze stanem w URL.

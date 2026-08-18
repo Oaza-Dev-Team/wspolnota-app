@@ -18,7 +18,7 @@ gdańska): ~300 par w **11 rejonach**, ~15 kont edytujących, 3 role.
 **Uwaga:** handoff w `docs/handoff/` opisuje 12 rejonów i tyle pokazują zrzuty —
 to stan sprzed weryfikacji u zamawiającego. Rejonów jest **11** (I–XI). Handoffu nie
 poprawiamy: to otrzymany brief. Liczba rejonów nie jest w kodzie literałem — wynika
-z `LICZBA_REJONOW` w `src/lib/domena/rejony.ts`.
+z `REGION_COUNT` w `src/lib/domain/regions.ts`.
 
 **Zanim cokolwiek napiszesz, przeczytaj:**
 
@@ -41,7 +41,7 @@ PostgreSQL 16 · Prisma 7 · Zod 4 · CSS Modules · Vitest 4 · Playwright
 
 **Bezpieczeństwo.** Żadna server action ani route handler nie dotyka Prismy przed
 `requireUser()`. Layout nie chroni server actions — to publiczne endpointy POST.
-Każde zapytanie listy, eksportu i statystyk wstrzykuje `zakresListy(user)`.
+Każde zapytanie listy, eksportu i statystyk wstrzykuje `listScope(user)`.
 Reguły uprawnień żyją wyłącznie w `src/lib/auth/permissions.ts`.
 
 **Style.** Bez MUI i bez Tailwinda. Wyłącznie CSS Modules + custom properties
@@ -56,12 +56,17 @@ Audyt zapisuje się w **tej samej transakcji** co zmiana.
 
 ## Język
 
-- **Identyfikatory domenowe po polsku:** `para`, `rejon`, `krag`, `rekolekcje`, `audyt`
-- **Identyfikatory techniczne po angielsku:** `requireUser`, `parseFilters`
-- **Komentarze, nazwy testów i commity po angielsku**
-- **Cały interfejs po polsku**, `lang="pl"` na `<html>`
-- Liczebniki wymagają odmiany (`odmiana()` z `src/lib/pl/`), sortowanie przez
-  `localeCompare(…, 'pl')`, w bazie kolacja `pl-PL-x-icu`
+**Po polsku jest tylko to, co czyta człowiek. Reszta po angielsku.**
+
+Angielski: identyfikatory, nazwy plików, klasy CSS, tokeny, schemat bazy (modele
+Prismy oraz tabele i kolumny), komentarze, nazwy testów, commity, parametry zapytania
+w URL.
+
+Polski: teksty interfejsu, formy odmiany liczebników, **ścieżki tras** (`/pary`,
+`/logowanie` — to adres, który widzi użytkownik) oraz kody rekolekcji (`ONŻ I`).
+
+Liczebniki odmieniaj przez `plural()` z `src/lib/pl/`, sortuj przez
+`localeCompare(…, 'pl')`; w bazie działa kolacja `pl-PL-x-icu`.
 
 ## Komendy
 
@@ -94,7 +99,7 @@ npm run db:reset
   padła, sprawdź `prisma migrate status` — jeśli mówi "up to date", migracja przeszła
   i wystarczy ubić proces. Wiszący proces trzyma blokadę advisory i zablokuje kolejne
   migracje.
-- **Kolumny `szukajka` są `GENERATED ALWAYS`** — Postgres je wylicza, aplikacja nigdy
+- **Kolumny `search_text` są `GENERATED ALWAYS`** — Postgres je wylicza, aplikacja nigdy
   nie zapisuje. Pomijaj je w `data` przy tworzeniu i edycji pary, inaczej baza odrzuci zapis.
 - Konfiguracje Vitest mają rozszerzenie `.mts` i używają natywnego
   `resolve.tsconfigPaths` zamiast wtyczki.

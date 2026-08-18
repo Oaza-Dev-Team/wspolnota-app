@@ -83,13 +83,32 @@ do jednego `tokens.css` jako custom properties i przepisują się 1:1.
 
 ## 3. Konwencja nazewnicza
 
-- **Identyfikatory domenowe po polsku** — `para`, `rejon`, `krag`, `rekolekcje`,
-  `audyt`, `nazwisko`. Schemat w handoffie jest polski; tłumaczenie wprowadzałoby
-  warstwę pomyłek, a `rejon` i `krąg` nie mają sensownych odpowiedników.
-- **Identyfikatory techniczne po angielsku** — `requireUser`, `SessionStore`,
-  `parseFilters`, `withTransaction`.
-- **Komentarze, nazwy testów i commity po angielsku.**
-- **Cały interfejs po polsku.** `lang="pl"` na `<html>`.
+**Reguła: po polsku jest tylko to, co czyta człowiek. Reszta po angielsku.**
+
+Po angielsku:
+
+- **Identyfikatory** — funkcje, typy, zmienne, stałe: `queryCouples`, `listScope`,
+  `CoupleRow`, `REGION_COUNT`.
+- **Nazwy plików i katalogów** — `src/lib/couples/queries.ts`, `CoupleTable.tsx`.
+- **Nazwy klas CSS i tokenów** — `.sortLink`, `--region-3`, `--shadow-drawer`.
+- **Schemat bazy** — modele i pola Prismy oraz fizyczne tabele i kolumny:
+  `couple.surname`, `retreat.kind`, `account.password_hash`.
+- **Komentarze, nazwy testów, komunikaty commitów.**
+- **Parametry zapytania w URL** — `?region=3&formation=ONZ_I&sort=surname`.
+  To hydraulika; trzymanie ich po polsku wymuszałoby tabelę tłumaczeń w parserze filtrów.
+
+Po polsku:
+
+- **Cały interfejs** — etykiety, komunikaty, teksty błędów. `lang="pl"` na `<html>`.
+- **Formy odmiany liczebników** — `COUPLES = ['para', 'pary', 'par']`.
+- **Ścieżki tras** — `/pary`, `/logowanie`, `/rejony`. To zapamiętywalna część adresu,
+  którą użytkownik widzi i wysyła dalej. W Next.js katalog trasy **jest** adresem,
+  więc `src/app/(app)/pary/` pozostaje polskie mimo reguły o nazwach plików.
+- **Kody rekolekcji** — `ONŻ I`, `ORAR II`. To nazwy własne, nie do tłumaczenia.
+
+Historia: kod powstawał początkowo z polskimi identyfikatorami domenowymi
+(`para`, `rejon`, `nazwisko`). Refactor na angielski objął całość, łącznie ze schematem
+bazy, i zesquashował migracje do jednej. Plany 1 i 2 opisują stan sprzed refactoru.
 
 ---
 

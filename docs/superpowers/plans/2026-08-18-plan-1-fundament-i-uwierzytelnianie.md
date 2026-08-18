@@ -1,4 +1,9 @@
-﻿# Kartoteka DK — Plan 1: Fundament i uwierzytelnianie
+# Kartoteka DK — Plan 1: Fundament i uwierzytelnianie
+
+> **Uwaga: ten plan opisuje stan sprzed refactoru na angielski.** Identyfikatory,
+> nazwy plikow i schemat bazy zostaly pozniej przemianowane — patrz spec §3.
+> Plan zostaje jako zapis tego, co i w jakiej kolejnosci zbudowano; nie odtwarzaj
+> z niego nazw.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
