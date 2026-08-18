@@ -1093,8 +1093,9 @@ Najtrudniejsze zadanie planu. Tu mieszka pułapka z parafią efektywną (spec §
 zawężenie do rejonu musi być strukturalne.
 
 **Files:**
-- Create: `src/lib/pary/zapytania.ts`
-- Test: `src/lib/pary/zapytania.int.test.ts`
+- Create: `prisma/migrations/*_szukajka/migration.sql`, `src/lib/pary/szukanie.ts`, `src/lib/pary/zapytania.ts`
+- Modify: `prisma/schema.prisma`
+- Test: `src/lib/pary/szukanie.test.ts`, `src/lib/pary/zapytania.int.test.ts`
 
 **Interfaces:**
 - Consumes: `zakresListy` z `@/lib/auth/permissions`, `Filtry` (Task 4), `prisma`
@@ -1103,7 +1104,133 @@ zawężenie do rejonu musi być strukturalne.
   - `queryPary(u, f): Promise<{ wiersze: WierszPary[]; znalezione: number; wszystkie: number }>`
   - `opcjeFiltrow(u, f): Promise<{ parafie: { id: bigint; etykieta: string }[]; kregi: { id: bigint; etykieta: string }[] }>`
 
-- [ ] **Step 1: Napisz test integracyjny**
+- [ ] **Step 1: Dodaj kolumny wyszukiwania**
+
+`mode: 'insensitive'` w Prismie to `ILIKE` — ignoruje wielkosc liter, ale **nie znaki
+diakrytyczne**. „baginscy" nie znajdzie „Baginscy" z ogonkami, a uzytkownicy beda
+wpisywac nazwiska bez nich. Spec §8 wymaga tego wprost.
+
+Rozwiazanie: kolumna generowana z tekstem pozbawionym ogonkow, po jednej na tabele,
+ktorej pola przeszukujemy. Kolumna generowana wymaga funkcji `IMMUTABLE`, a `unaccent`
+taka nie jest — stad opakowanie. To znany haczyk Postgresa, nie nasz wymysl.
+
+```bash
+npx prisma migrate dev --create-only --name szukajka
+```
+
+Wypelnij `migration.sql`:
+
+```sql
+-- unaccent() is declared STABLE because it depends on a dictionary that could
+-- in principle be changed. Generated columns require IMMUTABLE, so we pin the
+-- dictionary and wrap it. This is the standard Postgres workaround.
+CREATE OR REPLACE FUNCTION immutable_unaccent(text)
+  RETURNS text
+  LANGUAGE sql
+  IMMUTABLE
+  PARALLEL SAFE
+  STRICT
+AS $$ SELECT public.unaccent('public.unaccent', $1) $$;
+
+ALTER TABLE "para" ADD COLUMN "szukajka" text
+  GENERATED ALWAYS AS (
+    immutable_unaccent(lower(
+      coalesce("nazwisko", '') || ' ' ||
+      coalesce("imie_zony", '') || ' ' ||
+      coalesce("imie_meza", '') || ' ' ||
+      coalesce("email", '') || ' ' ||
+      coalesce("telefon", '')
+    ))
+  ) STORED;
+
+ALTER TABLE "parafia" ADD COLUMN "szukajka" text
+  GENERATED ALWAYS AS (
+    immutable_unaccent(lower(coalesce("nazwa", '') || ' ' || coalesce("miasto", '')))
+  ) STORED;
+
+ALTER TABLE "krag" ADD COLUMN "szukajka" text
+  GENERATED ALWAYS AS (immutable_unaccent(lower(coalesce("patron", '')))) STORED;
+
+-- Substring search cannot use a plain btree index; trigram can.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX "para_szukajka_idx" ON "para" USING gin ("szukajka" gin_trgm_ops);
+```
+
+Dopisz kolumny do `prisma/schema.prisma` — Prisma nie tworzy kolumn wyliczanych,
+ale musi o nich wiedziec, zeby dalo sie po nich filtrowac:
+
+```prisma
+model Para {
+  // …
+  /// Generated column: lower-case, unaccented text of the searchable fields.
+  /// Written by Postgres, never by the application.
+  szukajka String?
+}
+```
+
+To samo w `Parafia` i `Krag`. Zastosuj:
+
+```bash
+npx prisma migrate dev
+npx prisma generate
+```
+
+**Uwaga:** kolumna jest `GENERATED ALWAYS` — proba zapisu do niej konczy sie bledem
+bazy. Warstwa zapisu z Planu 3 nie moze jej dotykac, wiec pomijaj ja w `select`
+i `data` przy tworzeniu i edycji pary.
+
+- [ ] **Step 2: Napisz i przetestuj normalizacje zapytania**
+
+Zapytanie uzytkownika trzeba pozbawic ogonkow dokladnie tak samo jak kolumne.
+
+`src/lib/pary/szukanie.test.ts`:
+
+```ts
+import { describe, expect, it } from 'vitest';
+import { bezOgonkow } from './szukanie';
+
+describe('bezOgonkow', () => {
+  it('strips Polish diacritics and lowercases', () => {
+    expect(bezOgonkow('Bagińscy')).toBe('baginscy');
+    expect(bezOgonkow('ŻÓŁĆ')).toBe('zolc');
+  });
+
+  it('handles every Polish diacritic', () => {
+    expect(bezOgonkow('ąćęłńóśźż')).toBe('acelnoszz');
+  });
+
+  it('leaves plain text alone', () => {
+    expect(bezOgonkow('Kowalscy')).toBe('kowalscy');
+  });
+
+  it('handles the empty string', () => {
+    expect(bezOgonkow('')).toBe('');
+  });
+});
+```
+
+`src/lib/pary/szukanie.ts`:
+
+```ts
+/**
+ * Mirrors the `szukajka` generated column: lower case, no diacritics. Must stay
+ * in step with immutable_unaccent(lower(…)) in the migration, or a query will
+ * never match the column it is compared against.
+ */
+export function bezOgonkow(tekst: string): string {
+  return tekst
+    .toLowerCase()
+    // l-stroke has no Unicode decomposition, so it must go before NFD.
+    .replace(/\u0142/g, 'l')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+```
+
+Run: `npm test -- szukanie`
+Expected: PASS
+
+- [ ] **Step 3: Napisz test integracyjny warstwy zapytan**
 
 `src/lib/pary/zapytania.int.test.ts`:
 
@@ -1259,12 +1386,12 @@ describe('opcjeFiltrow', () => {
 });
 ```
 
-- [ ] **Step 2: Uruchom test — musi się wywalić**
+- [ ] **Step 4: Uruchom test — musi sie wywalic**
 
 Run: `npm run test:int -- zapytania`
 Expected: FAIL — brak modułu
 
-- [ ] **Step 3: Zaimplementuj**
+- [ ] **Step 5: Zaimplementuj**
 
 `src/lib/pary/zapytania.ts`:
 
@@ -1274,6 +1401,7 @@ import type { RodzajRekolekcji } from '@/generated/prisma/enums';
 import { type Uzytkownik, zakresListy } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 import { type Filtry, ROZMIAR_STRONY } from './filtry';
+import { bezOgonkow } from './szukanie';
 
 export type WierszPary = {
   id: bigint;
@@ -1314,19 +1442,17 @@ function warunekFormacji(f: Filtry['formacja']): Prisma.ParaWhereInput {
 
 function warunekSzukania(q: string): Prisma.ParaWhereInput {
   if (!q) return {};
-  // `mode: 'insensitive'` covers case; the unaccent extension is applied through
-  // a generated column would be neater, but for 300 rows OR-ing the columns is
-  // both simpler and fast enough.
-  const zawiera = { contains: q, mode: 'insensitive' as const };
+  // Compared against the generated `szukajka` columns, which Postgres keeps
+  // lower-cased and unaccented. Plain `contains` suffices: both sides of the
+  // comparison have already been normalised the same way.
+  const zawiera = { contains: bezOgonkow(q) };
   return {
     OR: [
-      { nazwisko: zawiera },
-      { imieZony: zawiera },
-      { imieMeza: zawiera },
-      { email: zawiera },
-      { telefon: zawiera },
-      { parafia: { OR: [{ nazwa: zawiera }, { miasto: zawiera }] } },
-      { krag: { patron: zawiera } },
+      { szukajka: zawiera },
+      { parafia: { szukajka: zawiera } },
+      { krag: { szukajka: zawiera } },
+      // A couple with no parish of its own is searchable through its circle's.
+      { parafiaId: null, krag: { parafia: { szukajka: zawiera } } },
     ],
   };
 }
@@ -1474,20 +1600,12 @@ export async function opcjeFiltrow(
 }
 ```
 
-- [ ] **Step 4: Uruchom test — musi przejść**
+- [ ] **Step 6: Uruchom test — musi przejsc**
 
 Run: `npm run test:int -- zapytania`
 Expected: PASS
 
-Jeśli test „matches without Polish diacritics" zawiedzie: `mode: 'insensitive'` w Prismie
-załatwia wielkość liter, ale **nie** znaki diakrytyczne. Wtedy zamień `warunekSzukania`
-na zapytanie surowe wykorzystujące `unaccent` (rozszerzenie jest już zainstalowane
-migracją z Planu 1) albo dodaj kolumnę generowaną `nazwisko_bez_ogonkow`. Rozstrzygnij
-świadomie i zapisz w `DECISIONS.md` — punkt „wyszukiwanie nieczułe na wielkość liter"
-z listy odbioru mówi tylko o wielkości liter, ale zrzut ekranu pokazuje polskie nazwiska
-i użytkownicy będą wpisywać je bez ogonków.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add -A
