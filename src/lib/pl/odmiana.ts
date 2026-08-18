@@ -29,3 +29,6 @@ export const KREGI: FormyOdmiany = ['krąg', 'kręgi', 'kręgów'];
 export const PARAFIE: FormyOdmiany = ['parafia', 'parafie', 'parafii'];
 export const WPISY: FormyOdmiany = ['wpis', 'wpisy', 'wpisów'];
 export const REKORDY: FormyOdmiany = ['rekord', 'rekordy', 'rekordów'];
+
+// Locative case: used only in the list subtitle, "… w N rejonach".
+export const REJONY: FormyOdmiany = ['rejonie', 'rejonach', 'rejonach'];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { KREGI, PARAFIE, PARY, odmiana } from './odmiana';
+import { KREGI, PARAFIE, PARY, REJONY, odmiana } from './odmiana';
 
 describe('odmiana', () => {
   it('uses the singular form for exactly one', () => {
@@ -29,6 +29,11 @@ describe('odmiana', () => {
   it('returns to the plural form above the exception', () => {
     expect(odmiana(22, PARY)).toBe('22 pary');
     expect(odmiana(102, PARY)).toBe('102 pary');
+  });
+
+  it('inflects regions in the locative used by the list subtitle', () => {
+    expect(odmiana(1, REJONY)).toBe('1 rejonie');
+    expect(odmiana(11, REJONY)).toBe('11 rejonach');
   });
 
   it('inflects circles and parishes', () => {
