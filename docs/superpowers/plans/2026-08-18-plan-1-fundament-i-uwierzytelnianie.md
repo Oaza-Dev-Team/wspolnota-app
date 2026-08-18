@@ -577,9 +577,14 @@ Expected: `accepting connections`
 - [ ] **Step 4: Zainstaluj Prismę i utwórz konfigurację**
 
 ```bash
-npm i -D prisma@7 dotenv
-npm i @prisma/client@7
+npm i -D prisma@7 dotenv tsx
+npm i @prisma/client@7 @prisma/adapter-pg@7
 ```
+
+**Prisma 7 wymaga sterownika (driver adapter).** To najwieksza zmiana wzgledem
+wersji 6: `new PrismaClient()` bez argumentu nie kompiluje sie (`TS2554`).
+URL w `prisma.config.ts` obsluguje wylacznie CLI — migracje i `generate`.
+Klient w runtime dostaje polaczenie osobno, przez `PrismaPg`.
 
 `prisma.config.ts` — **w Prismie 7 URL bazy mieszka tutaj, nie w bloku `datasource`**:
 
@@ -629,13 +634,23 @@ npm i -D tsx
 `src/lib/db.ts`:
 
 ```ts
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@/generated/prisma/client';
+
+// Prisma 7 makes driver adapters mandatory. The datasource URL in
+// prisma.config.ts serves the CLI (migrations, generate); the runtime client
+// needs its own connection, passed here.
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('Brak zmiennej DATABASE_URL — skopiuj .env.example do .env');
+}
 
 // Next.js hot-reloads modules in development, which would otherwise open a
 // new connection pool on every edit until Postgres refuses them.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+export const prisma =
+  globalForPrisma.prisma ?? new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
 
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
@@ -649,7 +664,17 @@ npx prisma generate
 npm run build
 ```
 
-Expected: `Generated Prisma Client (7.9.x) to ./src/generated/prisma`, build bez błędów
+Expected: `Generated Prisma Client (7.9.x) to ./src/generated/prisma`, build bez bledow
+
+**`npm audit` zglosi tu 3 podatnosci "high" — nie naprawiaj ich.** Chodzi o
+`deepmerge-ts` (wyczerpanie stosu przy scalaniu rekurencyjnych grafow obiektow),
+ktory wchodzi wylacznie sciezka `prisma` -> `@prisma/config` -> `deepmerge-ts`.
+`prisma` to devDependency (CLI), a `@prisma/client` — jedyna czesc trafiajaca do
+produkcji — tej zaleznosci nie ma. Zweryfikuj sam: `npm ls deepmerge-ts --all`.
+
+`npm audit fix --force` cofnalby projekt do `prisma@6.12.0`, co lamie cala
+konfiguracje Prismy 7 z Kroku 4. Wektorem jest plik konfiguracyjny, ktory piszemy
+sami — nie dane od uzytkownika.
 
 - [ ] **Step 8: Commit**
 
@@ -2382,20 +2407,19 @@ export const DZIECI = [
 `prisma/seed.ts`:
 
 ```ts
-import { PrismaClient } from '../src/generated/prisma/client';
-import type { RodzajRekolekcji } from '../src/generated/prisma/enums';
-import { zahashuj } from '../src/lib/auth/hasla';
-// Relative imports, not the "@/" alias: this script runs under tsx, outside
-// Next.js. The domain modules only import the Prisma enums as *types*, which
-// are erased at runtime, so nothing here needs alias resolution.
-import { STOPNIE } from '../src/lib/domena/rekolekcje';
-import { ROMAN } from '../src/lib/domena/rejony';
+// Only Next.js loads .env automatically. This script runs under tsx, so it
+// must load the environment itself — without this the client throws on the
+// missing DATABASE_URL. Keep it first: db.ts reads the variable at import time.
+import 'dotenv/config';
+import type { RodzajRekolekcji } from '@/generated/prisma/enums';
+import { zahashuj } from '@/lib/auth/hasla';
+import { prisma } from '@/lib/db';
+import { STOPNIE } from '@/lib/domena/rekolekcje';
+import { ROMAN } from '@/lib/domena/rejony';
 import {
   DZIECI, IMIONA_MESKIE, IMIONA_ZENSKIE, MIEJSCA_REKOLEKCJI,
   NAZWISKA, PARAFIE, PATRONI,
 } from './seed/dane';
-
-const prisma = new PrismaClient();
 
 const LICZBA_PAR = 300;
 const HASLO_TESTOWE = 'kartoteka123';
@@ -2541,6 +2565,8 @@ async function main() {
   console.log(`Gotowe. Hasło do wszystkich kont testowych: ${HASLO_TESTOWE}`);
 }
 
+// No top-level await: the project has no "type": "module", so tsx loads .ts
+// files as CommonJS and top-level await fails with ERR_REQUIRE_ASYNC_MODULE.
 main()
   .catch((e) => { console.error(e); process.exit(1); })
   .finally(() => prisma.$disconnect());
