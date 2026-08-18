@@ -21,6 +21,13 @@
   outline: none;
 }
 
+/* The soft ring reads as "active" for the mouse; the keyboard needs an actual
+   outline, and this rule has to outrank the :focus above to get one. */
+.control:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
 .search {
   min-width: 100%;
   font-size: 15px;

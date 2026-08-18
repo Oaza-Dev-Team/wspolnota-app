@@ -30,7 +30,7 @@ export function Shell({
 }) {
   return (
     <div className={style.app}>
-      <nav className={style.sidebar} aria-label="Nawigacja główna">
+      <aside className={style.sidebar}>
         <div className={style.brand}>
           <span className={style.monogram} aria-hidden="true">ŚŻ</span>
           <span>
@@ -40,7 +40,9 @@ export function Shell({
           </span>
         </div>
 
-        <Nav items={navItems(user)} counts={counts} />
+        <nav aria-label="Nawigacja główna">
+          <Nav items={navItems(user)} counts={counts} />
+        </nav>
 
         <div className={style.footer}>
           <div className={style.account}>
@@ -58,7 +60,7 @@ export function Shell({
             Informacja o danych
           </Link>
         </div>
-      </nav>
+      </aside>
 
       <main className={style.main}>{children}</main>
     </div>

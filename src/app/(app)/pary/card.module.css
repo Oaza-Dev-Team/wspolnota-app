@@ -55,8 +55,8 @@
 }
 
 .close {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   flex: none;
   border: 1px solid var(--border-input);
   border-radius: var(--r-7);
@@ -112,12 +112,20 @@
   font-size: 14px;
   color: var(--text);
   width: 100%;
+  min-height: 44px;
 }
 
 .control:focus {
   border-color: var(--blue-500);
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+/* The soft ring reads as "active" for the mouse; the keyboard needs an actual
+   outline, and this rule has to outrank the :focus above to get one. */
+.control:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
 }
 
 .control:disabled {
@@ -222,7 +230,7 @@
   border-radius: var(--r-7);
   padding: 8px 10px;
   font-size: 13px;
-  min-height: 38px;
+  min-height: 44px;
   background: var(--surface);
   color: var(--text);
 }
@@ -233,8 +241,8 @@
 .entryName { flex: 1 1 100%; }
 
 .entryRemove {
-  width: 34px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   flex: none;
   border: 1px solid var(--divider);
   border-radius: var(--r-7);
@@ -263,7 +271,7 @@
   font-size: 13px;
   font-weight: 600;
   color: var(--navy-700);
-  min-height: 42px;
+  min-height: 44px;
   cursor: pointer;
 }
 

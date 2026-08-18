@@ -99,7 +99,7 @@
   border: 1px solid var(--border-input);
   border-radius: var(--r-8);
   padding: 9px 14px;
-  min-height: 40px;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
 }
