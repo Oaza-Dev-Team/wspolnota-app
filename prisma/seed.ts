@@ -6,7 +6,7 @@ import type { RodzajRekolekcji } from '@/generated/prisma/enums';
 import { zahashuj } from '@/lib/auth/hasla';
 import { prisma } from '@/lib/db';
 import { STOPNIE } from '@/lib/domena/rekolekcje';
-import { ROMAN } from '@/lib/domena/rejony';
+import { LICZBA_REJONOW, ROMAN } from '@/lib/domena/rejony';
 import {
   DZIECI, IMIONA_MESKIE, IMIONA_ZENSKIE, MIEJSCA_REKOLEKCJI,
   NAZWISKA, PARAFIE, PATRONI,
@@ -78,7 +78,7 @@ async function main() {
   await prisma.rejon.deleteMany();
 
   console.log('Rejony...');
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= LICZBA_REJONOW; i++) {
     await prisma.rejon.create({ data: { id: i, numerRzym: ROMAN[i - 1]! } });
   }
 
@@ -90,7 +90,7 @@ async function main() {
 
   console.log('Kregi...');
   const kregi = [];
-  for (let rejonId = 1; rejonId <= 12; rejonId++) {
+  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
     const ile = 4 + Math.floor(rnd() * 3); // 4-6 circles per region
     for (let numer = 1; numer <= ile; numer++) {
       kregi.push(await prisma.krag.create({
@@ -117,10 +117,10 @@ async function main() {
       rola: 'podglad', hashHasla: hash, status: 'aktywne',
     },
   });
-  for (let rejonId = 1; rejonId <= 12; rejonId++) {
-    // Region XII stays unstaffed, so the "oczekuje" status and the
+  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
+    // The last region stays unstaffed, so the "oczekuje" status and the
     // "Do obsadzenia" tile both have data behind them.
-    const oczekuje = rejonId === 12;
+    const oczekuje = rejonId === LICZBA_REJONOW;
     await prisma.konto.create({
       data: {
         email: `rejon${rejonId}@example.pl`,

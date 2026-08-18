@@ -13,7 +13,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Kartoteka DK
 
 Kartoteka małżeństw wspólnoty Domowego Kościoła (Ruch Światło-Życie, archidiecezja
-gdańska): ~300 par w 12 rejonach, ~15 kont edytujących, 3 role.
+gdańska): ~300 par w **11 rejonach**, ~15 kont edytujących, 3 role.
+
+**Uwaga:** handoff w `docs/handoff/` opisuje 12 rejonów i tyle pokazują zrzuty —
+to stan sprzed weryfikacji u zamawiającego. Rejonów jest **11** (I–XI). Handoffu nie
+poprawiamy: to otrzymany brief. Liczba rejonów nie jest w kodzie literałem — wynika
+z `LICZBA_REJONOW` w `src/lib/domena/rejony.ts`.
 
 **Zanim cokolwiek napiszesz, przeczytaj:**
 

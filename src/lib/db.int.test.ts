@@ -37,7 +37,8 @@ async function dodajPare(nazwisko: string, rejonId = 1) {
 describe('schema', () => {
   it('enforces the region id range', async () => {
     await expect(
-      prisma.rejon.create({ data: { id: 13, numerRzym: 'XIII' } }),
+      // 12 is the first value outside the range: the community has eleven regions.
+      prisma.rejon.create({ data: { id: 12, numerRzym: 'XII' } }),
     ).rejects.toThrow();
   });
 

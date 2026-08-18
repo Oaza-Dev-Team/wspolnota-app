@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { LICZBA_REJONOW } from '@/lib/domena/rejony';
 
 const css = readFileSync(join(process.cwd(), 'src/styles/tokens.css'), 'utf8');
 
@@ -19,10 +20,12 @@ describe('design tokens', () => {
     }
   });
 
-  it('defines all twelve region colours', () => {
-    for (let i = 1; i <= 12; i++) {
+  it('defines one colour per region and no more', () => {
+    for (let i = 1; i <= LICZBA_REJONOW; i++) {
       expect(css, `missing --rejon-${i}`).toContain(`--rejon-${i}:`);
     }
+    // Catches a palette entry left behind when the region count changes.
+    expect(css, 'stale palette entry').not.toContain(`--rejon-${LICZBA_REJONOW + 1}:`);
   });
 
 });

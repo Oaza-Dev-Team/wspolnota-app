@@ -30,7 +30,7 @@
   --purple-bg: #f0ecf7;
   --purple-fg: #57407a;
 
-  /* Paleta 12 rejonow — jednolita jasnosc, rozne odcienie.
+  /* Paleta 11 rejonow — jednolita jasnosc, rozne odcienie.
      Uzywana na tlach z alfa 1a/18; proporcji alfy nie zmieniac
      bez ponownego pomiaru kontrastu (AA dla 12 px). */
   --rejon-1: #1c5f96;
@@ -44,7 +44,6 @@
   --rejon-9: #2b7f8f;
   --rejon-10: #8a5b8f;
   --rejon-11: #6b7d2f;
-  --rejon-12: #b05c7d;
 
   /* Promienie */
   --r-4: 4px;

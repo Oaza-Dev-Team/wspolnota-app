@@ -1,19 +1,20 @@
 import { afterAll, describe, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
 import { STOPNIE } from '@/lib/domena/rekolekcje';
+import { LICZBA_REJONOW } from '@/lib/domena/rejony';
 
 afterAll(async () => {
   await prisma.$disconnect();
 });
 
 describe('seed data', () => {
-  it('creates twelve regions and 300 couples', async () => {
-    expect(await prisma.rejon.count()).toBe(12);
+  it('creates one region per Roman numeral and 300 couples', async () => {
+    expect(await prisma.rejon.count()).toBe(LICZBA_REJONOW);
     expect(await prisma.para.count()).toBe(300);
   });
 
-  it('creates fourteen accounts, one of them awaiting invitation', async () => {
-    expect(await prisma.konto.count()).toBe(14);
+  it('creates an account per region plus admin and moderator', async () => {
+    expect(await prisma.konto.count()).toBe(LICZBA_REJONOW + 2);
     expect(await prisma.konto.count({ where: { status: 'oczekuje' } })).toBe(1);
   });
 

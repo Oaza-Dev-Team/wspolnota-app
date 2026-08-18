@@ -49,7 +49,7 @@ test('rejects a wrong password without revealing whether the account exists', as
 });
 
 test('an account awaiting invitation cannot sign in', async ({ page }) => {
-  await zaloguj(page, 'rejon12@example.pl');
+  await zaloguj(page, 'rejon11@example.pl');
   await expect(komunikat(page)).toBeVisible();
   await expect(page).toHaveURL(/\/logowanie$/);
 });

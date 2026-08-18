@@ -298,10 +298,12 @@ describe('design tokens', () => {
     }
   });
 
-  it('defines all twelve region colours', () => {
-    for (let i = 1; i <= 12; i++) {
+  it('defines one colour per region and no more', () => {
+    for (let i = 1; i <= LICZBA_REJONOW; i++) {
       expect(css, `missing --rejon-${i}`).toContain(`--rejon-${i}:`);
     }
+    // Catches a palette entry left behind when the region count changes.
+    expect(css, 'stale palette entry').not.toContain(`--rejon-${LICZBA_REJONOW + 1}:`);
   });
 
 });
@@ -383,7 +385,7 @@ Expected: FAIL — `ENOENT: no such file or directory … tokens.css`
   --purple-bg: #f0ecf7;
   --purple-fg: #57407a;
 
-  /* Paleta 12 rejonów — jednolita jasność, różne odcienie.
+  /* Paleta 11 rejonów — jednolita jasność, różne odcienie.
      Używana na tłach z alfą 1a/18; proporcji alfy nie zmieniać
      bez ponownego pomiaru kontrastu (AA dla 12 px). */
   --rejon-1: #1c5f96;
@@ -397,7 +399,6 @@ Expected: FAIL — `ENOENT: no such file or directory … tokens.css`
   --rejon-9: #2b7f8f;
   --rejon-10: #8a5b8f;
   --rejon-11: #6b7d2f;
-  --rejon-12: #b05c7d;
 
   /* Promienie */
   --r-4: 4px;   --r-5: 5px;   --r-7: 7px;   --r-8: 8px;
@@ -835,7 +836,7 @@ CREATE EXTENSION IF NOT EXISTS unaccent;
 ALTER TABLE "para" ALTER COLUMN "nazwisko" TYPE text COLLATE "pl-PL-x-icu";
 
 -- Range guards Prisma cannot express.
-ALTER TABLE "rejon" ADD CONSTRAINT rejon_id_zakres CHECK (id BETWEEN 1 AND 12);
+ALTER TABLE "rejon" ADD CONSTRAINT rejon_id_zakres CHECK (id BETWEEN 1 AND 11);
 ALTER TABLE "rekolekcje" ADD CONSTRAINT rekolekcje_rok_zakres CHECK (rok BETWEEN 1970 AND 2100);
 ALTER TABLE "rekolekcje" ADD CONSTRAINT rekolekcje_inne_ma_nazwe
   CHECK (rodzaj <> 'INNE' OR nazwa IS NOT NULL);
@@ -906,7 +907,7 @@ afterAll(async () => {
 describe('schema', () => {
   it('enforces the region id range', async () => {
     await expect(
-      prisma.rejon.create({ data: { id: 13, numerRzym: 'XIII' } }),
+      prisma.rejon.create({ data: { id: 12, numerRzym: 'XII' } }),
     ).rejects.toThrow();
   });
 
@@ -1532,7 +1533,7 @@ describe('numerRzymski', () => {
   it('maps region numbers to Roman numerals', () => {
     expect(numerRzymski(1)).toBe('I');
     expect(numerRzymski(4)).toBe('IV');
-    expect(numerRzymski(12)).toBe('XII');
+    expect(numerRzymski(11)).toBe('XI');
   });
 
   it('rejects numbers outside 1-12', () => {
@@ -1540,15 +1541,15 @@ describe('numerRzymski', () => {
     expect(() => numerRzymski(13)).toThrow();
   });
 
-  it('covers exactly twelve regions', () => {
-    expect(ROMAN).toHaveLength(12);
+  it('covers exactly eleven regions', () => {
+    expect(ROMAN).toHaveLength(11);
   });
 });
 
 describe('kolorRejonu', () => {
   it('returns the palette colour for a region', () => {
     expect(kolorRejonu(1)).toBe('var(--rejon-1)');
-    expect(kolorRejonu(12)).toBe('var(--rejon-12)');
+    expect(kolorRejonu(11)).toBe('var(--rejon-11)');
   });
 
   it('rejects numbers outside 1-12', () => {
@@ -1567,13 +1568,21 @@ Expected: FAIL — brak modułu
 `src/lib/domena/rejony.ts`:
 
 ```ts
+/**
+ * The community is divided into eleven regions, numbered with Roman numerals.
+ * This array is the single source of truth for how many there are — the range
+ * guard, the seed and the token test all derive from its length rather than
+ * repeating a literal.
+ */
 export const ROMAN = [
-  'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII',
+  'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI',
 ] as const;
 
+export const LICZBA_REJONOW = ROMAN.length;
+
 function sprawdzZakres(rejon: number): void {
-  if (!Number.isInteger(rejon) || rejon < 1 || rejon > 12) {
-    throw new Error(`Numer rejonu poza zakresem 1-12: ${rejon}`);
+  if (!Number.isInteger(rejon) || rejon < 1 || rejon > LICZBA_REJONOW) {
+    throw new Error(`Numer rejonu poza zakresem 1-${LICZBA_REJONOW}: ${rejon}`);
   }
 }
 
@@ -2401,7 +2410,7 @@ git commit -m "feat: add session cookie handling and protected layout"
 
 **Interfaces:**
 - Consumes: `zahashuj` (Task 9), `STOPNIE` (Task 7), `ROMAN` (Task 7)
-- Produces: baza z 12 rejonami, ~30 parafiami, kręgami, 300 parami i 14 kontami
+- Produces: baza z 11 rejonami, ~30 parafiami, kręgami, 300 parami i 13 kontami
 
 Rozkład formacji musi gwarantować **niepusty wynik dla każdej z 17 opcji filtra** (punkt listy odbioru) — czyli dla każdego z 7 stopni istnieje para, która go ma, i para, która go nie ma; istnieje para z wpisem `INNE`; istnieje para bez żadnych wpisów.
 
@@ -2482,7 +2491,7 @@ import type { RodzajRekolekcji } from '@/generated/prisma/enums';
 import { zahashuj } from '@/lib/auth/hasla';
 import { prisma } from '@/lib/db';
 import { STOPNIE } from '@/lib/domena/rekolekcje';
-import { ROMAN } from '@/lib/domena/rejony';
+import { LICZBA_REJONOW, ROMAN } from '@/lib/domena/rejony';
 import {
   DZIECI, IMIONA_MESKIE, IMIONA_ZENSKIE, MIEJSCA_REKOLEKCJI,
   NAZWISKA, PARAFIE, PATRONI,
@@ -2539,7 +2548,7 @@ async function main() {
   await prisma.rejon.deleteMany();
 
   console.log('Rejony…');
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= LICZBA_REJONOW; i++) {
     await prisma.rejon.create({ data: { id: i, numerRzym: ROMAN[i - 1]! } });
   }
 
@@ -2551,7 +2560,7 @@ async function main() {
 
   console.log('Kręgi…');
   const kregi = [];
-  for (let rejonId = 1; rejonId <= 12; rejonId++) {
+  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
     const ile = 4 + Math.floor(rnd() * 3); // 4-6 circles per region
     for (let numer = 1; numer <= ile; numer++) {
       kregi.push(await prisma.krag.create({
@@ -2578,10 +2587,10 @@ async function main() {
       rola: 'podglad', hashHasla: hash, status: 'aktywne',
     },
   });
-  for (let rejonId = 1; rejonId <= 12; rejonId++) {
-    // Region XII stays unstaffed, so the "oczekuje" status and the
+  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
+    // The last region stays unstaffed, so the "oczekuje" status and the
     // "Do obsadzenia" tile both have data behind them.
-    const oczekuje = rejonId === 12;
+    const oczekuje = rejonId === LICZBA_REJONOW;
     await prisma.konto.create({
       data: {
         email: `rejon${rejonId}@example.pl`,
@@ -3192,7 +3201,7 @@ test('rejects a wrong password without revealing whether the account exists', as
 });
 
 test('an account awaiting invitation cannot sign in', async ({ page }) => {
-  await zaloguj(page, 'rejon12@example.pl');
+  await zaloguj(page, 'rejon11@example.pl');
   await expect(komunikat(page)).toBeVisible();
   await expect(page).toHaveURL(/\/logowanie$/);
 });
@@ -3239,7 +3248,7 @@ git commit -m "test: add end-to-end login and session scoping coverage"
 
 ## Stan po Planie 1
 
-- Aplikacja startuje, baza zawiera 12 rejonów, ~30 parafii, kręgi, 300 par i 14 kont
+- Aplikacja startuje, baza zawiera 11 rejonów, ~30 parafii, kręgi, 300 par i 13 kont
 - Trzy role logują się i docierają na serwer z poprawnym zakresem
 - Wyłączenie konta odcina dostęp natychmiast (zweryfikowane ręcznie i testem)
 - Moduł uprawnień pokryty wyczerpującą macierzą 3 ról × 2 rejonów × 9 operacji

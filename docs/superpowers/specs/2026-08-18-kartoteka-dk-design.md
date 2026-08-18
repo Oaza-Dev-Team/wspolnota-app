@@ -15,8 +15,19 @@ techniczne i odstępstwa.
 ## 1. Cel i zakres
 
 Kartoteka ~300 małżeństw wspólnoty Domowego Kościoła (Ruch Światło-Życie, archidiecezja
-gdańska), podzielonych na 12 rejonów. Siedem widoków: logowanie, lista par, karta pary
+gdańska), podzielonych na **11 rejonów**. Siedem widoków: logowanie, lista par, karta pary
 (drawer), rejony, konta rejonów, historia zmian, plus import danych.
+
+> **Liczba rejonów: 11, nie 12.** Handoff (`docs/handoff/`) opisuje dwanaście rejonów
+> i tyle też pokazują zrzuty ekranu — to jest stan sprzed weryfikacji u zamawiającego.
+> Wspólnota ma **jedenaście** rejonów, I–XI. Dokumentów handoffu **nie modyfikujemy**:
+> to otrzymany brief i ma pozostać wiernym zapisem tego, co dostaliśmy. Punkt listy
+> odbioru mówiący „12 kafelków" czytamy jako „po jednym kafelku na rejon".
+>
+> W kodzie liczba rejonów **nie jest literałem** — wynika z długości tablicy `ROMAN`
+> w `src/lib/domena/rejony.ts` (stała `LICZBA_REJONOW`). Zakres w bazie pilnuje
+> `CHECK (id BETWEEN 1 AND 11)`, a paleta w `tokens.css` ma dokładnie tyle kolorów,
+> ile rejonów — test tokenów wykrywa wpis pozostawiony po zmianie liczby.
 
 **Skala:** ~300 rekordów rosnących powoli, ~15 kont edytujących, 3 role.
 Wydajność nie jest czynnikiem projektowym — poprawność uprawnień i wierność
@@ -112,6 +123,10 @@ CREATE TABLE proba_logowania (
   kiedy    timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX ON proba_logowania (klucz, kiedy);
+
+-- zakres rejonow: 11, nie 12 jak w handoffie
+ALTER TABLE rejon DROP CONSTRAINT rejon_id_zakres;
+ALTER TABLE rejon ADD CONSTRAINT rejon_id_zakres CHECK (id BETWEEN 1 AND 11);
 
 -- polska kolacja dla sortowania
 ALTER TABLE para ALTER COLUMN nazwisko TYPE text COLLATE "pl-PL-x-icu";
@@ -374,7 +389,7 @@ poprawki w Excelu → import działa jako pełna pętla.
 |---|---|---|
 | `ID` | liczba lub puste | wypełnione → aktualizacja wskazanego rekordu; puste → nowy |
 | `Nazwisko` | tekst, **wymagane** | forma mnoga, bez przekształceń |
-| `Rejon` | `I`–`XII` albo `1`–`12` | oba akceptowane |
+| `Rejon` | `I`–`XI` albo `1`–`11` | oba akceptowane |
 | `Parafia` | `nazwa, miasto` | rozdzielane po **ostatnim** przecinku |
 | `Krąg` | `numer · patron` albo `numer` | patron opcjonalny; separator `·` lub `-` |
 | `<stopień> (rok / miejsce)` | `rok / miejsce` albo sam `rok` | puste = brak wpisu |
@@ -424,7 +439,7 @@ Poza tym, co daje `<dialog>` (§9):
 - Widoczny `:focus-visible` — obrys, nie sama zmiana koloru obramowania
   (prototyp ma tylko `border-color`, co przy nawigacji klawiaturą jest za słabe).
 - Na mobile żaden element interaktywny poniżej 44 px.
-- Kontrast: paleta 12 rejonów na tłach z alfą `1a` przechodzi AA dla 12 px —
+- Kontrast: paleta rejonów na tłach z alfą `1a` przechodzi AA dla 12 px —
   proporcji alfy nie zmieniamy bez ponownego pomiaru.
 
 ---
@@ -448,7 +463,7 @@ Poza tym, co daje `<dialog>` (§9):
 ## 15. Design system
 
 `src/styles/tokens.css` — wszystkie tokeny z sekcji „Design Tokens" README jako custom
-properties: kolory, paleta 12 rejonów, skala typograficzna, odstępy, promienie, cienie,
+properties: kolory, paleta rejonów, skala typograficzna, odstępy, promienie, cienie,
 animacje. Komponenty korzystają wyłącznie z tokenów; wartości literalne w CSS Modules
 są błędem do wyłapania w review.
 
@@ -479,7 +494,7 @@ do własnego rejonu mimo parametru.
 
 ## 17. Seed
 
-12 rejonów (I–XII), ~30 parafii, kręgi, **~300 par** z realistycznym rozkładem formacji:
+11 rejonów (I–XI), ~30 parafii, kręgi, **~300 par** z realistycznym rozkładem formacji:
 część bez żadnych wpisów, część z lukami w stopniach, wszystkie 7 rodzajów obecne,
 kilka wpisów `Inne`. Konta: admin, moderator, 12 par rejonowych (jedno w statusie
 `oczekuje`). Dane generowane — nie są danymi rzeczywistych osób.
@@ -528,7 +543,7 @@ Każda kończy się stanem, który da się uruchomić i obejrzeć.
 | 6 | Karta pary | `<dialog>`, formularz, walidacja, zapis, soft-delete, audyt |
 | 7 | Formacja | wpisy, rodzaj `Inne`, podpowiadanie kolejnego stopnia |
 | 8 | Eksport | CSV bajtowo poprawny + XLSX, wpis do audytu |
-| 9 | Rejony · Konta · Historia | 12 kafelków, statusy kont, zaproszenia, paginowany audyt |
+| 9 | Rejony · Konta · Historia | 11 kafelków, statusy kont, zaproszenia, paginowany audyt |
 | 10 | Import | szablon do pobrania, walidacja, podgląd, zapis transakcyjny |
 | 11 | RODO | trwała purga, retencja audytu, strona klauzuli informacyjnej |
 | 12 | Odbiór | dostępność, e2e wg §9, `DECISIONS.md` |
