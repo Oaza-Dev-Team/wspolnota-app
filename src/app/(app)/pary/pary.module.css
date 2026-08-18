@@ -1,0 +1,154 @@
+/* --- przelacznik tabela/karty --- */
+.tylkoDesktop { display: block; }
+.tylkoMobile { display: none; }
+
+@media (max-width: 860px) {
+  .tylkoDesktop { display: none; }
+  .tylkoMobile { display: block; }
+}
+
+/* --- tabela --- */
+.kontener {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
+  overflow: hidden;
+  box-shadow: var(--cien-tabela);
+}
+
+.przewijanie { overflow-x: auto; }
+
+.tabela {
+  width: 100%;
+  min-width: 1060px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.tabela thead {
+  background: var(--bg-row);
+  border-bottom: 1px solid var(--border);
+}
+
+.tabela th {
+  padding: 0;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.naglowekSortowania,
+.naglowekZwykly {
+  display: block;
+  padding: 11px 15px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.naglowekSortowania:hover { color: var(--navy-700); }
+.naglowekAktywny { color: var(--navy-700); }
+
+.tabela tbody tr { border-bottom: 1px solid var(--divider); }
+.tabela tbody tr:hover { background: var(--wiersz-hover); }
+
+.tabela td {
+  padding: 12px 15px;
+  color: var(--text-body);
+}
+
+.nazwisko { font-weight: 600; color: var(--text); }
+.mono { font-family: var(--font-mono), monospace; font-size: 13px; }
+
+.akcja { text-align: right; }
+
+.linkAkcji {
+  color: var(--text-faint);
+  font-size: 13px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.linkAkcji:hover { color: var(--navy-700); }
+
+.pusty {
+  padding: 46px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* --- karty --- */
+.karty {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.karta {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-11);
+  padding: 14px;
+  text-decoration: none;
+  color: inherit;
+  min-height: 44px;
+}
+
+.karta:active { background: var(--wiersz-hover); }
+
+.kartaWiersz {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+}
+
+.kartaNazwisko { font-size: 16px; font-weight: 700; color: var(--text); }
+.kartaImiona { font-size: 14px; color: var(--text-body); }
+
+.kartaMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border-top: 1px solid var(--divider);
+  padding-top: 9px;
+  font-size: 13px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+/* --- paginacja --- */
+.paginacja {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.stronaLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 15px;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  font-size: 14px;
+  color: var(--navy-700);
+  text-decoration: none;
+}
+
+.stronaLink:hover { border-color: var(--navy-700); }
+
+.stronaLicznik {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+}
