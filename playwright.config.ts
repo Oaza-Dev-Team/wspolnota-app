@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  testIgnore: ['**/przygotuj.ts'],
+  testIgnore: ['**/prepare.ts'],
   // The suite logs in and out against one shared database; parallel workers
   // would invalidate each other's sessions.
   fullyParallel: false,

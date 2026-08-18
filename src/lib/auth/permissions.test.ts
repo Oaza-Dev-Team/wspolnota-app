@@ -1,97 +1,93 @@
 import { describe, expect, it } from 'vitest';
 import {
-  type Uzytkownik, Zabronione, assertMozeEdytowac, mozeCzytacAudyt,
-  mozeEksportowac, mozeEdytowac, mozeImportowac, mozeUsunacTrwale, mozeUsuwac,
-  mozeZarzadzacKontami, mozeZmienicRejon, zakresListy,
+  Forbidden, type User, assertCanEdit, canChangeRegion, canDelete, canEdit,
+  canExport, canImport, canManageAccounts, canPurge, canReadAudit, listScope,
 } from './permissions';
 
-const admin: Uzytkownik = { id: 1n, rola: 'admin', rejonId: null };
-const rejonVII: Uzytkownik = { id: 2n, rola: 'rejon', rejonId: 7 };
-const moderator: Uzytkownik = { id: 3n, rola: 'podglad', rejonId: null };
+const admin: User = { id: 1n, role: 'admin', regionId: null };
+const regionVII: User = { id: 2n, role: 'region', regionId: 7 };
+const viewer: User = { id: 3n, role: 'viewer', regionId: null };
 
-const paraVII = { rejonId: 7 };
-const paraIII = { rejonId: 3 };
+const coupleVII = { regionId: 7 };
+const coupleIII = { regionId: 3 };
 
-describe('zakresListy', () => {
+describe('listScope', () => {
   it('narrows a region account to its own region', () => {
-    expect(zakresListy(rejonVII)).toEqual({ usunieteAt: null, rejonId: 7 });
+    expect(listScope(regionVII)).toEqual({ deletedAt: null, regionId: 7 });
   });
 
   it('does not narrow admin or viewer by region', () => {
-    expect(zakresListy(admin)).toEqual({ usunieteAt: null });
-    expect(zakresListy(moderator)).toEqual({ usunieteAt: null });
+    expect(listScope(admin)).toEqual({ deletedAt: null });
+    expect(listScope(viewer)).toEqual({ deletedAt: null });
   });
 
   it('always excludes soft-deleted records', () => {
-    for (const u of [admin, rejonVII, moderator]) {
-      expect(zakresListy(u).usunieteAt).toBeNull();
+    for (const u of [admin, regionVII, viewer]) {
+      expect(listScope(u).deletedAt).toBeNull();
     }
   });
 
   it('refuses a region account with no region instead of widening the scope', () => {
     // A database CHECK makes this state impossible, but if it ever occurred the
     // scope must not silently fall through to "every couple in the community".
-    const zepsute: Uzytkownik = { id: 9n, rola: 'rejon', rejonId: null };
-    expect(() => zakresListy(zepsute)).toThrow(Zabronione);
+    const broken: User = { id: 9n, role: 'region', regionId: null };
+    expect(() => listScope(broken)).toThrow(Forbidden);
   });
 });
 
-describe('mozeEdytowac', () => {
+describe('canEdit', () => {
   it('lets admin edit couples in any region', () => {
-    expect(mozeEdytowac(admin, paraVII)).toBe(true);
-    expect(mozeEdytowac(admin, paraIII)).toBe(true);
+    expect(canEdit(admin, coupleVII)).toBe(true);
+    expect(canEdit(admin, coupleIII)).toBe(true);
   });
 
   it('lets a region account edit only its own region', () => {
-    expect(mozeEdytowac(rejonVII, paraVII)).toBe(true);
-    expect(mozeEdytowac(rejonVII, paraIII)).toBe(false);
+    expect(canEdit(regionVII, coupleVII)).toBe(true);
+    expect(canEdit(regionVII, coupleIII)).toBe(false);
   });
 
   it('never lets the viewer edit anything', () => {
-    expect(mozeEdytowac(moderator, paraVII)).toBe(false);
-    expect(mozeEdytowac(moderator, paraIII)).toBe(false);
+    expect(canEdit(viewer, coupleVII)).toBe(false);
+    expect(canEdit(viewer, coupleIII)).toBe(false);
   });
 });
 
-describe('mozeUsuwac', () => {
+describe('canDelete', () => {
   it('follows the same rule as editing', () => {
-    expect(mozeUsuwac(admin, paraIII)).toBe(true);
-    expect(mozeUsuwac(rejonVII, paraVII)).toBe(true);
-    expect(mozeUsuwac(rejonVII, paraIII)).toBe(false);
-    expect(mozeUsuwac(moderator, paraVII)).toBe(false);
+    expect(canDelete(admin, coupleIII)).toBe(true);
+    expect(canDelete(regionVII, coupleVII)).toBe(true);
+    expect(canDelete(regionVII, coupleIII)).toBe(false);
+    expect(canDelete(viewer, coupleVII)).toBe(false);
   });
 });
 
 describe('admin-only capabilities', () => {
-  const tylkoAdmin = {
-    mozeUsunacTrwale, mozeZarzadzacKontami, mozeCzytacAudyt,
-    mozeImportowac, mozeZmienicRejon,
-  };
+  const adminOnly = { canPurge, canManageAccounts, canReadAudit, canImport, canChangeRegion };
 
-  for (const [nazwa, fn] of Object.entries(tylkoAdmin)) {
-    it(`grants ${nazwa} to admin only`, () => {
+  for (const [name, fn] of Object.entries(adminOnly)) {
+    it(`grants ${name} to admin only`, () => {
       expect(fn(admin), 'admin').toBe(true);
-      expect(fn(rejonVII), 'region account').toBe(false);
-      expect(fn(moderator), 'viewer').toBe(false);
+      expect(fn(regionVII), 'region account').toBe(false);
+      expect(fn(viewer), 'viewer').toBe(false);
     });
   }
 });
 
-describe('mozeEksportowac', () => {
-  it('allows every role to export — scope is narrowed by zakresListy', () => {
-    expect(mozeEksportowac(admin)).toBe(true);
-    expect(mozeEksportowac(rejonVII)).toBe(true);
-    expect(mozeEksportowac(moderator)).toBe(true);
+describe('canExport', () => {
+  it('allows every role to export — scope is narrowed by listScope', () => {
+    expect(canExport(admin)).toBe(true);
+    expect(canExport(regionVII)).toBe(true);
+    expect(canExport(viewer)).toBe(true);
   });
 });
 
-describe('assertMozeEdytowac', () => {
+describe('assertCanEdit', () => {
   it('passes silently when allowed', () => {
-    expect(() => assertMozeEdytowac(rejonVII, paraVII)).not.toThrow();
+    expect(() => assertCanEdit(regionVII, coupleVII)).not.toThrow();
   });
 
-  it('throws Zabronione when denied', () => {
-    expect(() => assertMozeEdytowac(rejonVII, paraIII)).toThrow(Zabronione);
-    expect(() => assertMozeEdytowac(moderator, paraVII)).toThrow(Zabronione);
+  it('throws Forbidden when denied', () => {
+    expect(() => assertCanEdit(regionVII, coupleIII)).toThrow(Forbidden);
+    expect(() => assertCanEdit(viewer, coupleVII)).toThrow(Forbidden);
   });
 });

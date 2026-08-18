@@ -1,32 +1,32 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import type { Uzytkownik } from './permissions';
-import { CZAS_ZYCIA_DNI, pobierzUzytkownikaZTokena, usunSesje } from './sesja';
+import type { User } from './permissions';
+import { SESSION_DAYS, deleteSession, userFromToken } from './session';
 
-export const NAZWA_COOKIE = 'kartoteka_sesja';
+export const SESSION_COOKIE = 'kartoteka_sesja';
 
-export async function ustawCookieSesji(token: string): Promise<void> {
+export async function setSessionCookie(token: string): Promise<void> {
   const jar = await cookies();
-  jar.set(NAZWA_COOKIE, token, {
+  jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: CZAS_ZYCIA_DNI * 24 * 60 * 60,
+    maxAge: SESSION_DAYS * 24 * 60 * 60,
   });
 }
 
-export async function usunCookieSesji(): Promise<void> {
+export async function clearSessionCookie(): Promise<void> {
   const jar = await cookies();
-  const token = jar.get(NAZWA_COOKIE)?.value;
-  if (token) await usunSesje(token);
-  jar.delete(NAZWA_COOKIE);
+  const token = jar.get(SESSION_COOKIE)?.value;
+  if (token) await deleteSession(token);
+  jar.delete(SESSION_COOKIE);
 }
 
-export async function pobierzUzytkownika(): Promise<Uzytkownik | null> {
-  const token = (await cookies()).get(NAZWA_COOKIE)?.value;
+export async function currentUser(): Promise<User | null> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) return null;
-  return pobierzUzytkownikaZTokena(token);
+  return userFromToken(token);
 }
 
 /**
@@ -34,8 +34,8 @@ export async function pobierzUzytkownika(): Promise<Uzytkownik | null> {
  * Prisma. The protected layout calling it is not enough: server actions are
  * public POST endpoints and are not covered by any layout.
  */
-export async function requireUser(): Promise<Uzytkownik> {
-  const u = await pobierzUzytkownika();
+export async function requireUser(): Promise<User> {
+  const u = await currentUser();
   if (!u) redirect('/logowanie');
   return u;
 }

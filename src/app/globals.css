@@ -15,7 +15,7 @@ body {
 }
 
 h1, h2, h3 {
-  font-family: var(--font-naglowek), Georgia, serif;
+  font-family: var(--font-heading), Georgia, serif;
   font-weight: 400;
   margin: 0;
 }

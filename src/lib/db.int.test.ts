@@ -4,17 +4,17 @@ import { prisma } from '@/lib/db';
 // Rows created by these tests, cleaned up in afterEach so a failing assertion
 // cannot leak them into the seed-data counts. Deleting by surname would not
 // work: the seed dictionary contains names like "Mazurowie" too.
-const utworzonePary: bigint[] = [];
-const utworzoneKonta: bigint[] = [];
+const createdCouples: bigint[] = [];
+const createdAccounts: bigint[] = [];
 
 afterEach(async () => {
-  if (utworzonePary.length) {
-    await prisma.para.deleteMany({ where: { id: { in: utworzonePary } } });
-    utworzonePary.length = 0;
+  if (createdCouples.length) {
+    await prisma.couple.deleteMany({ where: { id: { in: createdCouples } } });
+    createdCouples.length = 0;
   }
-  if (utworzoneKonta.length) {
-    await prisma.konto.deleteMany({ where: { id: { in: utworzoneKonta } } });
-    utworzoneKonta.length = 0;
+  if (createdAccounts.length) {
+    await prisma.account.deleteMany({ where: { id: { in: createdAccounts } } });
+    createdAccounts.length = 0;
   }
 });
 
@@ -22,80 +22,90 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function dodajPare(nazwisko: string, rejonId = 1) {
-  await prisma.rejon.upsert({
-    where: { id: rejonId }, update: {},
-    create: { id: rejonId, numerRzym: rejonId === 1 ? 'I' : 'VII' },
+async function addCouple(surname: string, regionId = 1) {
+  await prisma.region.upsert({
+    where: { id: regionId },
+    update: {},
+    create: { id: regionId, romanNumeral: regionId === 1 ? 'I' : 'VII' },
   });
-  const para = await prisma.para.create({
-    data: { imieZony: 'Anna', imieMeza: 'Piotr', nazwisko, rejonId },
+  const couple = await prisma.couple.create({
+    data: { wifeName: 'Anna', husbandName: 'Piotr', surname, regionId },
   });
-  utworzonePary.push(para.id);
-  return para;
+  createdCouples.push(couple.id);
+  return couple;
 }
 
 describe('schema', () => {
   it('enforces the region id range', async () => {
     await expect(
       // 12 is the first value outside the range: the community has eleven regions.
-      prisma.rejon.create({ data: { id: 12, numerRzym: 'XII' } }),
+      prisma.region.create({ data: { id: 12, romanNumeral: 'XII' } }),
     ).rejects.toThrow();
   });
 
   it('requires a name for INNE retreat entries', async () => {
-    const para = await dodajPare('Testowi');
+    const couple = await addCouple('Testowi');
     await expect(
-      prisma.rekolekcje.create({
-        data: { paraId: para.id, rodzaj: 'INNE', rok: 2020 },
-      }),
+      prisma.retreat.create({ data: { coupleId: couple.id, kind: 'INNE', year: 2020 } }),
     ).rejects.toThrow();
   });
 
   it('sorts surnames using Polish collation', async () => {
-    const pary = [];
-    for (const nazwisko of ['Zawadzcy', 'Łabędzcy', 'Mazurowie', 'Lisowscy']) {
-      pary.push(await dodajPare(nazwisko));
+    const couples = [];
+    for (const surname of ['Zawadzcy', 'Łabędzcy', 'Mazurowie', 'Lisowscy']) {
+      couples.push(await addCouple(surname));
     }
 
     // Restricted to the rows this test created: the seed dictionary contains
     // some of these surnames, so filtering by name would pull in its couples.
-    const posortowane = await prisma.para.findMany({
-      where: { id: { in: pary.map((p) => p.id) } },
-      orderBy: { nazwisko: 'asc' },
-      select: { nazwisko: true },
+    const sorted = await prisma.couple.findMany({
+      where: { id: { in: couples.map((c) => c.id) } },
+      orderBy: { surname: 'asc' },
+      select: { surname: true },
     });
 
     // Ł belongs between L and M, not after Z.
-    expect(posortowane.map((p) => p.nazwisko)).toEqual([
+    expect(sorted.map((c) => c.surname)).toEqual([
       'Lisowscy', 'Łabędzcy', 'Mazurowie', 'Zawadzcy',
     ]);
+  });
+
+  it('computes the search text without diacritics', async () => {
+    const couple = await addCouple('Bagińscy');
+    const stored = await prisma.couple.findUniqueOrThrow({
+      where: { id: couple.id },
+      select: { searchText: true },
+    });
+    expect(stored.searchText).toContain('baginscy');
   });
 });
 
 describe('account constraints', () => {
   it('rejects an admin account bound to a region', async () => {
-    await prisma.rejon.upsert({ where: { id: 1 }, update: {}, create: { id: 1, numerRzym: 'I' } });
+    await prisma.region.upsert({ where: { id: 1 }, update: {}, create: { id: 1, romanNumeral: 'I' } });
     await expect(
-      prisma.konto.create({
-        data: { email: 'zly@example.pl', nazwa: 'Zły Admin', rola: 'admin', rejonId: 1 },
+      prisma.account.create({
+        data: { email: 'bad@example.pl', name: 'Zły Admin', role: 'admin', regionId: 1 },
       }),
     ).rejects.toThrow();
   });
 
   it('rejects a region account without a region', async () => {
     await expect(
-      prisma.konto.create({
-        data: { email: 'zly2@example.pl', nazwa: 'Zła Para', rola: 'rejon' },
+      prisma.account.create({
+        data: { email: 'bad2@example.pl', name: 'Zła Para', role: 'region' },
       }),
     ).rejects.toThrow();
   });
 
   it('accepts a correctly shaped region account', async () => {
-    await prisma.rejon.upsert({ where: { id: 7 }, update: {}, create: { id: 7, numerRzym: 'VII' } });
-    const konto = await prisma.konto.create({
-      data: { email: 'dobry@example.pl', nazwa: 'Anna i Marek Sowa', rola: 'rejon', rejonId: 7 },
+    await prisma.region.upsert({
+      where: { id: 7 }, update: {}, create: { id: 7, romanNumeral: 'VII' },
     });
-    utworzoneKonta.push(konto.id);
-    expect(konto.status).toBe('oczekuje');
+    const account = await prisma.account.create({
+      data: { email: 'good@example.pl', name: 'Anna i Marek Sowa', role: 'region', regionId: 7 },
+    });
+    createdAccounts.push(account.id);
+    expect(account.status).toBe('pending');
   });
 });

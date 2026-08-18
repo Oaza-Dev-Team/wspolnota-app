@@ -2,22 +2,21 @@
 // must load the environment itself — without this the client throws on the
 // missing DATABASE_URL. Keep it first: db.ts reads the variable at import time.
 import 'dotenv/config';
-import type { RodzajRekolekcji } from '@/generated/prisma/enums';
-import { zahashuj } from '@/lib/auth/hasla';
+import type { RetreatKind } from '@/generated/prisma/enums';
+import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db';
-import { STOPNIE } from '@/lib/domena/rekolekcje';
-import { LICZBA_REJONOW, ROMAN } from '@/lib/domena/rejony';
+import { REGION_COUNT, ROMAN } from '@/lib/domain/regions';
+import { DEGREES } from '@/lib/domain/retreats';
 import {
-  DZIECI, IMIONA_MESKIE, IMIONA_ZENSKIE, MIEJSCA_REKOLEKCJI,
-  NAZWISKA, PARAFIE, PATRONI,
-} from './seed/dane';
+  CHILDREN, HUSBAND_NAMES, PARISHES, PATRONS, RETREAT_PLACES, SURNAMES, WIFE_NAMES,
+} from './seed/data';
 
-const LICZBA_PAR = 300;
-const HASLO_TESTOWE = 'kartoteka123';
+const COUPLE_COUNT = 300;
+const TEST_PASSWORD = 'kartoteka123';
 
 /** Deterministic PRNG (mulberry32) so reseeding reproduces the same data. */
-function losowy(ziarno: number) {
-  let a = ziarno;
+function seeded(seed: number) {
+  let a = seed;
   return () => {
     a |= 0; a = (a + 0x6d2b79f5) | 0;
     let t = Math.imul(a ^ (a >>> 15), 1 | a);
@@ -26,8 +25,8 @@ function losowy(ziarno: number) {
   };
 }
 
-const rnd = losowy(20260818);
-const wybierz = <T>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)]!;
+const rnd = seeded(20260818);
+const pick = <T>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)]!;
 
 /**
  * Picks the formation entries for couple `i`.
@@ -35,143 +34,139 @@ const wybierz = <T>(xs: readonly T[]): T => xs[Math.floor(rnd() * xs.length)]!;
  * The distribution is engineered, not random, because the acceptance
  * checklist requires all 17 formation filter options to return a non-empty
  * result. Indices 0..8 are reserved to guarantee that:
- *   0      → no entries at all           (covers "Bez żadnych rekolekcji")
- *   1..7   → exactly one degree each     (covers every "Bez <stopień>")
- *   8      → every degree plus INNE      (covers every "Ma <stopień>" and "Ma inne")
+ *   0      → no entries at all           (covers "no retreats at all")
+ *   1..7   → exactly one degree each     (covers every "without <degree>")
+ *   8      → every degree plus INNE      (covers every "has <degree>" and "has other")
  * The rest get a realistic prefix of the path, sometimes with gaps.
  */
-function formacjaDlaPary(i: number): RodzajRekolekcji[] {
+function formationFor(i: number): RetreatKind[] {
   if (i === 0) return [];
-  if (i >= 1 && i <= 7) return [STOPNIE[i - 1]!];
-  if (i === 8) return [...STOPNIE, 'INNE'];
+  if (i >= 1 && i <= 7) return [DEGREES[i - 1]!];
+  if (i === 8) return [...DEGREES, 'INNE'];
 
-  const ile = Math.floor(rnd() * (STOPNIE.length + 1));
-  const wybrane = STOPNIE.slice(0, ile).filter(() => rnd() > 0.15);
-  if (rnd() > 0.85) wybrane.push('INNE');
-  return wybrane;
+  const count = Math.floor(rnd() * (DEGREES.length + 1));
+  const chosen = DEGREES.slice(0, count).filter(() => rnd() > 0.15);
+  if (rnd() > 0.85) chosen.push('INNE');
+  return chosen;
 }
 
-function adresEmail(nazwisko: string, i: number): string {
+function emailFor(surname: string, i: number): string {
   // ł has no Unicode decomposition, so it must be replaced before NFD.
-  const bezOgonkow = nazwisko
+  const plain = surname
     .toLowerCase()
     .replace(/ł/g, 'l')
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '');
-  return `${bezOgonkow}${i}@example.pl`;
+  return `${plain}${i}@example.pl`;
 }
 
-function numerTelefonu(): string {
-  const blok = () => String(Math.floor(rnd() * 900) + 100);
-  return `+48 ${500 + Math.floor(rnd() * 400)} ${blok()} ${blok()}`;
+function phoneNumber(): string {
+  const block = () => String(Math.floor(rnd() * 900) + 100);
+  return `+48 ${500 + Math.floor(rnd() * 400)} ${block()} ${block()}`;
 }
 
 async function main() {
-  console.log('Czyszczenie bazy...');
-  await prisma.rekolekcje.deleteMany();
-  await prisma.para.deleteMany();
-  await prisma.krag.deleteMany();
-  await prisma.sesja.deleteMany();
-  await prisma.audyt.deleteMany();
-  await prisma.konto.deleteMany();
-  await prisma.parafia.deleteMany();
-  await prisma.rejon.deleteMany();
+  console.log('Clearing database...');
+  await prisma.retreat.deleteMany();
+  await prisma.couple.deleteMany();
+  await prisma.circle.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.audit.deleteMany();
+  await prisma.account.deleteMany();
+  await prisma.parish.deleteMany();
+  await prisma.region.deleteMany();
 
-  console.log('Rejony...');
-  for (let i = 1; i <= LICZBA_REJONOW; i++) {
-    await prisma.rejon.create({ data: { id: i, numerRzym: ROMAN[i - 1]! } });
+  console.log('Regions...');
+  for (let i = 1; i <= REGION_COUNT; i++) {
+    await prisma.region.create({ data: { id: i, romanNumeral: ROMAN[i - 1]! } });
   }
 
-  console.log('Parafie...');
-  const parafie = [];
-  for (const [nazwa, miasto] of PARAFIE) {
-    parafie.push(await prisma.parafia.create({ data: { nazwa, miasto } }));
+  console.log('Parishes...');
+  const parishes = [];
+  for (const [name, city] of PARISHES) {
+    parishes.push(await prisma.parish.create({ data: { name, city } }));
   }
 
-  console.log('Kregi...');
-  const kregi = [];
-  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
-    const ile = 4 + Math.floor(rnd() * 3); // 4-6 circles per region
-    for (let numer = 1; numer <= ile; numer++) {
-      kregi.push(await prisma.krag.create({
-        data: {
-          rejonId, numer,
-          patron: wybierz(PATRONI),
-          parafiaId: wybierz(parafie).id,
-        },
+  console.log('Circles...');
+  const circles = [];
+  for (let regionId = 1; regionId <= REGION_COUNT; regionId++) {
+    const count = 4 + Math.floor(rnd() * 3); // 4-6 circles per region
+    for (let number = 1; number <= count; number++) {
+      circles.push(await prisma.circle.create({
+        data: { regionId, number, patron: pick(PATRONS), parishId: pick(parishes).id },
       }));
     }
   }
 
-  console.log('Konta...');
-  const hash = await zahashuj(HASLO_TESTOWE);
-  await prisma.konto.create({
+  console.log('Accounts...');
+  const hash = await hashPassword(TEST_PASSWORD);
+  await prisma.account.create({
     data: {
-      email: 'admin@example.pl', nazwa: 'Maria i Piotr Lewandowscy',
-      rola: 'admin', hashHasla: hash, status: 'aktywne',
+      email: 'admin@example.pl', name: 'Maria i Piotr Lewandowscy',
+      role: 'admin', passwordHash: hash, status: 'active',
     },
   });
-  await prisma.konto.create({
+  await prisma.account.create({
     data: {
-      email: 'moderator@example.pl', nazwa: 'ks. Marek Górzyński',
-      rola: 'podglad', hashHasla: hash, status: 'aktywne',
+      email: 'moderator@example.pl', name: 'ks. Marek Górzyński',
+      role: 'viewer', passwordHash: hash, status: 'active',
     },
   });
-  for (let rejonId = 1; rejonId <= LICZBA_REJONOW; rejonId++) {
-    // The last region stays unstaffed, so the "oczekuje" status and the
+  for (let regionId = 1; regionId <= REGION_COUNT; regionId++) {
+    // The last region stays unstaffed, so the "pending" status and the
     // "Do obsadzenia" tile both have data behind them.
-    const oczekuje = rejonId === LICZBA_REJONOW;
-    await prisma.konto.create({
+    const pending = regionId === REGION_COUNT;
+    await prisma.account.create({
       data: {
-        email: `rejon${rejonId}@example.pl`,
-        nazwa: oczekuje
+        email: `rejon${regionId}@example.pl`,
+        name: pending
           ? 'Do obsadzenia'
-          : `${wybierz(IMIONA_ZENSKIE)} i ${wybierz(IMIONA_MESKIE)} ${wybierz(NAZWISKA)}`,
-        rola: 'rejon', rejonId,
-        hashHasla: oczekuje ? null : hash,
-        status: oczekuje ? 'oczekuje' : 'aktywne',
-        ostatnieLogowanie: oczekuje
+          : `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
+        role: 'region', regionId,
+        passwordHash: pending ? null : hash,
+        status: pending ? 'pending' : 'active',
+        lastLoginAt: pending
           ? null
           : new Date(Date.now() - Math.floor(rnd() * 30) * 86400000),
       },
     });
   }
 
-  console.log(`Pary (${LICZBA_PAR})...`);
-  for (let i = 0; i < LICZBA_PAR; i++) {
-    const krag = wybierz(kregi);
-    const nazwisko = wybierz(NAZWISKA);
-    const para = await prisma.para.create({
+  console.log(`Couples (${COUPLE_COUNT})...`);
+  for (let i = 0; i < COUPLE_COUNT; i++) {
+    const circle = pick(circles);
+    const surname = pick(SURNAMES);
+    const couple = await prisma.couple.create({
       data: {
-        imieZony: wybierz(IMIONA_ZENSKIE),
-        imieMeza: wybierz(IMIONA_MESKIE),
-        nazwisko,
-        email: adresEmail(nazwisko, i),
-        telefon: numerTelefonu(),
-        rejonId: krag.rejonId,
-        kragId: krag.id,
+        wifeName: pick(WIFE_NAMES),
+        husbandName: pick(HUSBAND_NAMES),
+        surname,
+        email: emailFor(surname, i),
+        phone: phoneNumber(),
+        regionId: circle.regionId,
+        circleId: circle.id,
         // A minority belong to a parish other than their circle's, which is
-        // what makes the parafia_efektywna coalesce necessary.
-        parafiaId: rnd() > 0.85 ? wybierz(parafie).id : null,
-        dzieci: wybierz(DZIECI) || null,
-        notatki: rnd() > 0.9 ? 'Kontakt przez e-mail.' : null,
+        // what makes the effective-parish coalesce necessary.
+        parishId: rnd() > 0.85 ? pick(parishes).id : null,
+        children: pick(CHILDREN) || null,
+        notes: rnd() > 0.9 ? 'Kontakt przez e-mail.' : null,
       },
     });
 
-    for (const rodzaj of formacjaDlaPary(i)) {
-      await prisma.rekolekcje.create({
+    for (const kind of formationFor(i)) {
+      await prisma.retreat.create({
         data: {
-          paraId: para.id,
-          rodzaj,
-          rok: 2005 + Math.floor(rnd() * 20),
-          miejsce: wybierz(MIEJSCA_REKOLEKCJI),
-          nazwa: rodzaj === 'INNE' ? 'Rekolekcje ewangelizacyjne' : null,
+          coupleId: couple.id,
+          kind,
+          year: 2005 + Math.floor(rnd() * 20),
+          place: pick(RETREAT_PLACES),
+          name: kind === 'INNE' ? 'Rekolekcje ewangelizacyjne' : null,
         },
       });
     }
   }
 
-  console.log(`Gotowe. Haslo do wszystkich kont testowych: ${HASLO_TESTOWE}`);
+  console.log(`Done. Password for every test account: ${TEST_PASSWORD}`);
 }
 
 // No top-level await: the project has no "type": "module", so tsx loads .ts

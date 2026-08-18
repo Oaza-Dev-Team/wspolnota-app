@@ -1,29 +1,29 @@
-import { mozeZarzadzacKontami, zakresListy } from '@/lib/auth/permissions';
+import { canManageAccounts, listScope } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { prisma } from '@/lib/db';
-import { LICZBA_REJONOW } from '@/lib/domena/rejony';
-import type { KluczWidoku } from '@/lib/nawigacja';
-import { Powloka } from './Powloka';
+import { REGION_COUNT } from '@/lib/domain/regions';
+import type { ViewKey } from '@/lib/navigation';
+import { Shell } from './Shell';
 
-export default async function LayoutAplikacji({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const u = await requireUser();
 
-  const [konto, liczbaPar] = await Promise.all([
-    prisma.konto.findUniqueOrThrow({ where: { id: u.id }, select: { nazwa: true } }),
+  const [account, coupleCount] = await Promise.all([
+    prisma.account.findUniqueOrThrow({ where: { id: u.id }, select: { name: true } }),
     // Counted within the user's own scope, so a region account sees the size
     // of its region rather than of the community.
-    prisma.para.count({ where: zakresListy(u) }),
+    prisma.couple.count({ where: listScope(u) }),
   ]);
 
-  const liczniki: Partial<Record<KluczWidoku, number>> = { pary: liczbaPar };
-  if (u.rola !== 'rejon') liczniki.rejony = LICZBA_REJONOW;
-  if (mozeZarzadzacKontami(u)) {
-    liczniki.konta = await prisma.konto.count({ where: { rola: { not: 'admin' } } });
+  const counts: Partial<Record<ViewKey, number>> = { couples: coupleCount };
+  if (u.role !== 'region') counts.regions = REGION_COUNT;
+  if (canManageAccounts(u)) {
+    counts.accounts = await prisma.account.count({ where: { role: { not: 'admin' } } });
   }
 
   return (
-    <Powloka uzytkownik={u} nazwaKonta={konto.nazwa} aktywny="pary" liczniki={liczniki}>
+    <Shell user={u} accountName={account.name} active="couples" counts={counts}>
       {children}
-    </Powloka>
+    </Shell>
   );
 }

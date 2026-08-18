@@ -14,7 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
-    "e2e": "tsx e2e/przygotuj.ts && playwright test"
+    "e2e": "tsx e2e/prepare.ts && playwright test"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",

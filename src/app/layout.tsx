@@ -17,7 +17,7 @@ const sourceSerif = Source_Serif_4({
   subsets: ['latin-ext'],
   weight: ['400', '600'],
   display: 'swap',
-  variable: '--font-naglowek',
+  variable: '--font-heading',
 });
 
 const plexMono = IBM_Plex_Mono({

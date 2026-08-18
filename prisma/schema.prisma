@@ -7,7 +7,7 @@ datasource db {
   provider = "postgresql"
 }
 
-enum RodzajRekolekcji {
+enum RetreatKind {
   ONZ_I
   ONZ_II
   ONZ_III
@@ -18,169 +18,169 @@ enum RodzajRekolekcji {
   INNE
 }
 
-model Rejon {
-  id        Int    @id @db.SmallInt
-  numerRzym String @map("numer_rzym")
-
-  kregi Krag[]
-  pary  Para[]
-  konta Konto[]
-
-  @@map("rejon")
-}
-
-model Parafia {
-  id     BigInt @id @default(autoincrement())
-  nazwa  String
-  miasto String
-  /// Generated column; see Para.szukajka.
-  szukajka String?
-
-  kregi Krag[]
-  pary  Para[]
-
-  @@unique([nazwa, miasto])
-  @@map("parafia")
-}
-
-model Krag {
-  id        BigInt  @id @default(autoincrement())
-  rejonId   Int     @map("rejon_id") @db.SmallInt
-  numer     Int     @db.SmallInt
-  patron    String?
-  parafiaId BigInt  @map("parafia_id")
-  /// Generated column; see Para.szukajka.
-  szukajka  String?
-
-  rejon   Rejon   @relation(fields: [rejonId], references: [id])
-  parafia Parafia @relation(fields: [parafiaId], references: [id])
-  pary    Para[]
-
-  @@unique([rejonId, numer])
-  @@map("krag")
-}
-
-model Para {
-  id         BigInt    @id @default(autoincrement())
-  imieZony   String    @map("imie_zony")
-  imieMeza   String    @map("imie_meza")
-  nazwisko   String
-  email      String?
-  telefon    String?
-  rejonId    Int       @map("rejon_id") @db.SmallInt
-  kragId     BigInt?   @map("krag_id")
-  /// Only set when the couple belongs to a parish other than its circle's.
-  /// Effective parish is COALESCE(para.parafia_id, krag.parafia_id) — see spec 4.2.
-  parafiaId  BigInt?   @map("parafia_id")
-  dzieci     String?
-  notatki    String?
-  /// Generated column: lower-case, unaccented text of the searchable fields.
-  /// Written by Postgres, never by the application — writing to it errors.
-  szukajka   String?
-  utworzono  DateTime  @default(now()) @db.Timestamptz(6)
-  zmieniono  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
-  usunieteAt DateTime? @map("usuniete_at") @db.Timestamptz(6)
-
-  rejon      Rejon        @relation(fields: [rejonId], references: [id])
-  krag       Krag?        @relation(fields: [kragId], references: [id])
-  parafia    Parafia?     @relation(fields: [parafiaId], references: [id])
-  rekolekcje Rekolekcje[]
-
-  @@index([rejonId])
-  @@index([nazwisko])
-  @@map("para")
-}
-
-model Rekolekcje {
-  id      BigInt           @id @default(autoincrement())
-  paraId  BigInt           @map("para_id")
-  rodzaj  RodzajRekolekcji
-  rok     Int              @db.SmallInt
-  miejsce String?
-  nazwa   String?
-
-  para Para @relation(fields: [paraId], references: [id], onDelete: Cascade)
-
-  @@index([paraId])
-  @@index([rodzaj])
-  @@map("rekolekcje")
-}
-
-enum Rola {
+enum Role {
   admin
-  rejon
-  podglad
+  region
+  viewer
 }
 
-enum StatusKonta {
-  aktywne
-  wylaczone
-  oczekuje
+enum AccountStatus {
+  active
+  disabled
+  pending
 }
 
-enum RodzajAudytu {
-  edycja
-  dodanie
-  usuniecie
-  eksport
-  konto
+enum AuditKind {
+  edit
+  create
+  delete
+  export
+  account
 }
 
-model Konto {
-  id                   BigInt      @id @default(autoincrement())
-  email                String      @unique
-  hashHasla            String?     @map("hash_hasla")
-  nazwa                String
-  rola                 Rola
-  rejonId              Int?        @map("rejon_id") @db.SmallInt
-  status               StatusKonta @default(oczekuje)
-  ostatnieLogowanie    DateTime?   @map("ostatnie_logowanie") @db.Timestamptz(6)
-  zaproszenieTokenHash String?     @map("zaproszenie_token_hash")
-  zaproszenieWygasa    DateTime?   @map("zaproszenie_wygasa") @db.Timestamptz(6)
+model Region {
+  id            Int    @id @db.SmallInt
+  romanNumeral  String @map("roman_numeral")
 
-  rejon Rejon?  @relation(fields: [rejonId], references: [id])
-  sesje Sesja[]
-  audyt Audyt[]
+  circles  Circle[]
+  couples  Couple[]
+  accounts Account[]
 
-  @@map("konto")
+  @@map("region")
 }
 
-model Sesja {
-  id      BigInt @id @default(autoincrement())
-  kontoId BigInt @map("konto_id")
+model Parish {
+  id   BigInt @id @default(autoincrement())
+  name String
+  city String
+  /// Generated column: lower-case, unaccented searchable text.
+  /// Written by Postgres, never by the application.
+  searchText String? @map("search_text")
+
+  circles Circle[]
+  couples Couple[]
+
+  @@unique([name, city])
+  @@map("parish")
+}
+
+model Circle {
+  id       BigInt  @id @default(autoincrement())
+  regionId Int     @map("region_id") @db.SmallInt
+  number   Int     @db.SmallInt
+  patron   String?
+  parishId BigInt  @map("parish_id")
+  /// Generated column; see Parish.searchText.
+  searchText String? @map("search_text")
+
+  region  Region   @relation(fields: [regionId], references: [id])
+  parish  Parish   @relation(fields: [parishId], references: [id])
+  couples Couple[]
+
+  @@unique([regionId, number])
+  @@map("circle")
+}
+
+model Couple {
+  id          BigInt    @id @default(autoincrement())
+  wifeName    String    @map("wife_name")
+  husbandName String    @map("husband_name")
+  surname     String
+  email       String?
+  phone       String?
+  regionId    Int       @map("region_id") @db.SmallInt
+  circleId    BigInt?   @map("circle_id")
+  /// Only set when the couple belongs to a parish other than its circle's.
+  /// Effective parish is COALESCE(couple.parish_id, circle.parish_id) — see spec 4.2.
+  parishId    BigInt?   @map("parish_id")
+  children    String?
+  notes       String?
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  deletedAt   DateTime? @map("deleted_at") @db.Timestamptz(6)
+  /// Generated column; see Parish.searchText.
+  searchText  String?   @map("search_text")
+
+  region   Region    @relation(fields: [regionId], references: [id])
+  circle   Circle?   @relation(fields: [circleId], references: [id])
+  parish   Parish?   @relation(fields: [parishId], references: [id])
+  retreats Retreat[]
+
+  @@index([regionId])
+  @@index([surname])
+  @@map("couple")
+}
+
+model Retreat {
+  id       BigInt      @id @default(autoincrement())
+  coupleId BigInt      @map("couple_id")
+  kind     RetreatKind
+  year     Int         @db.SmallInt
+  place    String?
+  name     String?
+
+  couple Couple @relation(fields: [coupleId], references: [id], onDelete: Cascade)
+
+  @@index([coupleId])
+  @@index([kind])
+  @@map("retreat")
+}
+
+model Account {
+  id               BigInt        @id @default(autoincrement())
+  email            String        @unique
+  passwordHash     String?       @map("password_hash")
+  name             String
+  role             Role
+  regionId         Int?          @map("region_id") @db.SmallInt
+  status           AccountStatus @default(pending)
+  lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz(6)
+  inviteTokenHash  String?       @map("invite_token_hash")
+  inviteExpiresAt  DateTime?     @map("invite_expires_at") @db.Timestamptz(6)
+
+  region   Region?   @relation(fields: [regionId], references: [id])
+  sessions Session[]
+  audit    Audit[]
+
+  @@map("account")
+}
+
+model Session {
+  id        BigInt @id @default(autoincrement())
+  accountId BigInt @map("account_id")
   /// SHA-256 of the token. The raw token exists only in the user's cookie,
   /// so a database dump does not hand over live sessions.
-  tokenHash         String   @unique @map("token_hash")
-  utworzono         DateTime @default(now()) @db.Timestamptz(6)
-  wygasa            DateTime @db.Timestamptz(6)
-  ostatniaAktywnosc DateTime @default(now()) @map("ostatnia_aktywnosc") @db.Timestamptz(6)
+  tokenHash  String   @unique @map("token_hash")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  lastSeenAt DateTime @default(now()) @map("last_seen_at") @db.Timestamptz(6)
 
-  konto Konto @relation(fields: [kontoId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
-  @@index([kontoId])
-  @@map("sesja")
+  @@index([accountId])
+  @@map("session")
 }
 
-model Audyt {
-  id      BigInt       @id @default(autoincrement())
-  kiedy   DateTime     @default(now()) @db.Timestamptz(6)
-  rodzaj  RodzajAudytu
-  opis    String
-  kontoId BigInt?      @map("konto_id")
+model Audit {
+  id          BigInt    @id @default(autoincrement())
+  at          DateTime  @default(now()) @db.Timestamptz(6)
+  kind        AuditKind
+  description String
+  accountId   BigInt?   @map("account_id")
   /// Deliberately not a foreign key: the record may already be gone.
-  paraId  BigInt?      @map("para_id")
+  coupleId    BigInt?   @map("couple_id")
 
-  konto Konto? @relation(fields: [kontoId], references: [id])
+  account Account? @relation(fields: [accountId], references: [id])
 
-  @@index([kiedy])
-  @@map("audyt")
+  @@index([at])
+  @@map("audit")
 }
 
-model ProbaLogowania {
-  id    BigInt   @id @default(autoincrement())
-  klucz String
-  kiedy DateTime @default(now()) @db.Timestamptz(6)
+model LoginAttempt {
+  id   BigInt   @id @default(autoincrement())
+  key  String
+  at   DateTime @default(now()) @db.Timestamptz(6)
 
-  @@index([klucz, kiedy])
-  @@map("proba_logowania")
+  @@index([key, at])
+  @@map("login_attempt")
 }

@@ -1,0 +1,39 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.control {
+  min-height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  padding: 12px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.control:focus {
+  border-color: var(--blue-500);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.search {
+  min-width: 100%;
+  font-size: 15px;
+}
+
+.region { flex: 1; min-width: 130px; }
+.parish { flex: 2; min-width: 190px; }
+.circle { flex: 2; min-width: 180px; }
+.formation { flex: 1; min-width: 165px; }
+
+.counter {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}

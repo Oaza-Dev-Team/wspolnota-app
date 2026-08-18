@@ -1,18 +1,18 @@
-import type { Rola } from '@/generated/prisma/enums';
+import type { Role } from '@/generated/prisma/enums';
 
-export type Uzytkownik = {
+export type User = {
   id: bigint;
-  rola: Rola;
-  rejonId: number | null;
+  role: Role;
+  regionId: number | null;
 };
 
 /** The minimum a caller must know about a couple to decide access. */
-export type ParaZakres = { rejonId: number };
+export type CoupleScope = { regionId: number };
 
-export class Zabronione extends Error {
+export class Forbidden extends Error {
   constructor(message = 'Brak uprawnień do tej operacji') {
     super(message);
-    this.name = 'Zabronione';
+    this.name = 'Forbidden';
   }
 }
 
@@ -21,55 +21,55 @@ export class Zabronione extends Error {
  * must spread in. Scoping is structural rather than remembered: a query that
  * forgets this fragment fails review, not production.
  */
-export function zakresListy(u: Uzytkownik): { usunieteAt: null; rejonId?: number } {
-  if (u.rola === 'rejon') {
-    // Fail closed. A CHECK constraint keeps rejonId set for this role, but if
+export function listScope(u: User): { deletedAt: null; regionId?: number } {
+  if (u.role === 'region') {
+    // Fail closed. A CHECK constraint keeps regionId set for this role, but if
     // that invariant ever broke, falling through would hand a region account
     // the whole community rather than denying it.
-    if (u.rejonId === null) {
-      throw new Zabronione('Konto rejonowe bez przypisanego rejonu');
+    if (u.regionId === null) {
+      throw new Forbidden('Konto rejonowe bez przypisanego rejonu');
     }
-    return { usunieteAt: null, rejonId: u.rejonId };
+    return { deletedAt: null, regionId: u.regionId };
   }
-  return { usunieteAt: null };
+  return { deletedAt: null };
 }
 
-export function mozeEdytowac(u: Uzytkownik, para: ParaZakres): boolean {
-  if (u.rola === 'admin') return true;
-  if (u.rola === 'rejon') return u.rejonId !== null && para.rejonId === u.rejonId;
+export function canEdit(u: User, couple: CoupleScope): boolean {
+  if (u.role === 'admin') return true;
+  if (u.role === 'region') return u.regionId !== null && couple.regionId === u.regionId;
   return false;
 }
 
-export function mozeUsuwac(u: Uzytkownik, para: ParaZakres): boolean {
-  return mozeEdytowac(u, para);
+export function canDelete(u: User, couple: CoupleScope): boolean {
+  return canEdit(u, couple);
 }
 
-export function mozeUsunacTrwale(u: Uzytkownik): boolean {
-  return u.rola === 'admin';
+export function canPurge(u: User): boolean {
+  return u.role === 'admin';
 }
 
-export function mozeZarzadzacKontami(u: Uzytkownik): boolean {
-  return u.rola === 'admin';
+export function canManageAccounts(u: User): boolean {
+  return u.role === 'admin';
 }
 
-export function mozeCzytacAudyt(u: Uzytkownik): boolean {
-  return u.rola === 'admin';
+export function canReadAudit(u: User): boolean {
+  return u.role === 'admin';
 }
 
-export function mozeImportowac(u: Uzytkownik): boolean {
-  return u.rola === 'admin';
+export function canImport(u: User): boolean {
+  return u.role === 'admin';
 }
 
 /** A region account may never move a couple out of its own region. */
-export function mozeZmienicRejon(u: Uzytkownik): boolean {
-  return u.rola === 'admin';
+export function canChangeRegion(u: User): boolean {
+  return u.role === 'admin';
 }
 
-/** Every role may export; zakresListy decides how much they get. */
-export function mozeEksportowac(_u: Uzytkownik): boolean {
+/** Every role may export; listScope decides how much they get. */
+export function canExport(_u: User): boolean {
   return true;
 }
 
-export function assertMozeEdytowac(u: Uzytkownik, para: ParaZakres): void {
-  if (!mozeEdytowac(u, para)) throw new Zabronione();
+export function assertCanEdit(u: User, couple: CoupleScope): void {
+  if (!canEdit(u, couple)) throw new Forbidden();
 }

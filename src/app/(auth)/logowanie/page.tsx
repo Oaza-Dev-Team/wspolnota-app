@@ -1,25 +1,25 @@
 import { redirect } from 'next/navigation';
-import { pobierzUzytkownika } from '@/lib/auth/requireUser';
-import { Formularz } from './Formularz';
-import style from './logowanie.module.css';
+import { currentUser } from '@/lib/auth/requireUser';
+import { LoginForm } from './LoginForm';
+import style from './login.module.css';
 
-export default async function StronaLogowania() {
-  if (await pobierzUzytkownika()) redirect('/pary');
+export default async function LoginPage() {
+  if (await currentUser()) redirect('/pary');
 
   return (
-    <div className={style.ekran}>
-      <section className={style.lewa}>
+    <div className={style.screen}>
+      <section className={style.left}>
         <div className={style.brand}>
           <span className={style.monogram} aria-hidden="true">ŚŻ</span>
-          <span className={style.podpis}>
+          <span className={style.caption}>
             Ruch Światło-Życie
             <br />
             Archidiecezja Gdańska
           </span>
         </div>
 
-        <div className={style.srodek}>
-          <h1 className={style.tytul}>
+        <div className={style.middle}>
+          <h1 className={style.title}>
             Kartoteka
             <br />
             <em>Domowego Kościoła</em>
@@ -30,13 +30,13 @@ export default async function StronaLogowania() {
           </p>
         </div>
 
-        <p className={style.stopkaLewa}>Archidiecezja Gdańska</p>
+        <p className={style.leftFooter}>Archidiecezja Gdańska</p>
       </section>
 
-      <section className={style.prawa}>
-        <h2 className={style.naglowekFormularza}>Zaloguj się</h2>
-        <Formularz />
-        <p className={style.stopkaFormularza}>
+      <section className={style.right}>
+        <h2 className={style.formHeading}>Zaloguj się</h2>
+        <LoginForm />
+        <p className={style.formFooter}>
           Dostęp nadaje para odpowiedzialna za wspólnotę.
         </p>
       </section>

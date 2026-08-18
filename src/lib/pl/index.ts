@@ -1,3 +1,3 @@
-export * from './odmiana';
-export * from './sortowanie';
-export * from './formaty';
+export * from './plural';
+export * from './collation';
+export * from './format';
