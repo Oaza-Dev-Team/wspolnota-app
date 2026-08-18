@@ -126,11 +126,22 @@ W `tsconfig.json` upewnij się, że `compilerOptions` zawiera:
 
 ```json
 {
+  "target": "ES2022",
   "strict": true,
   "noUncheckedIndexedAccess": true,
   "paths": { "@/*": ["./src/*"] }
 }
 ```
+
+**`target` trzeba podniesc z `ES2017`, ktory ustawia `create-next-app`.** Klucze
+glowne w schemacie to `BigInt`, a literaly `1n` wymagaja `ES2020` lub wyzej —
+inaczej build przewraca sie na `TS2737`. Vitest tego nie wylapie, bo transpiluje
+wlasnym torem; blad wychodzi dopiero w `tsc` podczas `next build`.
+
+Jesli po zmianie `target` build **nadal** zglasza `TS2737`, to nieaktualny cache
+przyrostowy: `rm -f .next/cache/.tsbuildinfo` i buduj ponownie. `npx tsc --noEmit`
+przechodzacy przy jednoczesnie walacym sie `next build` jest sygnatura tego wlasnie
+problemu.
 
 `noUncheckedIndexedAccess` dokładamy świadomie: kod operuje na tablicach indeksowanych numerem rejonu (`PALETA_REJONOW[rejon - 1]`) i bez tej flagi TypeScript nie przypomni o zakresie.
 
@@ -220,6 +231,20 @@ W `eslint.config.mjs`, wewnatrz `globalIgnores([...])`, dopisz:
     "docs/**",
     // Prisma emits TypeScript sources; they are generated, not authored.
     "src/generated/**",
+```
+
+Dopisz tez konwencje podkreslnika jako osobny wpis konfiguracji — bez niej
+`mozeEksportowac(_u)` z Zadania 8 wywola ostrzezenie:
+
+```js
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
+  },
 ```
 
 Run: `npm run lint`
@@ -1725,7 +1750,13 @@ export class Zabronione extends Error {
  * forgets this fragment fails review, not production.
  */
 export function zakresListy(u: Uzytkownik): { usunieteAt: null; rejonId?: number } {
-  if (u.rola === 'rejon' && u.rejonId !== null) {
+  if (u.rola === 'rejon') {
+    // Fail closed. A CHECK constraint keeps rejonId set for this role, but if
+    // that invariant ever broke, falling through would hand a region account
+    // the whole community rather than denying it.
+    if (u.rejonId === null) {
+      throw new Zabronione('Konto rejonowe bez przypisanego rejonu');
+    }
     return { usunieteAt: null, rejonId: u.rejonId };
   }
   return { usunieteAt: null };

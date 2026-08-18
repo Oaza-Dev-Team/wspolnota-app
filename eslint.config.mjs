@@ -18,6 +18,17 @@ const eslintConfig = defineConfig([
     // Prisma emits TypeScript sources; they are generated, not authored.
     "src/generated/**",
   ]),
+  {
+    rules: {
+      // A leading underscore marks a parameter kept for signature symmetry.
+      // mozeEksportowac(_u) takes the user so it matches every other
+      // capability check, even though the answer is the same for all roles.
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;
