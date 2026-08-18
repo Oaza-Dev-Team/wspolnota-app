@@ -3101,18 +3101,38 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
+  testIgnore: ['**/przygotuj.ts'],
+  // The suite logs in and out against one shared database; parallel workers
+  // would invalidate each other's sessions.
   fullyParallel: false,
+  workers: 1,
   use: { baseURL: 'http://localhost:3000' },
   webServer: {
-    command: 'npm run dev',
+    // A production build rather than `next dev`: on-demand compilation makes
+    // the first hit on a route take seconds, which shows up as flaky timeouts
+    // rather than as the slowness it is. This also tests what actually ships.
+    command: 'npm run build && npm run start',
     url: 'http://localhost:3000/logowanie',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    reuseExistingServer: false,
+    timeout: 300_000,
   },
 });
 ```
 
-Dopisz do `package.json`: `"e2e": "playwright test"`
+**Nie uruchamiaj e2e na `next dev`.** Pierwsze wejscie na kazda trase kompiluje ja
+na zadanie, co potrafi zajac kilkanascie sekund i objawia sie jako **losowo padajace
+testy** — raz jeden, raz inny. Diagnoza kosztuje wiecej niz minuta buildu.
+
+Licznik prob logowania trzeba wyzerowac przed przebiegiem, bo suite celowo podaje
+bledne hasla, a limit to 10 prob na 15 minut. **Nie da sie tego zrobic w `globalSetup`
+Playwrighta** — laduje on TypeScript jako CommonJS, a wygenerowany klient Prismy jest
+ESM i wywala sie na `exports is not defined`. Zrob to osobnym krokiem pod `tsx`:
+
+```json
+"e2e": "tsx e2e/przygotuj.ts && playwright test"
+```
+
+`e2e/przygotuj.ts` kasuje wiersze z `proba_logowania` i rozlacza klienta.
 
 - [ ] **Step 3: Napisz testy**
 
@@ -3151,22 +3171,29 @@ test('the moderator signs in with the view-only role', async ({ page }) => {
   await expect(page.getByText('podglad')).toBeVisible();
 });
 
+// Next.js injects its own role="alert" route announcer, so alerts must be
+// scoped to the form rather than matched globally — otherwise getByRole('alert')
+// fails Playwright's strict mode by resolving to two elements.
+function komunikat(page: Page) {
+  return page.locator('form').getByRole('alert');
+}
+
 test('rejects a wrong password without revealing whether the account exists', async ({ page }) => {
   await page.goto('/logowanie');
   await page.getByLabel('Adres e-mail').fill('admin@example.pl');
   await page.getByLabel('Hasło').fill('zle-haslo');
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.');
+  await expect(komunikat(page)).toHaveText('Nieprawidłowy e-mail lub hasło.');
 
   await page.getByLabel('Adres e-mail').fill('nieistniejacy@example.pl');
   await page.getByLabel('Hasło').fill('cokolwiek');
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page.getByRole('alert')).toHaveText('Nieprawidłowy e-mail lub hasło.');
+  await expect(komunikat(page)).toHaveText('Nieprawidłowy e-mail lub hasło.');
 });
 
 test('an account awaiting invitation cannot sign in', async ({ page }) => {
   await zaloguj(page, 'rejon12@example.pl');
-  await expect(page.getByRole('alert')).toBeVisible();
+  await expect(komunikat(page)).toBeVisible();
   await expect(page).toHaveURL(/\/logowanie$/);
 });
 
