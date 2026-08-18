@@ -2,167 +2,155 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Podłączyć pod istniejący adres `?karta=<id>` panel boczny z pełną kartą pary — formularz, sekcję formacji, tryb tylko-do-odczytu, zapis i usuwanie, każde z wpisem do historii zmian.
+**Goal:** Podłączyć pod istniejący adres `/pary?card=<id>` panel boczny z pełną kartą pary — formularz, sekcję formacji, tryb tylko-do-odczytu, zapis i usuwanie, każde z wpisem do historii zmian.
 
-**Architecture:** Panel to natywny `<dialog showModal>` — daje focus trap, `Esc`, `aria-modal` i powrót fokusu bez własnego kodu. Treść renderuje się na serwerze i wchodzi do dialogu jako `children`; klienckie jest tylko to, co musi być: otwarcie dialogu, edycja szkicu i sekcja formacji. Zapis nie mieszka w server action, tylko w `lib/pary/zapisz.ts` — bo import z Excela w Planie 4 musi przejść przez dokładnie tę samą walidację i ten sam zapis.
+**Architecture:** Panel to natywny `<dialog showModal>` — daje focus trap, `Esc`, `aria-modal` i powrót fokusu bez własnego kodu. Treść renderuje się na serwerze; klienckie jest tylko to, co musi być: otwarcie dialogu, szkic formularza i sekcja formacji. Zapis mieszka w `lib/couples/save.ts`, nie w server action, bo import z Excela w Planie 4 musi przejść przez tę samą walidację i ten sam zapis.
 
-**Tech Stack:** Next.js 16.3 App Router · React 19.2 · Prisma 7.9 · Zod 4 · CSS Modules · Vitest 4 · Playwright
+**Tech Stack:** Next.js 16.3 · React 19.2 · Prisma 7.9 · Zod 4 · CSS Modules · Vitest 4 · Playwright
 
-**Spec:** `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md` (§4.3, §4.4, §7, §9)
+**Spec:** `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md` (§3 nazewnictwo, §4.3, §4.4, §7, §9)
 **Wygląd — nadrzędny:** `docs/handoff/README.md` §4 (Panel pary)
 **Zrzuty:** `docs/handoff/screenshots/03-karta-pary-pelna.png`, `04-formacja-rekolekcje.png`
-**Poprzednie plany:** `…plan-1-fundament-i-uwierzytelnianie.md`, `…plan-2-powloka-lista-filtry.md`
 
 ## Global Constraints
 
 - **Wersje:** Next.js 16.3.1 · React 19.2 · TypeScript `strict` + `noUncheckedIndexedAccess` · `target: ES2022` · Prisma 7.9 · Zod 4
-- **Bez MUI i bez Tailwinda.** CSS Modules + tokeny z `src/styles/tokens.css`. **Literał koloru, odstępu, promienia lub cienia w `.module.css` to błąd** — brakujące wartości dodaj do `tokens.css`.
-- **Bezpieczeństwo:** żadna server action nie dotyka Prismy przed `requireUser()`. Uprawnienia sprawdzane **na serwerze przy każdym zapisie**, nie tylko ukrywaniem przycisków.
-- **Audyt w tej samej transakcji co zmiana.** Osobny zapis dopuszcza stan „zmiana bez wpisu w historii".
-- **Liczba rejonów to `LICZBA_REJONOW`** — nigdy literał. Rejonów jest 11.
-- **Liczebniki przez `odmiana()`** z `@/lib/pl`.
-- **Commity** po każdym zadaniu, po angielsku.
+- **Nazewnictwo (spec §3):** po polsku wyłącznie to, co czyta człowiek — teksty interfejsu, formy odmiany, ścieżki tras, kody rekolekcji. **Identyfikatory, nazwy plików, klasy CSS, pola bazy, komentarze, testy i commity po angielsku.** Parametry zapytania też po angielsku.
+- **Bez MUI i bez Tailwinda.** CSS Modules + tokeny z `src/styles/tokens.css`; literał koloru, odstępu, promienia lub cienia w `.module.css` to błąd.
+- **Bezpieczeństwo:** żadna server action nie dotyka Prismy przed `requireUser()`. Uprawnienia sprawdzane na serwerze przy każdym zapisie, nie ukrywaniem przycisków.
+- **Audyt w tej samej transakcji co zmiana.**
+- **Commity** po każdym zadaniu, po angielsku, w trybie rozkazującym.
 
-## Cztery rzeczy z poprzednich planów, które tu obowiązują
+## Cztery rzeczy z poprzednich planów
 
 1. **`searchParams` to `Promise`** — trzeba `await`.
-2. **Kolumny `szukajka` są `GENERATED ALWAYS`.** Postgres je wylicza. Próba wstawienia ich w `data` przy `create` lub `update` kończy się błędem bazy — **nigdy ich nie wymieniaj**.
-3. **`bigint` nie przechodzi przez granicę serwer–klient.** Identyfikatory jadą do komponentów klienckich jako `string`.
-4. **`prisma migrate dev` potrafi zawisnąć po zastosowaniu migracji.** Sprawdź `prisma migrate status`, zanim uznasz, że padła; wiszący proces trzyma blokadę advisory.
+2. **Kolumny `search_text` są `GENERATED ALWAYS`.** Postgres je wylicza; wymienienie ich w `data` przy `create` lub `update` kończy się błędem bazy.
+3. **`bigint` nie przechodzi przez granicę serwer–klient** — identyfikatory jadą jako `string`.
+4. **`prisma migrate dev` potrafi zawisnąć po zastosowaniu migracji.** Sprawdź `prisma migrate status`, zanim uznasz, że padła.
 
 ---
 
 ## Struktura plików
 
 ```
-src/lib/pary/
-  schemat.ts              schemat Zod pary i wpisu formacji — wspólny dla formularza,
+src/lib/couples/
+  schema.ts               schemat Zod pary i wpisu formacji — wspólny dla formularza,
                           server action i (w Planie 4) importu
-  zapisz.ts               utwórz / zaktualizuj / usuń + audyt w jednej transakcji
-  karta.ts               odczyt pojedynczej pary wraz z opcjami kręgów i parafii
+  save.ts                 create / update / delete + audyt w jednej transakcji
+  card.ts                 odczyt pojedynczej pary wraz z opcjami kręgów i parafii
 
 src/app/(app)/pary/
-  akcje.ts                server actions — cienkie adaptery nad zapisz.ts
-  KartaPary.tsx           dialog + formularz + sekcja formacji (klient)
-  SekcjaFormacji.tsx      wiersze wpisów
-  PoleKregu.tsx           combobox: istniejący krąg albo nowy
-  PoleParafii.tsx         combobox: istniejąca parafia albo nowa
-  karta.module.css
+  actions.ts              server actions — cienkie adaptery nad save.ts
+  CoupleCard.tsx          dialog + formularz (klient)
+  FormationSection.tsx    wiersze wpisów formacji
+  card.module.css
 
 src/components/
-  Toast.tsx               komunikat po zapisie
+  Toast.tsx
   toast.module.css
 
 e2e/
-  karta.spec.ts
+  card.spec.ts
 ```
-
-**Granica klient/serwer.** `KartaPary.tsx` jest kliencki, bo trzyma szkic i steruje dialogiem. Dane wchodzą do niego jako proste propsy z serwera. Zapis wychodzi server action, która **ponownie** sprawdza uprawnienia — to, że przycisk był widoczny, niczego nie dowodzi.
 
 ---
 
 ### Task 1: Schemat walidacji
 
 **Files:**
-- Create: `src/lib/pary/schemat.ts`
-- Test: `src/lib/pary/schemat.test.ts`
+- Create: `src/lib/couples/schema.ts`
+- Test: `src/lib/couples/schema.test.ts`
 
 **Interfaces:**
-- Produces:
-  - `schematPary` — Zod, pola: `imieZony`, `imieMeza`, `nazwisko`, `email`, `telefon`, `rejonId`, `kragId`, `nowyKrag`, `parafiaId`, `nowaParafia`, `dzieci`, `notatki`
-  - `schematRekolekcji` — `rodzaj`, `rok`, `miejsce`, `nazwa`
-  - `type DanePary = z.infer<typeof schematPary>`
-  - `type DaneRekolekcji = z.infer<typeof schematRekolekcji>`
-  - `schematZapisu` — `{ para: DanePary; rekolekcje: DaneRekolekcji[] }`
+- Produces: `coupleSchema`, `retreatSchema`, `saveSchema`, `type CoupleInput`, `type RetreatInput`, `type SaveInput`
 
 - [ ] **Step 1: Napisz test**
 
-`src/lib/pary/schemat.test.ts`:
+`src/lib/couples/schema.test.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest';
-import { schematPary, schematRekolekcji, schematZapisu } from './schemat';
+import { coupleSchema, retreatSchema, saveSchema } from './schema';
 
-const poprawnaPara = {
-  imieZony: 'Anna', imieMeza: 'Piotr', nazwisko: 'Kowalscy',
-  email: 'kowalscy@example.pl', telefon: '+48 601 202 303',
-  rejonId: 7, kragId: '12', nowyKrag: null, parafiaId: '3', nowaParafia: null,
-  dzieci: 'Marysia 2014', notatki: '',
+const validCouple = {
+  wifeName: 'Anna', husbandName: 'Piotr', surname: 'Kowalscy',
+  email: 'kowalscy@example.pl', phone: '+48 601 202 303',
+  regionId: 7, circleId: '12', newCircle: null, parishId: '3', newParish: null,
+  children: 'Marysia 2014', notes: '',
 };
 
-describe('schematPary', () => {
+describe('coupleSchema', () => {
   it('accepts a fully filled couple', () => {
-    expect(schematPary.safeParse(poprawnaPara).success).toBe(true);
+    expect(coupleSchema.safeParse(validCouple).success).toBe(true);
   });
 
   // The only hard requirement from the acceptance checklist.
   it('requires a surname', () => {
-    const wynik = schematPary.safeParse({ ...poprawnaPara, nazwisko: '   ' });
-    expect(wynik.success).toBe(false);
-    expect(wynik.error!.issues[0]!.message).toBe('Podaj nazwisko');
+    const result = coupleSchema.safeParse({ ...validCouple, surname: '   ' });
+    expect(result.success).toBe(false);
+    expect(result.error!.issues[0]!.message).toBe('Podaj nazwisko');
   });
 
   it('treats blank optional fields as absent rather than as empty strings', () => {
-    const wynik = schematPary.parse({ ...poprawnaPara, email: '', telefon: '', dzieci: '' });
-    expect(wynik.email).toBeNull();
-    expect(wynik.telefon).toBeNull();
-    expect(wynik.dzieci).toBeNull();
+    const parsed = coupleSchema.parse({ ...validCouple, email: '', phone: '', children: '' });
+    expect(parsed.email).toBeNull();
+    expect(parsed.phone).toBeNull();
+    expect(parsed.children).toBeNull();
   });
 
   it('rejects a malformed e-mail but allows none at all', () => {
-    expect(schematPary.safeParse({ ...poprawnaPara, email: 'to-nie-email' }).success).toBe(false);
-    expect(schematPary.safeParse({ ...poprawnaPara, email: '' }).success).toBe(true);
+    expect(coupleSchema.safeParse({ ...validCouple, email: 'not-an-email' }).success).toBe(false);
+    expect(coupleSchema.safeParse({ ...validCouple, email: '' }).success).toBe(true);
   });
 
   it('rejects a region outside the range', () => {
-    expect(schematPary.safeParse({ ...poprawnaPara, rejonId: 12 }).success).toBe(false);
-    expect(schematPary.safeParse({ ...poprawnaPara, rejonId: 0 }).success).toBe(false);
+    expect(coupleSchema.safeParse({ ...validCouple, regionId: 12 }).success).toBe(false);
+    expect(coupleSchema.safeParse({ ...validCouple, regionId: 0 }).success).toBe(false);
   });
 
   it('refuses a circle given both by id and as a new one', () => {
-    const wynik = schematPary.safeParse({
-      ...poprawnaPara, kragId: '12', nowyKrag: { numer: 4, patron: 'św. Rity', parafiaId: '3' },
-    });
-    expect(wynik.success).toBe(false);
+    expect(coupleSchema.safeParse({
+      ...validCouple, circleId: '12',
+      newCircle: { number: 4, patron: 'św. Rity', parishId: '3' },
+    }).success).toBe(false);
   });
 });
 
-describe('schematRekolekcji', () => {
+describe('retreatSchema', () => {
   it('accepts a degree entry without a name', () => {
-    expect(schematRekolekcji.safeParse({
-      rodzaj: 'ONZ_I', rok: 2014, miejsce: 'Krościenko', nazwa: '',
+    expect(retreatSchema.safeParse({
+      kind: 'ONZ_I', year: 2014, place: 'Krościenko', name: '',
     }).success).toBe(true);
   });
 
   it('requires a name for INNE', () => {
-    const wynik = schematRekolekcji.safeParse({
-      rodzaj: 'INNE', rok: 2014, miejsce: 'Chmielno', nazwa: '',
+    const result = retreatSchema.safeParse({
+      kind: 'INNE', year: 2014, place: 'Chmielno', name: '',
     });
-    expect(wynik.success).toBe(false);
-    expect(wynik.error!.issues[0]!.message).toBe('Podaj nazwę rekolekcji');
+    expect(result.success).toBe(false);
+    expect(result.error!.issues[0]!.message).toBe('Podaj nazwę rekolekcji');
   });
 
   it('keeps the year inside the range the database enforces', () => {
-    expect(schematRekolekcji.safeParse({ rodzaj: 'ONZ_I', rok: 1969, miejsce: '', nazwa: '' }).success)
+    expect(retreatSchema.safeParse({ kind: 'ONZ_I', year: 1969, place: '', name: '' }).success)
       .toBe(false);
-    expect(schematRekolekcji.safeParse({ rodzaj: 'ONZ_I', rok: 2101, miejsce: '', nazwa: '' }).success)
+    expect(retreatSchema.safeParse({ kind: 'ONZ_I', year: 2101, place: '', name: '' }).success)
       .toBe(false);
   });
 });
 
-describe('schematZapisu', () => {
+describe('saveSchema', () => {
   it('validates the couple and its entries together', () => {
-    const wynik = schematZapisu.safeParse({
-      para: poprawnaPara,
-      rekolekcje: [{ rodzaj: 'ONZ_I', rok: 2014, miejsce: 'Krościenko', nazwa: '' }],
-    });
-    expect(wynik.success).toBe(true);
+    expect(saveSchema.safeParse({
+      couple: validCouple,
+      retreats: [{ kind: 'ONZ_I', year: 2014, place: 'Krościenko', name: '' }],
+    }).success).toBe(true);
   });
 
   it('fails when any entry is invalid', () => {
-    expect(schematZapisu.safeParse({
-      para: poprawnaPara,
-      rekolekcje: [{ rodzaj: 'INNE', rok: 2014, miejsce: '', nazwa: '' }],
+    expect(saveSchema.safeParse({
+      couple: validCouple,
+      retreats: [{ kind: 'INNE', year: 2014, place: '', name: '' }],
     }).success).toBe(false);
   });
 });
@@ -170,90 +158,90 @@ describe('schematZapisu', () => {
 
 - [ ] **Step 2: Uruchom test — musi się wywalić**
 
-Run: `npm test -- schemat`
+Run: `npm test -- schema`
 Expected: FAIL — brak modułu
 
 - [ ] **Step 3: Zaimplementuj**
 
-`src/lib/pary/schemat.ts`:
+`src/lib/couples/schema.ts`:
 
 ```ts
 import { z } from 'zod';
-import { RODZAJE_REKOLEKCJI } from '@/lib/domena/rekolekcje';
-import { LICZBA_REJONOW } from '@/lib/domena/rejony';
+import { REGION_COUNT } from '@/lib/domain/regions';
+import { RETREAT_KINDS } from '@/lib/domain/retreats';
 
 /** Empty form fields arrive as "" and must land in the database as NULL. */
-const pusteNaNull = z
+const blankToNull = z
   .string()
   .transform((s) => s.trim())
   .transform((s) => (s === '' ? null : s));
 
-const RODZAJE = RODZAJE_REKOLEKCJI.map((r) => r.rodzaj) as [string, ...string[]];
+const KINDS = RETREAT_KINDS.map((r) => r.kind) as [string, ...string[]];
 
-export const schematRekolekcji = z
+export const retreatSchema = z
   .object({
-    rodzaj: z.enum(RODZAJE),
+    kind: z.enum(KINDS),
     // The database CHECK enforces the same range; keeping them equal means a
     // form error rather than a constraint violation.
-    rok: z.number().int().min(1970, 'Rok poza zakresem').max(2100, 'Rok poza zakresem'),
-    miejsce: pusteNaNull,
-    nazwa: pusteNaNull,
+    year: z.number().int().min(1970, 'Rok poza zakresem').max(2100, 'Rok poza zakresem'),
+    place: blankToNull,
+    name: blankToNull,
   })
-  .refine((r) => r.rodzaj !== 'INNE' || r.nazwa !== null, {
+  .refine((r) => r.kind !== 'INNE' || r.name !== null, {
     message: 'Podaj nazwę rekolekcji',
-    path: ['nazwa'],
+    path: ['name'],
   });
 
-const nowyKrag = z.object({
-  numer: z.number().int().min(1).max(99),
-  patron: pusteNaNull,
-  parafiaId: z.string().regex(/^\d+$/),
+const newCircleSchema = z.object({
+  number: z.number().int().min(1).max(99),
+  patron: blankToNull,
+  parishId: z.string().regex(/^\d+$/),
 });
 
-const nowaParafia = z.object({
-  nazwa: z.string().trim().min(1, 'Podaj nazwę parafii'),
-  miasto: z.string().trim().min(1, 'Podaj miasto'),
+const newParishSchema = z.object({
+  name: z.string().trim().min(1, 'Podaj nazwę parafii'),
+  city: z.string().trim().min(1, 'Podaj miasto'),
 });
 
-export const schematPary = z
+export const coupleSchema = z
   .object({
-    imieZony: z.string().trim().max(60),
-    imieMeza: z.string().trim().max(60),
-    nazwisko: z.string().trim().min(1, 'Podaj nazwisko').max(80),
+    wifeName: z.string().trim().max(60),
+    husbandName: z.string().trim().max(60),
+    surname: z.string().trim().min(1, 'Podaj nazwisko').max(80),
     email: z.union([z.literal(''), z.email('Niepoprawny adres e-mail')]).transform((s) => s || null),
-    telefon: pusteNaNull,
-    rejonId: z.number().int().min(1).max(LICZBA_REJONOW),
-    kragId: z.string().regex(/^\d+$/).nullable(),
-    nowyKrag: nowyKrag.nullable(),
-    parafiaId: z.string().regex(/^\d+$/).nullable(),
-    nowaParafia: nowaParafia.nullable(),
-    dzieci: pusteNaNull,
-    notatki: pusteNaNull,
+    phone: blankToNull,
+    regionId: z.number().int().min(1).max(REGION_COUNT),
+    circleId: z.string().regex(/^\d+$/).nullable(),
+    newCircle: newCircleSchema.nullable(),
+    parishId: z.string().regex(/^\d+$/).nullable(),
+    newParish: newParishSchema.nullable(),
+    children: blankToNull,
+    notes: blankToNull,
   })
   // Picking an existing entity and creating a new one at once is ambiguous —
   // the combobox can only be in one of those states.
-  .refine((p) => !(p.kragId && p.nowyKrag), {
+  .refine((c) => !(c.circleId && c.newCircle), {
     message: 'Wybierz istniejący krąg albo utwórz nowy',
-    path: ['kragId'],
+    path: ['circleId'],
   })
-  .refine((p) => !(p.parafiaId && p.nowaParafia), {
+  .refine((c) => !(c.parishId && c.newParish), {
     message: 'Wybierz istniejącą parafię albo utwórz nową',
-    path: ['parafiaId'],
+    path: ['parishId'],
   });
 
-export const schematZapisu = z.object({
-  para: schematPary,
-  rekolekcje: z.array(schematRekolekcji),
+export const saveSchema = z.object({
+  couple: coupleSchema,
+  retreats: z.array(retreatSchema),
 });
 
-export type DanePary = z.infer<typeof schematPary>;
-export type DaneRekolekcji = z.infer<typeof schematRekolekcji>;
-export type DaneZapisu = z.infer<typeof schematZapisu>;
+export type CoupleInput = z.infer<typeof coupleSchema>;
+export type RetreatInput = z.infer<typeof retreatSchema>;
+export type SaveInput = z.infer<typeof saveSchema>;
 ```
 
 - [ ] **Step 4: Uruchom test — musi przejść**
 
-Run: `npm test -- schemat`
+Run: `npm test -- schema`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -267,347 +255,332 @@ git commit -m "feat: add couple and retreat validation schema"
 
 ### Task 2: Warstwa zapisu
 
-Serce planu. Tu audyt wchodzi do tej samej transakcji co zmiana, a uprawnienia są
-sprawdzane po stronie serwera.
+Serce planu: audyt w tej samej transakcji co zmiana i uprawnienia sprawdzane po stronie serwera.
 
 **Files:**
-- Create: `src/lib/pary/zapisz.ts`
-- Test: `src/lib/pary/zapisz.int.test.ts`
+- Create: `src/lib/couples/save.ts`
+- Test: `src/lib/couples/save.int.test.ts`
 
 **Interfaces:**
-- Consumes: `assertMozeEdytowac`, `mozeZmienicRejon`, `Zabronione` z `@/lib/auth/permissions`; `DaneZapisu` (Task 1)
-- Produces:
-  - `dodajPare(u: Uzytkownik, dane: DaneZapisu): Promise<bigint>`
-  - `zaktualizujPare(u: Uzytkownik, id: bigint, dane: DaneZapisu): Promise<void>`
-  - `usunPare(u: Uzytkownik, id: bigint): Promise<void>` — soft-delete
-  - `class NieZnaleziono extends Error`
+- Produces: `createCouple(u, data): Promise<bigint>`, `updateCouple(u, id, data): Promise<void>`, `deleteCouple(u, id): Promise<void>`, `class NotFound extends Error`
 
 - [ ] **Step 1: Napisz test integracyjny**
 
-`src/lib/pary/zapisz.int.test.ts`:
+`src/lib/couples/save.int.test.ts`:
 
 ```ts
 import { afterEach, describe, expect, it } from 'vitest';
-import { type Uzytkownik, Zabronione } from '@/lib/auth/permissions';
+import { Forbidden, type User } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
-import type { DaneZapisu } from './schemat';
-import { NieZnaleziono, dodajPare, usunPare, zaktualizujPare } from './zapisz';
+import type { SaveInput } from './schema';
+import { NotFound, createCouple, deleteCouple, updateCouple } from './save';
 
-const admin: Uzytkownik = { id: 0n, rola: 'admin', rejonId: null };
-const rejonVII: Uzytkownik = { id: 0n, rola: 'rejon', rejonId: 7 };
-const moderator: Uzytkownik = { id: 0n, rola: 'podglad', rejonId: null };
+const admin: User = { id: 0n, role: 'admin', regionId: null };
+const regionVII: User = { id: 0n, role: 'region', regionId: 7 };
+const viewer: User = { id: 0n, role: 'viewer', regionId: null };
 
-const utworzone: bigint[] = [];
+const created: bigint[] = [];
 
 afterEach(async () => {
-  if (utworzone.length) {
-    await prisma.rekolekcje.deleteMany({ where: { paraId: { in: utworzone } } });
-    await prisma.para.deleteMany({ where: { id: { in: utworzone } } });
-    await prisma.audyt.deleteMany({ where: { paraId: { in: utworzone } } });
-    utworzone.length = 0;
+  if (created.length) {
+    await prisma.retreat.deleteMany({ where: { coupleId: { in: created } } });
+    await prisma.couple.deleteMany({ where: { id: { in: created } } });
+    await prisma.audit.deleteMany({ where: { coupleId: { in: created } } });
+    created.length = 0;
   }
 });
 
-function dane(nadpisz: Partial<DaneZapisu['para']> = {}): DaneZapisu {
+function input(overrides: Partial<SaveInput['couple']> = {}): SaveInput {
   return {
-    para: {
-      imieZony: 'Testowa', imieMeza: 'Testowy', nazwisko: 'Testowi',
-      email: null, telefon: null, rejonId: 7,
-      kragId: null, nowyKrag: null, parafiaId: null, nowaParafia: null,
-      dzieci: null, notatki: null, ...nadpisz,
+    couple: {
+      wifeName: 'Testowa', husbandName: 'Testowy', surname: 'Testowi',
+      email: null, phone: null, regionId: 7,
+      circleId: null, newCircle: null, parishId: null, newParish: null,
+      children: null, notes: null, ...overrides,
     },
-    rekolekcje: [],
+    retreats: [],
   };
 }
 
-async function dodaj(u: Uzytkownik, d: DaneZapisu = dane()) {
-  const id = await dodajPare(u, d);
-  utworzone.push(id);
+async function add(u: User, data: SaveInput = input()) {
+  const id = await createCouple(u, data);
+  created.push(id);
   return id;
 }
 
-describe('dodajPare', () => {
+describe('createCouple', () => {
   it('creates the couple and one audit entry, in one transaction', async () => {
-    const przed = await prisma.audyt.count();
-    const id = await dodaj(admin);
+    const before = await prisma.audit.count();
+    const id = await add(admin);
 
-    expect(await prisma.para.findUnique({ where: { id } })).not.toBeNull();
-    expect(await prisma.audyt.count()).toBe(przed + 1);
-
-    const wpis = await prisma.audyt.findFirstOrThrow({ where: { paraId: id } });
-    expect(wpis.rodzaj).toBe('dodanie');
+    expect(await prisma.couple.findUnique({ where: { id } })).not.toBeNull();
+    expect(await prisma.audit.count()).toBe(before + 1);
+    expect((await prisma.audit.findFirstOrThrow({ where: { coupleId: id } })).kind).toBe('create');
   });
 
   it('stores retreat entries alongside the couple', async () => {
-    const id = await dodaj(admin, {
-      ...dane(),
-      rekolekcje: [
-        { rodzaj: 'ONZ_I', rok: 2014, miejsce: 'Krościenko', nazwa: null },
-        { rodzaj: 'INNE', rok: 2019, miejsce: null, nazwa: 'Ewangelizacyjne' },
+    const id = await add(admin, {
+      ...input(),
+      retreats: [
+        { kind: 'ONZ_I', year: 2014, place: 'Krościenko', name: null },
+        { kind: 'INNE', year: 2019, place: null, name: 'Ewangelizacyjne' },
       ],
     });
-    expect(await prisma.rekolekcje.count({ where: { paraId: id } })).toBe(2);
+    expect(await prisma.retreat.count({ where: { coupleId: id } })).toBe(2);
   });
 
   it('lets a region account create only inside its own region', async () => {
-    await expect(dodajPare(rejonVII, dane({ rejonId: 3 }))).rejects.toThrow(Zabronione);
+    await expect(createCouple(regionVII, input({ regionId: 3 }))).rejects.toThrow(Forbidden);
   });
 
   it('never lets the viewer create', async () => {
-    await expect(dodajPare(moderator, dane())).rejects.toThrow(Zabronione);
+    await expect(createCouple(viewer, input())).rejects.toThrow(Forbidden);
   });
 });
 
-describe('zaktualizujPare', () => {
+describe('updateCouple', () => {
   it('records an edit in the audit trail', async () => {
-    const id = await dodaj(admin);
-    await zaktualizujPare(admin, id, dane({ nazwisko: 'Zmienieni' }));
+    const id = await add(admin);
+    await updateCouple(admin, id, input({ surname: 'Zmienieni' }));
 
-    const para = await prisma.para.findUniqueOrThrow({ where: { id } });
-    expect(para.nazwisko).toBe('Zmienieni');
-    expect(await prisma.audyt.count({ where: { paraId: id, rodzaj: 'edycja' } })).toBe(1);
+    expect((await prisma.couple.findUniqueOrThrow({ where: { id } })).surname).toBe('Zmienieni');
+    expect(await prisma.audit.count({ where: { coupleId: id, kind: 'edit' } })).toBe(1);
   });
 
   it('replaces the retreat entries rather than appending to them', async () => {
-    const id = await dodaj(admin, {
-      ...dane(),
-      rekolekcje: [{ rodzaj: 'ONZ_I', rok: 2014, miejsce: null, nazwa: null }],
+    const id = await add(admin, {
+      ...input(),
+      retreats: [{ kind: 'ONZ_I', year: 2014, place: null, name: null }],
     });
-    await zaktualizujPare(admin, id, {
-      ...dane(),
-      rekolekcje: [{ rodzaj: 'ONZ_II', rok: 2016, miejsce: null, nazwa: null }],
+    await updateCouple(admin, id, {
+      ...input(),
+      retreats: [{ kind: 'ONZ_II', year: 2016, place: null, name: null }],
     });
 
-    const wpisy = await prisma.rekolekcje.findMany({ where: { paraId: id } });
-    expect(wpisy).toHaveLength(1);
-    expect(wpisy[0]!.rodzaj).toBe('ONZ_II');
+    const entries = await prisma.retreat.findMany({ where: { coupleId: id } });
+    expect(entries).toHaveLength(1);
+    expect(entries[0]!.kind).toBe('ONZ_II');
   });
 
   // The checklist requires the region field to be locked for a region account
   // both in the interface and on the server.
   it('refuses to move a couple out of a region account own region', async () => {
-    const id = await dodaj(admin);
-    await expect(zaktualizujPare(rejonVII, id, dane({ rejonId: 3 }))).rejects.toThrow(Zabronione);
+    const id = await add(admin);
+    await expect(updateCouple(regionVII, id, input({ regionId: 3 }))).rejects.toThrow(Forbidden);
   });
 
   it('lets a region account edit its own couple without touching the region', async () => {
-    const id = await dodaj(admin);
-    await zaktualizujPare(rejonVII, id, dane({ nazwisko: 'Poprawieni' }));
-    expect((await prisma.para.findUniqueOrThrow({ where: { id } })).nazwisko).toBe('Poprawieni');
+    const id = await add(admin);
+    await updateCouple(regionVII, id, input({ surname: 'Poprawieni' }));
+    expect((await prisma.couple.findUniqueOrThrow({ where: { id } })).surname).toBe('Poprawieni');
   });
 
   it('refuses a couple from another region', async () => {
-    const id = await dodaj(admin, dane({ rejonId: 3 }));
-    await expect(zaktualizujPare(rejonVII, id, dane({ rejonId: 3 }))).rejects.toThrow(Zabronione);
+    const id = await add(admin, input({ regionId: 3 }));
+    await expect(updateCouple(regionVII, id, input({ regionId: 3 }))).rejects.toThrow(Forbidden);
   });
 
-  it('throws NieZnaleziono for an id that does not exist', async () => {
-    await expect(zaktualizujPare(admin, 999_999_999n, dane())).rejects.toThrow(NieZnaleziono);
+  it('throws NotFound for an id that does not exist', async () => {
+    await expect(updateCouple(admin, 999_999_999n, input())).rejects.toThrow(NotFound);
   });
 });
 
-describe('usunPare', () => {
+describe('deleteCouple', () => {
   it('soft-deletes so the record survives for recovery', async () => {
-    const id = await dodaj(admin);
-    await usunPare(admin, id);
+    const id = await add(admin);
+    await deleteCouple(admin, id);
 
-    const para = await prisma.para.findUniqueOrThrow({ where: { id } });
-    expect(para.usunieteAt).not.toBeNull();
-    expect(await prisma.audyt.count({ where: { paraId: id, rodzaj: 'usuniecie' } })).toBe(1);
+    expect((await prisma.couple.findUniqueOrThrow({ where: { id } })).deletedAt).not.toBeNull();
+    expect(await prisma.audit.count({ where: { coupleId: id, kind: 'delete' } })).toBe(1);
   });
 
-  it('hides a soft-deleted couple from an already-deleted record', async () => {
-    const id = await dodaj(admin);
-    await usunPare(admin, id);
-    // A second delete has nothing left to act on.
-    await expect(usunPare(admin, id)).rejects.toThrow(NieZnaleziono);
+  it('has nothing left to act on when called twice', async () => {
+    const id = await add(admin);
+    await deleteCouple(admin, id);
+    await expect(deleteCouple(admin, id)).rejects.toThrow(NotFound);
   });
 
   it('never lets the viewer delete', async () => {
-    const id = await dodaj(admin);
-    await expect(usunPare(moderator, id)).rejects.toThrow(Zabronione);
+    const id = await add(admin);
+    await expect(deleteCouple(viewer, id)).rejects.toThrow(Forbidden);
   });
 });
 ```
 
 - [ ] **Step 2: Uruchom test — musi się wywalić**
 
-Run: `npm run test:int -- zapisz`
+Run: `npm run test:int -- save`
 Expected: FAIL — brak modułu
 
 - [ ] **Step 3: Zaimplementuj**
 
-`src/lib/pary/zapisz.ts`:
+`src/lib/couples/save.ts`:
 
 ```ts
 import type { Prisma } from '@/generated/prisma/client';
 import {
-  type Uzytkownik, Zabronione, assertMozeEdytowac, mozeUsuwac, mozeZmienicRejon,
+  Forbidden, type User, assertCanEdit, canChangeRegion, canDelete,
 } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
-import type { DaneZapisu } from './schemat';
+import type { SaveInput } from './schema';
 
-export class NieZnaleziono extends Error {
+export class NotFound extends Error {
   constructor(message = 'Nie znaleziono pary') {
     super(message);
-    this.name = 'NieZnaleziono';
+    this.name = 'NotFound';
   }
 }
 
 /**
- * Never mention `szukajka` here. Those columns are GENERATED ALWAYS: Postgres
- * computes them and rejects any attempt to write them.
+ * Never mention `searchText` here. Those columns are GENERATED ALWAYS:
+ * Postgres computes them and rejects any attempt to write them.
  */
-function poleParyDoZapisu(d: DaneZapisu['para']) {
+function coupleFields(c: SaveInput['couple']) {
   return {
-    imieZony: d.imieZony,
-    imieMeza: d.imieMeza,
-    nazwisko: d.nazwisko,
-    email: d.email,
-    telefon: d.telefon,
-    rejonId: d.rejonId,
-    dzieci: d.dzieci,
-    notatki: d.notatki,
+    wifeName: c.wifeName,
+    husbandName: c.husbandName,
+    surname: c.surname,
+    email: c.email,
+    phone: c.phone,
+    regionId: c.regionId,
+    children: c.children,
+    notes: c.notes,
   };
 }
 
 /** Resolves the combobox state into ids, creating the new entity when asked. */
-async function rozwiazPowiazania(
+async function resolveRelations(
   tx: Prisma.TransactionClient,
-  d: DaneZapisu['para'],
-): Promise<{ kragId: bigint | null; parafiaId: bigint | null }> {
-  let parafiaId = d.parafiaId === null ? null : BigInt(d.parafiaId);
+  c: SaveInput['couple'],
+): Promise<{ circleId: bigint | null; parishId: bigint | null }> {
+  let parishId = c.parishId === null ? null : BigInt(c.parishId);
 
-  if (d.nowaParafia) {
-    const parafia = await tx.parafia.upsert({
-      where: { nazwa_miasto: { nazwa: d.nowaParafia.nazwa, miasto: d.nowaParafia.miasto } },
+  if (c.newParish) {
+    const parish = await tx.parish.upsert({
+      where: { name_city: { name: c.newParish.name, city: c.newParish.city } },
       update: {},
-      create: d.nowaParafia,
+      create: c.newParish,
     });
-    parafiaId = parafia.id;
+    parishId = parish.id;
   }
 
-  let kragId = d.kragId === null ? null : BigInt(d.kragId);
+  let circleId = c.circleId === null ? null : BigInt(c.circleId);
 
-  if (d.nowyKrag) {
-    const krag = await tx.krag.upsert({
-      where: { rejonId_numer: { rejonId: d.rejonId, numer: d.nowyKrag.numer } },
+  if (c.newCircle) {
+    const circle = await tx.circle.upsert({
+      where: { regionId_number: { regionId: c.regionId, number: c.newCircle.number } },
       update: {},
       create: {
-        rejonId: d.rejonId,
-        numer: d.nowyKrag.numer,
-        patron: d.nowyKrag.patron,
-        parafiaId: BigInt(d.nowyKrag.parafiaId),
+        regionId: c.regionId,
+        number: c.newCircle.number,
+        patron: c.newCircle.patron,
+        parishId: BigInt(c.newCircle.parishId),
       },
     });
-    kragId = krag.id;
+    circleId = circle.id;
   }
 
-  return { kragId, parafiaId };
+  return { circleId, parishId };
 }
 
-function opisPary(d: DaneZapisu['para']): string {
-  const imiona = [d.imieZony, d.imieMeza].filter(Boolean).join(' i ');
-  return imiona ? `${imiona} ${d.nazwisko}` : d.nazwisko;
+function coupleLabel(c: SaveInput['couple']): string {
+  const names = [c.wifeName, c.husbandName].filter(Boolean).join(' i ');
+  return names ? `${names} ${c.surname}` : c.surname;
 }
 
-export async function dodajPare(u: Uzytkownik, dane: DaneZapisu): Promise<bigint> {
-  assertMozeEdytowac(u, { rejonId: dane.para.rejonId });
+export async function createCouple(u: User, data: SaveInput): Promise<bigint> {
+  assertCanEdit(u, { regionId: data.couple.regionId });
 
   return prisma.$transaction(async (tx) => {
-    const { kragId, parafiaId } = await rozwiazPowiazania(tx, dane.para);
+    const { circleId, parishId } = await resolveRelations(tx, data.couple);
 
-    const para = await tx.para.create({
+    const couple = await tx.couple.create({
       data: {
-        ...poleParyDoZapisu(dane.para),
-        kragId,
-        parafiaId,
-        rekolekcje: { create: dane.rekolekcje },
+        ...coupleFields(data.couple),
+        circleId,
+        parishId,
+        retreats: { create: data.retreats },
       },
     });
 
     // Same transaction as the change itself: a couple must never exist
     // without the audit entry that records who added it.
-    await tx.audyt.create({
+    await tx.audit.create({
       data: {
-        rodzaj: 'dodanie',
-        opis: `Dodano parę ${opisPary(dane.para)}`,
-        kontoId: u.id,
-        paraId: para.id,
+        kind: 'create',
+        description: `Dodano parę ${coupleLabel(data.couple)}`,
+        accountId: u.id,
+        coupleId: couple.id,
       },
     });
 
-    return para.id;
+    return couple.id;
   });
 }
 
-export async function zaktualizujPare(
-  u: Uzytkownik,
-  id: bigint,
-  dane: DaneZapisu,
-): Promise<void> {
-  const istniejaca = await prisma.para.findFirst({
-    where: { id, usunieteAt: null },
-    select: { rejonId: true },
+export async function updateCouple(u: User, id: bigint, data: SaveInput): Promise<void> {
+  const existing = await prisma.couple.findFirst({
+    where: { id, deletedAt: null },
+    select: { regionId: true },
   });
-  if (!istniejaca) throw new NieZnaleziono();
+  if (!existing) throw new NotFound();
 
   // Two checks, not one: the user must be allowed to touch the couple as it is
   // now, and also allowed to put it where the form wants to put it.
-  assertMozeEdytowac(u, { rejonId: istniejaca.rejonId });
-  if (dane.para.rejonId !== istniejaca.rejonId && !mozeZmienicRejon(u)) {
-    throw new Zabronione('Nie możesz przenieść pary do innego rejonu');
+  assertCanEdit(u, { regionId: existing.regionId });
+  if (data.couple.regionId !== existing.regionId && !canChangeRegion(u)) {
+    throw new Forbidden('Nie możesz przenieść pary do innego rejonu');
   }
-  assertMozeEdytowac(u, { rejonId: dane.para.rejonId });
+  assertCanEdit(u, { regionId: data.couple.regionId });
 
   await prisma.$transaction(async (tx) => {
-    const { kragId, parafiaId } = await rozwiazPowiazania(tx, dane.para);
+    const { circleId, parishId } = await resolveRelations(tx, data.couple);
 
-    await tx.para.update({
+    await tx.couple.update({
       where: { id },
-      data: { ...poleParyDoZapisu(dane.para), kragId, parafiaId },
+      data: { ...coupleFields(data.couple), circleId, parishId },
     });
 
     // The form owns the whole list, so the stored entries are replaced rather
     // than merged — otherwise a removed row would quietly survive.
-    await tx.rekolekcje.deleteMany({ where: { paraId: id } });
-    if (dane.rekolekcje.length > 0) {
-      await tx.rekolekcje.createMany({
-        data: dane.rekolekcje.map((r) => ({ ...r, paraId: id })),
+    await tx.retreat.deleteMany({ where: { coupleId: id } });
+    if (data.retreats.length > 0) {
+      await tx.retreat.createMany({
+        data: data.retreats.map((r) => ({ ...r, coupleId: id })),
       });
     }
 
-    await tx.audyt.create({
+    await tx.audit.create({
       data: {
-        rodzaj: 'edycja',
-        opis: `Zmieniono dane pary ${opisPary(dane.para)}`,
-        kontoId: u.id,
-        paraId: id,
+        kind: 'edit',
+        description: `Zmieniono dane pary ${coupleLabel(data.couple)}`,
+        accountId: u.id,
+        coupleId: id,
       },
     });
   });
 }
 
-export async function usunPare(u: Uzytkownik, id: bigint): Promise<void> {
-  const para = await prisma.para.findFirst({
-    where: { id, usunieteAt: null },
-    select: { rejonId: true, nazwisko: true, imieZony: true, imieMeza: true },
+export async function deleteCouple(u: User, id: bigint): Promise<void> {
+  const couple = await prisma.couple.findFirst({
+    where: { id, deletedAt: null },
+    select: { regionId: true, surname: true, wifeName: true, husbandName: true },
   });
-  if (!para) throw new NieZnaleziono();
-  if (!mozeUsuwac(u, { rejonId: para.rejonId })) throw new Zabronione();
+  if (!couple) throw new NotFound();
+  if (!canDelete(u, { regionId: couple.regionId })) throw new Forbidden();
 
   await prisma.$transaction(async (tx) => {
     // Soft delete: a region account can misclick, and the record holds a
     // family's history. Permanent removal is a separate, admin-only action
     // arriving in Plan 6.
-    await tx.para.update({ where: { id }, data: { usunieteAt: new Date() } });
+    await tx.couple.update({ where: { id }, data: { deletedAt: new Date() } });
 
-    await tx.audyt.create({
+    await tx.audit.create({
       data: {
-        rodzaj: 'usuniecie',
-        opis: `Usunięto parę ${para.imieZony} i ${para.imieMeza} ${para.nazwisko}`,
-        kontoId: u.id,
-        paraId: id,
+        kind: 'delete',
+        description: `Usunięto parę ${couple.wifeName} i ${couple.husbandName} ${couple.surname}`,
+        accountId: u.id,
+        coupleId: id,
       },
     });
   });
@@ -616,13 +589,10 @@ export async function usunPare(u: Uzytkownik, id: bigint): Promise<void> {
 
 - [ ] **Step 4: Uruchom test — musi przejść**
 
-Run: `npm run test:int -- zapisz`
-Expected: PASS
+**Zanim uruchomisz, sprawdź nazwy kluczy złożonych.** Prisma generuje je z `@@unique([...])`, sklejając nazwy pól podkreśleniem — stąd `name_city` i `regionId_number`. Potwierdź w `src/generated/prisma/models/Parish.ts` i `.../Circle.ts`; literówka daje błąd typów, nie runtime'u.
 
-**Zanim uruchomisz test, sprawdź nazwy kluczy złożonych.** Prisma generuje je
-z `@@unique([...])`, sklejając nazwy pól podkreśleniem — stąd `nazwa_miasto`
-i `rejonId_numer`. Potwierdź w `src/generated/prisma/models/Parafia.ts`
-i `.../Krag.ts`, bo literówka w tym miejscu daje błąd typów, a nie runtime'u.
+Run: `npm run test:int -- save`
+Expected: PASS
 
 - [ ] **Step 5: Commit**
 
@@ -636,237 +606,234 @@ git commit -m "feat: add couple write layer with transactional audit"
 ### Task 3: Odczyt karty
 
 **Files:**
-- Create: `src/lib/pary/karta.ts`
-- Test: `src/lib/pary/karta.int.test.ts`
+- Create: `src/lib/couples/card.ts`
+- Test: `src/lib/couples/card.int.test.ts`
 
 **Interfaces:**
 - Produces:
-  - `type DaneKarty = { id: string; imieZony: string; imieMeza: string; nazwisko: string; email: string; telefon: string; rejonId: number; kragId: string | null; parafiaId: string | null; dzieci: string; notatki: string; rekolekcje: WpisFormacji[] }`
-  - `type WpisFormacji = { rodzaj: RodzajRekolekcji; rok: string; miejsce: string; nazwa: string }` — `rok` jest tekstem, bo to wartość pola formularza
-  - `pobierzKarte(u, id): Promise<{ karta: DaneKarty; edytowalna: boolean } | null>`
-  - `pustaKarta(u): DaneKarty`
-  - `opcjeKarty(rejonId): Promise<{ kregi: …; parafie: … }>`
+  - `type FormationEntry = { kind: RetreatKind; year: string; place: string; name: string }` — `year` jest tekstem, bo to wartość pola formularza
+  - `type CardData = { id: string; wifeName: string; husbandName: string; surname: string; email: string; phone: string; regionId: number; circleId: string | null; parishId: string | null; children: string; notes: string; retreats: FormationEntry[] }`
+  - `loadCard(u, id): Promise<{ card: CardData; editable: boolean } | null>`
+  - `blankCard(u): CardData`
+  - `cardOptions(regionId): Promise<{ circles: …; parishes: … }>`
 
-Wszystkie identyfikatory są `string`, a pola tekstowe nigdy nie są `null` — karta jedzie
-prosto do komponentu klienckiego i do niekontrolowanych pól formularza, gdzie `null`
-zamienia input w kontrolowany i wywołuje ostrzeżenie Reacta.
+Wszystkie identyfikatory są `string`, a pola tekstowe nigdy nie są `null` — karta jedzie prosto do komponentu klienckiego i do niekontrolowanych pól formularza.
 
 - [ ] **Step 1: Napisz test**
 
-`src/lib/pary/karta.int.test.ts`:
+`src/lib/couples/card.int.test.ts`:
 
 ```ts
 import { afterAll, describe, expect, it } from 'vitest';
-import type { Uzytkownik } from '@/lib/auth/permissions';
+import type { User } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
-import { opcjeKarty, pobierzKarte, pustaKarta } from './karta';
+import { blankCard, cardOptions, loadCard } from './card';
 
-const admin: Uzytkownik = { id: 1n, rola: 'admin', rejonId: null };
-const rejonVII: Uzytkownik = { id: 2n, rola: 'rejon', rejonId: 7 };
-const moderator: Uzytkownik = { id: 3n, rola: 'podglad', rejonId: null };
+const admin: User = { id: 1n, role: 'admin', regionId: null };
+const regionVII: User = { id: 2n, role: 'region', regionId: 7 };
+const viewer: User = { id: 3n, role: 'viewer', regionId: null };
 
 afterAll(async () => {
   await prisma.$disconnect();
 });
 
-async function idPary(rejonId: number): Promise<bigint> {
-  const p = await prisma.para.findFirstOrThrow({ where: { rejonId, usunieteAt: null } });
-  return p.id;
+async function anyCoupleIn(regionId: number): Promise<bigint> {
+  const c = await prisma.couple.findFirstOrThrow({ where: { regionId, deletedAt: null } });
+  return c.id;
 }
 
-describe('pobierzKarte', () => {
-  it('returns every field as a string, never null', async () => {
-    const wynik = await pobierzKarte(admin, await idPary(7));
-    expect(wynik).not.toBeNull();
-    for (const pole of ['imieZony', 'imieMeza', 'nazwisko', 'email', 'telefon', 'dzieci', 'notatki'] as const) {
-      expect(typeof wynik!.karta[pole], pole).toBe('string');
+describe('loadCard', () => {
+  it('returns every text field as a string, never null', async () => {
+    const result = await loadCard(admin, await anyCoupleIn(7));
+    expect(result).not.toBeNull();
+    const fields = ['wifeName', 'husbandName', 'surname', 'email', 'phone', 'children', 'notes'] as const;
+    for (const field of fields) {
+      expect(typeof result!.card[field], field).toBe('string');
     }
-    expect(typeof wynik!.karta.id).toBe('string');
+    expect(typeof result!.card.id).toBe('string');
   });
 
   it('marks a couple in the account own region as editable', async () => {
-    expect((await pobierzKarte(rejonVII, await idPary(7)))!.edytowalna).toBe(true);
+    expect((await loadCard(regionVII, await anyCoupleIn(7)))!.editable).toBe(true);
   });
 
   it('marks a couple from another region as read-only rather than hiding it', async () => {
     // The drawer shows a read-only banner; it does not pretend the couple
     // does not exist.
-    const wynik = await pobierzKarte(rejonVII, await idPary(3));
-    expect(wynik).not.toBeNull();
-    expect(wynik!.edytowalna).toBe(false);
+    const result = await loadCard(regionVII, await anyCoupleIn(3));
+    expect(result).not.toBeNull();
+    expect(result!.editable).toBe(false);
   });
 
   it('marks everything read-only for the viewer', async () => {
-    expect((await pobierzKarte(moderator, await idPary(7)))!.edytowalna).toBe(false);
+    expect((await loadCard(viewer, await anyCoupleIn(7)))!.editable).toBe(false);
   });
 
   it('returns null for a soft-deleted couple', async () => {
-    const id = await idPary(7);
-    await prisma.para.update({ where: { id }, data: { usunieteAt: new Date() } });
-    expect(await pobierzKarte(admin, id)).toBeNull();
-    await prisma.para.update({ where: { id }, data: { usunieteAt: null } });
+    const id = await anyCoupleIn(7);
+    await prisma.couple.update({ where: { id }, data: { deletedAt: new Date() } });
+    expect(await loadCard(admin, id)).toBeNull();
+    await prisma.couple.update({ where: { id }, data: { deletedAt: null } });
   });
 
   it('returns null for an id that does not exist', async () => {
-    expect(await pobierzKarte(admin, 999_999_999n)).toBeNull();
+    expect(await loadCard(admin, 999_999_999n)).toBeNull();
   });
 });
 
-describe('pustaKarta', () => {
+describe('blankCard', () => {
   it('pins a region account to its own region', () => {
-    expect(pustaKarta(rejonVII).rejonId).toBe(7);
+    expect(blankCard(regionVII).regionId).toBe(7);
   });
 
   it('starts admin on the first region', () => {
-    expect(pustaKarta(admin).rejonId).toBe(1);
+    expect(blankCard(admin).regionId).toBe(1);
   });
 
   it('has no entries and no ids', () => {
-    const k = pustaKarta(admin);
-    expect(k.id).toBe('');
-    expect(k.rekolekcje).toEqual([]);
-    expect(k.kragId).toBeNull();
+    const card = blankCard(admin);
+    expect(card.id).toBe('');
+    expect(card.retreats).toEqual([]);
+    expect(card.circleId).toBeNull();
   });
 });
 
-describe('opcjeKarty', () => {
+describe('cardOptions', () => {
   it('offers the circles of the given region and every parish', async () => {
-    const { kregi, parafie } = await opcjeKarty(7);
-    expect(kregi.length).toBeGreaterThan(0);
-    expect(parafie.length).toBeGreaterThan(0);
-    expect(kregi.every((k) => k.etykieta.length > 0)).toBe(true);
+    const { circles, parishes } = await cardOptions(7);
+    expect(circles.length).toBeGreaterThan(0);
+    expect(parishes.length).toBeGreaterThan(0);
+    expect(circles.every((c) => c.label.length > 0)).toBe(true);
   });
 });
 ```
 
 - [ ] **Step 2: Uruchom test — musi się wywalić**
 
-Run: `npm run test:int -- karta`
+Run: `npm run test:int -- card`
 Expected: FAIL
 
 - [ ] **Step 3: Zaimplementuj**
 
-`src/lib/pary/karta.ts`:
+`src/lib/couples/card.ts`:
 
 ```ts
-import type { RodzajRekolekcji } from '@/generated/prisma/enums';
-import { type Uzytkownik, mozeEdytowac } from '@/lib/auth/permissions';
+import type { RetreatKind } from '@/generated/prisma/enums';
+import { type User, canEdit } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
-import { STOPNIE } from '@/lib/domena/rekolekcje';
 
-export type WpisFormacji = {
-  rodzaj: RodzajRekolekcji;
-  rok: string;
-  miejsce: string;
-  nazwa: string;
+export type FormationEntry = {
+  kind: RetreatKind;
+  year: string;
+  place: string;
+  name: string;
 };
 
-export type DaneKarty = {
+export type CardData = {
   id: string;
-  imieZony: string;
-  imieMeza: string;
-  nazwisko: string;
+  wifeName: string;
+  husbandName: string;
+  surname: string;
   email: string;
-  telefon: string;
-  rejonId: number;
-  kragId: string | null;
-  parafiaId: string | null;
-  dzieci: string;
-  notatki: string;
-  rekolekcje: WpisFormacji[];
+  phone: string;
+  regionId: number;
+  circleId: string | null;
+  parishId: string | null;
+  children: string;
+  notes: string;
+  retreats: FormationEntry[];
 };
 
 // Everything crosses into a client component and feeds uncontrolled inputs,
 // where null would flip an input to controlled and trigger a React warning.
-const tekst = (v: string | null): string => v ?? '';
+const asText = (v: string | null): string => v ?? '';
 
-export async function pobierzKarte(
-  u: Uzytkownik,
+export async function loadCard(
+  u: User,
   id: bigint,
-): Promise<{ karta: DaneKarty; edytowalna: boolean } | null> {
-  const para = await prisma.para.findFirst({
-    where: { id, usunieteAt: null },
+): Promise<{ card: CardData; editable: boolean } | null> {
+  const couple = await prisma.couple.findFirst({
+    where: { id, deletedAt: null },
     select: {
-      id: true, imieZony: true, imieMeza: true, nazwisko: true,
-      email: true, telefon: true, rejonId: true, kragId: true, parafiaId: true,
-      dzieci: true, notatki: true,
-      rekolekcje: {
-        select: { rodzaj: true, rok: true, miejsce: true, nazwa: true },
-        orderBy: { rok: 'asc' },
+      id: true, wifeName: true, husbandName: true, surname: true,
+      email: true, phone: true, regionId: true, circleId: true, parishId: true,
+      children: true, notes: true,
+      retreats: {
+        select: { kind: true, year: true, place: true, name: true },
+        orderBy: { year: 'asc' },
       },
     },
   });
-  if (!para) return null;
+  if (!couple) return null;
 
   return {
-    edytowalna: mozeEdytowac(u, { rejonId: para.rejonId }),
-    karta: {
-      id: String(para.id),
-      imieZony: tekst(para.imieZony),
-      imieMeza: tekst(para.imieMeza),
-      nazwisko: para.nazwisko,
-      email: tekst(para.email),
-      telefon: tekst(para.telefon),
-      rejonId: para.rejonId,
-      kragId: para.kragId === null ? null : String(para.kragId),
-      parafiaId: para.parafiaId === null ? null : String(para.parafiaId),
-      dzieci: tekst(para.dzieci),
-      notatki: tekst(para.notatki),
-      rekolekcje: para.rekolekcje.map((r) => ({
-        rodzaj: r.rodzaj,
-        rok: String(r.rok),
-        miejsce: tekst(r.miejsce),
-        nazwa: tekst(r.nazwa),
+    editable: canEdit(u, { regionId: couple.regionId }),
+    card: {
+      id: String(couple.id),
+      wifeName: asText(couple.wifeName),
+      husbandName: asText(couple.husbandName),
+      surname: couple.surname,
+      email: asText(couple.email),
+      phone: asText(couple.phone),
+      regionId: couple.regionId,
+      circleId: couple.circleId === null ? null : String(couple.circleId),
+      parishId: couple.parishId === null ? null : String(couple.parishId),
+      children: asText(couple.children),
+      notes: asText(couple.notes),
+      retreats: couple.retreats.map((r) => ({
+        kind: r.kind,
+        year: String(r.year),
+        place: asText(r.place),
+        name: asText(r.name),
       })),
     },
   };
 }
 
-export function pustaKarta(u: Uzytkownik): DaneKarty {
+export function blankCard(u: User): CardData {
   return {
     id: '',
-    imieZony: '', imieMeza: '', nazwisko: '', email: '', telefon: '',
+    wifeName: '', husbandName: '', surname: '', email: '', phone: '',
     // A region account may only ever create inside its own region, so the
     // field starts there and stays disabled.
-    rejonId: u.rejonId ?? 1,
-    kragId: null, parafiaId: null, dzieci: '', notatki: '',
-    rekolekcje: [],
+    regionId: u.regionId ?? 1,
+    circleId: null, parishId: null, children: '', notes: '',
+    retreats: [],
   };
 }
 
-export async function opcjeKarty(rejonId: number): Promise<{
-  kregi: { id: string; etykieta: string }[];
-  parafie: { id: string; etykieta: string }[];
+export async function cardOptions(regionId: number): Promise<{
+  circles: { id: string; label: string }[];
+  parishes: { id: string; label: string }[];
 }> {
-  const [kregi, parafie] = await Promise.all([
-    prisma.krag.findMany({
-      where: { rejonId },
-      select: { id: true, numer: true, patron: true },
-      orderBy: { numer: 'asc' },
+  const [circles, parishes] = await Promise.all([
+    prisma.circle.findMany({
+      where: { regionId },
+      select: { id: true, number: true, patron: true },
+      orderBy: { number: 'asc' },
     }),
-    prisma.parafia.findMany({
-      select: { id: true, nazwa: true, miasto: true },
-      orderBy: [{ miasto: 'asc' }, { nazwa: 'asc' }],
+    prisma.parish.findMany({
+      select: { id: true, name: true, city: true },
+      orderBy: [{ city: 'asc' }, { name: 'asc' }],
     }),
   ]);
 
   return {
-    kregi: kregi.map((k) => ({
-      id: String(k.id),
-      etykieta: k.patron ? `${k.numer} · ${k.patron}` : String(k.numer),
+    circles: circles.map((c) => ({
+      id: String(c.id),
+      label: c.patron ? `${c.number} · ${c.patron}` : String(c.number),
     })),
-    parafie: parafie.map((p) => ({
+    parishes: parishes.map((p) => ({
       id: String(p.id),
-      etykieta: `${p.nazwa}, ${p.miasto}`,
+      label: `${p.name}, ${p.city}`,
     })),
   };
 }
-
 ```
 
 - [ ] **Step 4: Uruchom test — musi przejść**
 
-Run: `npm run test:int -- karta`
+Run: `npm run test:int -- card`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -881,42 +848,39 @@ git commit -m "feat: add single couple read model"
 ### Task 4: Server actions
 
 **Files:**
-- Create: `src/app/(app)/pary/akcje.ts`
+- Create: `src/app/(app)/pary/actions.ts`
 
 **Interfaces:**
-- Produces:
-  - `type StanKarty = { blad?: string }`
-  - `zapiszPare(stan: StanKarty, formData: FormData): Promise<StanKarty>`
-  - `usunParaAkcja(stan: StanKarty, formData: FormData): Promise<StanKarty>`
+- Produces: `type CardState = { error?: string }`, `saveCoupleAction(state, formData)`, `deleteCoupleAction(state, formData)`
 
 - [ ] **Step 1: Zaimplementuj**
 
-`src/app/(app)/pary/akcje.ts`:
+`src/app/(app)/pary/actions.ts`:
 
 ```ts
 'use server';
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Zabronione } from '@/lib/auth/permissions';
+import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
-import { schematZapisu } from '@/lib/pary/schemat';
-import { NieZnaleziono, dodajPare, usunPare, zaktualizujPare } from '@/lib/pary/zapisz';
+import { NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
+import { saveSchema } from '@/lib/couples/schema';
 
-export type StanKarty = { blad?: string };
+export type CardState = { error?: string };
 
-function liczbaAlbo(v: FormDataEntryValue | null, domyslna: number): number {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : domyslna;
-}
-
-function tekstAlbo(v: FormDataEntryValue | null): string {
+function textOr(v: FormDataEntryValue | null): string {
   return typeof v === 'string' ? v : '';
 }
 
-function pustyNaNull(v: FormDataEntryValue | null): string | null {
-  const s = tekstAlbo(v);
+function emptyToNull(v: FormDataEntryValue | null): string | null {
+  const s = textOr(v);
   return s === '' ? null : s;
+}
+
+function numberOr(v: FormDataEntryValue | null, fallback: number): number {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 /**
@@ -924,69 +888,79 @@ function pustyNaNull(v: FormDataEntryValue | null): string | null {
  * write layer checks permissions again — the protected layout does not cover
  * this call, and a hidden button proves nothing.
  */
-export async function zapiszPare(_stan: StanKarty, formData: FormData): Promise<StanKarty> {
+export async function saveCoupleAction(
+  _state: CardState,
+  formData: FormData,
+): Promise<CardState> {
   const u = await requireUser();
 
-  const surowe = {
-    para: {
-      imieZony: tekstAlbo(formData.get('imieZony')),
-      imieMeza: tekstAlbo(formData.get('imieMeza')),
-      nazwisko: tekstAlbo(formData.get('nazwisko')),
-      email: tekstAlbo(formData.get('email')),
-      telefon: tekstAlbo(formData.get('telefon')),
-      rejonId: liczbaAlbo(formData.get('rejonId'), u.rejonId ?? 1),
-      kragId: pustyNaNull(formData.get('kragId')),
-      nowyKrag: null,
-      parafiaId: pustyNaNull(formData.get('parafiaId')),
-      nowaParafia: null,
-      dzieci: tekstAlbo(formData.get('dzieci')),
-      notatki: tekstAlbo(formData.get('notatki')),
-    },
-    rekolekcje: JSON.parse(tekstAlbo(formData.get('rekolekcje')) || '[]'),
-  };
+  // The form ships the entries as JSON with the year as a string, because that
+  // is what a text input produces; the schema wants a number.
+  const rawEntries = JSON.parse(textOr(formData.get('retreats')) || '[]') as {
+    kind: string; year: string; place: string; name: string;
+  }[];
 
-  const wynik = schematZapisu.safeParse(surowe);
-  if (!wynik.success) {
-    return { blad: wynik.error.issues[0]?.message ?? 'Popraw dane w formularzu' };
+  const parsed = saveSchema.safeParse({
+    couple: {
+      wifeName: textOr(formData.get('wifeName')),
+      husbandName: textOr(formData.get('husbandName')),
+      surname: textOr(formData.get('surname')),
+      email: textOr(formData.get('email')),
+      phone: textOr(formData.get('phone')),
+      regionId: numberOr(formData.get('regionId'), u.regionId ?? 1),
+      circleId: emptyToNull(formData.get('circleId')),
+      newCircle: null,
+      parishId: emptyToNull(formData.get('parishId')),
+      newParish: null,
+      children: textOr(formData.get('children')),
+      notes: textOr(formData.get('notes')),
+    },
+    retreats: rawEntries.map((r) => ({ ...r, year: Number(r.year) })),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? 'Popraw dane w formularzu' };
   }
 
-  const id = pustyNaNull(formData.get('id'));
+  const id = emptyToNull(formData.get('id'));
 
   try {
-    if (id === null) await dodajPare(u, wynik.data);
-    else await zaktualizujPare(u, BigInt(id), wynik.data);
+    if (id === null) await createCouple(u, parsed.data);
+    else await updateCouple(u, BigInt(id), parsed.data);
   } catch (e) {
-    if (e instanceof Zabronione) return { blad: e.message };
-    if (e instanceof NieZnaleziono) return { blad: 'Ta para już nie istnieje' };
+    if (e instanceof Forbidden) return { error: e.message };
+    if (e instanceof NotFound) return { error: 'Ta para już nie istnieje' };
     throw e;
   }
 
   revalidatePath('/pary');
-  redirect(`/pary?zapisano=1`);
+  redirect('/pary?saved=1');
 }
 
-export async function usunParaAkcja(_stan: StanKarty, formData: FormData): Promise<StanKarty> {
+export async function deleteCoupleAction(
+  _state: CardState,
+  formData: FormData,
+): Promise<CardState> {
   const u = await requireUser();
-  const id = pustyNaNull(formData.get('id'));
-  if (id === null) return { blad: 'Brak identyfikatora pary' };
+  const id = emptyToNull(formData.get('id'));
+  if (id === null) return { error: 'Brak identyfikatora pary' };
 
   try {
-    await usunPare(u, BigInt(id));
+    await deleteCouple(u, BigInt(id));
   } catch (e) {
-    if (e instanceof Zabronione) return { blad: e.message };
-    if (e instanceof NieZnaleziono) return { blad: 'Ta para już nie istnieje' };
+    if (e instanceof Forbidden) return { error: e.message };
+    if (e instanceof NotFound) return { error: 'Ta para już nie istnieje' };
     throw e;
   }
 
   revalidatePath('/pary');
-  redirect(`/pary?usunieto=1`);
+  redirect('/pary?deleted=1');
 }
 ```
 
-**Uwaga o `nowyKrag` i `nowaParafia`:** akcja przekazuje `null`, bo pola „+ nowy" wchodzą
-dopiero w Zadaniu 7. Schemat już je zna, więc dołożenie ich będzie zmianą w jednym miejscu.
+**Uwaga o `newCircle` i `newParish`:** akcja przekazuje `null`, bo pola „+ nowy" wchodzą razem z importem w Planie 4. Schemat już je zna, więc dołożenie ich będzie zmianą w jednym miejscu.
 
-- [ ] **Step 2: Sprawdź, że lint i build przechodzą**
+- [ ] **Step 2: Sprawdź lint i build**
 
 Run: `npm run lint && npm run build`
 Expected: bez błędów
@@ -1004,22 +978,8 @@ git commit -m "feat: add couple save and delete server actions"
 
 **Files:**
 - Create: `src/components/Toast.tsx`, `src/components/toast.module.css`
-- Modify: `src/styles/tokens.css`
 
-**Interfaces:**
-- Produces: `<Toast tekst="Zapisano zmiany" />`
-
-- [ ] **Step 1: Dopisz brakujące tokeny**
-
-```css
-  --toast-tlo: var(--navy-900);
-  --toast-tekst: var(--sidebar-tekst);
-  --czas-toast: 2600ms;
-```
-
-Dopisz je również do listy wymaganych w `src/styles/tokens.test.ts`.
-
-- [ ] **Step 2: Napisz style**
+- [ ] **Step 1: Napisz style**
 
 `src/components/toast.module.css`:
 
@@ -1029,17 +989,19 @@ Dopisz je również do listy wymaganych w `src/styles/tokens.test.ts`.
   bottom: 22px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--toast-tlo);
-  color: var(--toast-tekst);
+  background: var(--toast-bg);
+  color: var(--toast-text);
   padding: 12px 20px;
   border-radius: var(--r-9);
   font-size: 14px;
-  box-shadow: var(--cien-toast);
+  box-shadow: var(--shadow-toast);
   z-index: 90;
 }
 ```
 
-- [ ] **Step 3: Napisz komponent**
+Tokeny `--toast-bg`, `--toast-text` i `--shadow-toast` są już w `tokens.css`.
+
+- [ ] **Step 2: Napisz komponent**
 
 `src/components/Toast.tsx`:
 
@@ -1049,29 +1011,29 @@ Dopisz je również do listy wymaganych w `src/styles/tokens.test.ts`.
 import { useEffect, useState } from 'react';
 import style from './toast.module.css';
 
-const CZAS_MS = 2600;
+const VISIBLE_MS = 2600;
 
-export function Toast({ tekst }: { tekst: string }) {
-  const [widoczny, setWidoczny] = useState(true);
+export function Toast({ text }: { text: string }) {
+  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setWidoczny(false), CZAS_MS);
+    const t = setTimeout(() => setVisible(false), VISIBLE_MS);
     return () => clearTimeout(t);
   }, []);
 
-  if (!widoczny) return null;
+  if (!visible) return null;
 
   // role="status" with aria-live="polite" so a screen reader announces the
   // result without stealing focus from wherever the user is.
   return (
     <p className={style.toast} role="status" aria-live="polite">
-      {tekst}
+      {text}
     </p>
   );
 }
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add -A
@@ -1083,15 +1045,11 @@ git commit -m "feat: add toast for save feedback"
 ### Task 6: Panel karty pary
 
 **Files:**
-- Create: `src/app/(app)/pary/KartaPary.tsx`, `src/app/(app)/pary/karta.module.css`
-
-**Interfaces:**
-- Consumes: `KartaPary`, `opcjeKarty` (Task 3), `zapiszPare`, `usunParaAkcja` (Task 4)
-- Produces: `<KartaPary karta={…} edytowalna={…} opcje={…} mozeZmienicRejon={…} />`
+- Create: `src/app/(app)/pary/CoupleCard.tsx`, `src/app/(app)/pary/card.module.css`
 
 - [ ] **Step 1: Napisz style**
 
-`src/app/(app)/pary/karta.module.css`:
+`src/app/(app)/pary/card.module.css`:
 
 ```css
 .overlay {
@@ -1099,9 +1057,7 @@ git commit -m "feat: add toast for save feedback"
   inset: 0;
   display: flex;
   justify-content: flex-end;
-  background: rgba(13, 36, 57, .35);
-  z-index: 50;
-  animation: fadein var(--czas-overlay);
+  background: transparent;
   border: none;
   padding: 0;
   max-width: none;
@@ -1112,6 +1068,7 @@ git commit -m "feat: add toast for save feedback"
 
 .overlay::backdrop {
   background: rgba(13, 36, 57, .35);
+  animation: fadein var(--dur-overlay);
 }
 
 .panel {
@@ -1124,11 +1081,11 @@ git commit -m "feat: add toast for save feedback"
   padding: 24px 28px 40px;
   background: var(--surface);
   overflow-y: auto;
-  box-shadow: var(--cien-drawer);
-  animation: slidein var(--czas-drawer) ease-out;
+  box-shadow: var(--shadow-drawer);
+  animation: slidein var(--dur-drawer) ease-out;
 }
 
-.naglowek {
+.header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -1141,16 +1098,17 @@ git commit -m "feat: add toast for save feedback"
   letter-spacing: .14em;
   text-transform: uppercase;
   color: var(--text-faint);
+  margin: 0;
 }
 
-.tytul {
-  font-family: var(--font-naglowek), Georgia, serif;
+.title {
+  font-family: var(--font-heading), Georgia, serif;
   font-size: 28px;
   font-weight: 400;
   margin: 2px 0 0;
 }
 
-.zamknij {
+.close {
   width: 32px;
   height: 32px;
   flex: none;
@@ -1163,34 +1121,44 @@ git commit -m "feat: add toast for save feedback"
 
 .banner {
   background: var(--warn-bg);
-  border: 1px solid #f0dcae;
+  border: 1px solid var(--warn-border);
   border-radius: var(--r-8);
   padding: 11px 13px;
   font-size: 13px;
-  color: #6b5418;
+  color: var(--warn-strong);
   margin: 0;
 }
 
-.formularz {
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--danger-fg);
+  margin: 0;
+}
+
+.form {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 13px;
 }
 
-.pole {
+.field {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.szeroko { grid-column: span 2; }
+.wide { grid-column: span 2; }
 
-.etykieta {
+.label {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.kontrolka {
+.control {
   background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: var(--r-8);
@@ -1200,18 +1168,18 @@ git commit -m "feat: add toast for save feedback"
   width: 100%;
 }
 
-.kontrolka:focus {
+.control:focus {
   border-color: var(--blue-500);
-  box-shadow: var(--focus-obwodka);
+  box-shadow: var(--focus-ring);
   outline: none;
 }
 
-.kontrolka:disabled {
+.control:disabled {
   background: var(--bg-row);
   color: var(--text-muted);
 }
 
-.stopka {
+.footer {
   display: flex;
   flex-wrap: wrap;
   gap: 9px;
@@ -1219,7 +1187,7 @@ git commit -m "feat: add toast for save feedback"
   padding-top: 16px;
 }
 
-.zapisz {
+.save {
   background: var(--navy-700);
   color: var(--surface);
   border: none;
@@ -1231,10 +1199,10 @@ git commit -m "feat: add toast for save feedback"
   cursor: pointer;
 }
 
-.zapisz:hover { background: var(--navy-900); }
-.zapisz:disabled { opacity: .6; cursor: progress; }
+.save:hover { background: var(--navy-900); }
+.save:disabled { opacity: .6; cursor: progress; }
 
-.anuluj {
+.cancel {
   background: var(--surface);
   border: 1px solid var(--border-input);
   border-radius: var(--r-8);
@@ -1242,16 +1210,13 @@ git commit -m "feat: add toast for save feedback"
   font-size: 14px;
   min-height: 44px;
   color: var(--text);
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
   cursor: pointer;
 }
 
-.usun {
+.remove {
   margin-left: auto;
   background: var(--surface);
-  border: 1px solid #e3c4c4;
+  border: 1px solid var(--danger-border);
   border-radius: var(--r-8);
   padding: 11px 20px;
   font-size: 14px;
@@ -1260,22 +1225,105 @@ git commit -m "feat: add toast for save feedback"
   cursor: pointer;
 }
 
-.usun:hover { background: var(--danger-bg); }
+.remove:hover { background: var(--danger-bg); }
 
-.notka {
+.note {
   font-size: 12px;
   color: var(--text-faint);
   margin: 0;
 }
 
-.blad {
-  background: var(--danger-bg);
-  border: 1px solid #e3c4c4;
-  border-radius: var(--r-8);
-  padding: 11px 13px;
+/* --- formation section --- */
+.formation {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-top: 1px solid var(--bg-app);
+  padding-top: 16px;
+}
+
+.formationHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.formationTitle {
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.formationCount {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.entry {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  background: var(--bg-row-alt);
+  border: 1px solid var(--bg-app);
+  border-radius: var(--r-9);
+  padding: 8px;
+}
+
+.entryControl {
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-7);
+  padding: 8px 10px;
   font-size: 13px;
+  min-height: 38px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.entryKind { flex: 1 1 100%; }
+.entryYear { width: 72px; flex: none; font-family: var(--font-mono), monospace; }
+.entryPlace { flex: 1; min-width: 120px; }
+.entryName { flex: 1 1 100%; }
+
+.entryRemove {
+  width: 34px;
+  height: 38px;
+  flex: none;
+  border: 1px solid var(--divider);
+  border-radius: var(--r-7);
+  background: var(--surface);
+  color: var(--placeholder);
+  cursor: pointer;
+}
+
+.entryRemove:hover {
+  border-color: var(--danger-border);
   color: var(--danger-fg);
+}
+
+.noEntries {
+  font-size: 13px;
+  color: var(--text-faint);
   margin: 0;
+}
+
+.addEntry {
+  align-self: flex-start;
+  background: var(--bg-row);
+  border: 1px dashed var(--border-input);
+  border-radius: var(--r-8);
+  padding: 10px 15px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy-700);
+  min-height: 42px;
+  cursor: pointer;
+}
+
+.addEntry:hover {
+  border-color: var(--navy-700);
+  background: var(--bg-panel);
 }
 
 @media (max-width: 860px) {
@@ -1286,18 +1334,14 @@ git commit -m "feat: add toast for save feedback"
     padding: 18px 16px 44px;
   }
 
-  .formularz { grid-template-columns: 1fr; }
-  .szeroko { grid-column: auto; }
+  .form { grid-template-columns: 1fr; }
+  .wide { grid-column: auto; }
 }
 ```
 
-Kolory `#f0dcae`, `#6b5418` i `#e3c4c4` nie są w tokenach — **dodaj je do `tokens.css`**
-jako `--warn-obwodka`, `--warn-tekst-mocny` i `--danger-obwodka` i użyj `var()`.
-Powyższy blok pokazuje je dosłownie tylko dla czytelności.
-
 - [ ] **Step 2: Napisz komponent**
 
-`src/app/(app)/pary/KartaPary.tsx`:
+`src/app/(app)/pary/CoupleCard.tsx`:
 
 ```tsx
 'use client';
@@ -1305,40 +1349,40 @@ Powyższy blok pokazuje je dosłownie tylko dla czytelności.
 import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import { LICZBA_REJONOW, numerRzymski } from '@/lib/domena/rejony';
-import type { DaneKarty, WpisFormacji } from '@/lib/pary/karta';
-import { SekcjaFormacji } from './SekcjaFormacji';
-import { type StanKarty, usunParaAkcja, zapiszPare } from './akcje';
-import style from './karta.module.css';
+import type { CardData, FormationEntry } from '@/lib/couples/card';
+import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
+import { FormationSection } from './FormationSection';
+import { type CardState, deleteCoupleAction, saveCoupleAction } from './actions';
+import style from './card.module.css';
 
-function PrzyciskZapisu() {
+function SaveButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className={style.zapisz} disabled={pending}>
+    <button type="submit" className={style.save} disabled={pending}>
       {pending ? 'Zapisywanie…' : 'Zapisz'}
     </button>
   );
 }
 
-export function KartaPary({
-  karta,
-  edytowalna,
-  opcje,
-  mozeZmienicRejon,
+export function CoupleCard({
+  card,
+  editable,
+  options,
+  regionChangeable,
 }: {
-  karta: DaneKarty;
-  edytowalna: boolean;
-  opcje: { kregi: { id: string; etykieta: string }[]; parafie: { id: string; etykieta: string }[] };
-  mozeZmienicRejon: boolean;
+  card: CardData;
+  editable: boolean;
+  options: { circles: { id: string; label: string }[]; parishes: { id: string; label: string }[] };
+  regionChangeable: boolean;
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
-  const [stan, akcjaZapisu] = useActionState<StanKarty, FormData>(zapiszPare, {});
-  const [stanUsuwania, akcjaUsuwania] = useActionState<StanKarty, FormData>(usunParaAkcja, {});
+  const [state, saveAction] = useActionState<CardState, FormData>(saveCoupleAction, {});
+  const [deleteState, deleteAction] = useActionState<CardState, FormData>(deleteCoupleAction, {});
 
   // The drawer is edited on a copy — Cancel simply navigates away and the
   // list behind it was never touched.
-  const [rekolekcje, setRekolekcje] = useState<WpisFormacji[]>(karta.rekolekcje);
+  const [retreats, setRetreats] = useState<FormationEntry[]>(card.retreats);
 
   // showModal is what gives the focus trap, Esc handling and the backdrop.
   // A <dialog open> attribute would render the element without any of them.
@@ -1346,149 +1390,145 @@ export function KartaPary({
     dialog.current?.showModal();
   }, []);
 
-  function zamknij() {
+  function close() {
     router.push('/pary');
   }
 
-  const nowa = karta.id === '';
-  const kicker = nowa ? 'Nowy wpis' : `Karta pary · rejon ${numerRzymski(karta.rejonId)}`;
-  const tytul = nowa ? 'Dodaj parę' : `${karta.imieZony} i ${karta.imieMeza} ${karta.nazwisko}`;
-  const blad = stan.blad ?? stanUsuwania.blad;
+  const isNew = card.id === '';
+  const kicker = isNew ? 'Nowy wpis' : `Karta pary · rejon ${romanNumeral(card.regionId)}`;
+  const title = isNew ? 'Dodaj parę' : `${card.wifeName} i ${card.husbandName} ${card.surname}`;
+  const error = state.error ?? deleteState.error;
 
   return (
     <dialog
       ref={dialog}
       className={style.overlay}
-      aria-label={tytul}
-      onCancel={zamknij}
+      aria-label={title}
+      onCancel={close}
       onClick={(e) => {
         // Clicking the backdrop closes; clicking inside the panel must not.
-        if (e.target === dialog.current) zamknij();
+        if (e.target === dialog.current) close();
       }}
     >
       <div className={style.panel}>
-        <header className={style.naglowek}>
+        <header className={style.header}>
           <div>
             <p className={style.kicker}>{kicker}</p>
-            <h2 className={style.tytul}>{tytul}</h2>
+            <h2 className={style.title}>{title}</h2>
           </div>
-          <button type="button" className={style.zamknij} onClick={zamknij} aria-label="Zamknij">
+          <button type="button" className={style.close} onClick={close} aria-label="Zamknij">
             ✕
           </button>
         </header>
 
-        {!edytowalna && (
+        {!editable && (
           <p className={style.banner}>
             Tylko podgląd — ta para należy do innego rejonu, edytować może para rejonowa
             lub odpowiedzialni za wspólnotę.
           </p>
         )}
 
-        {blad && <p className={style.blad} role="alert">{blad}</p>}
+        {error && <p className={style.error} role="alert">{error}</p>}
 
-        <form action={akcjaZapisu} className={style.formularz}>
-          <input type="hidden" name="id" value={karta.id} />
-          <input type="hidden" name="rekolekcje" value={JSON.stringify(rekolekcje)} />
+        <form action={saveAction} className={style.form}>
+          <input type="hidden" name="id" value={card.id} />
+          <input type="hidden" name="retreats" value={JSON.stringify(retreats)} />
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>Imię żony</span>
-            <input className={style.kontrolka} name="imieZony" defaultValue={karta.imieZony}
-              disabled={!edytowalna} />
+          <label className={style.field}>
+            <span className={style.label}>Imię żony</span>
+            <input className={style.control} name="wifeName" defaultValue={card.wifeName}
+              disabled={!editable} />
           </label>
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>Imię męża</span>
-            <input className={style.kontrolka} name="imieMeza" defaultValue={karta.imieMeza}
-              disabled={!edytowalna} />
+          <label className={style.field}>
+            <span className={style.label}>Imię męża</span>
+            <input className={style.control} name="husbandName" defaultValue={card.husbandName}
+              disabled={!editable} />
           </label>
 
-          <label className={`${style.pole} ${style.szeroko}`}>
-            <span className={style.etykieta}>Nazwisko</span>
-            <input className={style.kontrolka} name="nazwisko" defaultValue={karta.nazwisko}
-              disabled={!edytowalna} required />
+          <label className={`${style.field} ${style.wide}`}>
+            <span className={style.label}>Nazwisko</span>
+            <input className={style.control} name="surname" defaultValue={card.surname}
+              disabled={!editable} required />
           </label>
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>E-mail</span>
-            <input className={style.kontrolka} type="email" name="email" defaultValue={karta.email}
-              disabled={!edytowalna} />
+          <label className={style.field}>
+            <span className={style.label}>E-mail</span>
+            <input className={style.control} type="email" name="email" defaultValue={card.email}
+              disabled={!editable} />
           </label>
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>Telefon</span>
-            <input className={style.kontrolka} name="telefon" defaultValue={karta.telefon}
-              disabled={!edytowalna} />
+          <label className={style.field}>
+            <span className={style.label}>Telefon</span>
+            <input className={style.control} name="phone" defaultValue={card.phone}
+              disabled={!editable} />
           </label>
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>Rejon</span>
-            <select className={style.kontrolka} name="rejonId" defaultValue={karta.rejonId}
-              disabled={!edytowalna || !mozeZmienicRejon}>
-              {Array.from({ length: LICZBA_REJONOW }, (_, i) => i + 1).map((r) => (
-                <option key={r} value={r}>{`Rejon ${numerRzymski(r)}`}</option>
+          <label className={style.field}>
+            <span className={style.label}>Rejon</span>
+            <select className={style.control} name="regionId" defaultValue={card.regionId}
+              disabled={!editable || !regionChangeable}>
+              {Array.from({ length: REGION_COUNT }, (_, i) => i + 1).map((r) => (
+                <option key={r} value={r}>{`Rejon ${romanNumeral(r)}`}</option>
               ))}
             </select>
           </label>
 
-          <label className={style.pole}>
-            <span className={style.etykieta}>Krąg</span>
-            <select className={style.kontrolka} name="kragId" defaultValue={karta.kragId ?? ''}
-              disabled={!edytowalna}>
+          <label className={style.field}>
+            <span className={style.label}>Krąg</span>
+            <select className={style.control} name="circleId" defaultValue={card.circleId ?? ''}
+              disabled={!editable}>
               <option value="">— bez kręgu —</option>
-              {opcje.kregi.map((k) => (
-                <option key={k.id} value={k.id}>{`Krąg ${k.etykieta}`}</option>
+              {options.circles.map((c) => (
+                <option key={c.id} value={c.id}>{`Krąg ${c.label}`}</option>
               ))}
             </select>
           </label>
 
-          <label className={`${style.pole} ${style.szeroko}`}>
-            <span className={style.etykieta}>Parafia</span>
-            <select className={style.kontrolka} name="parafiaId" defaultValue={karta.parafiaId ?? ''}
-              disabled={!edytowalna}>
+          <label className={`${style.field} ${style.wide}`}>
+            <span className={style.label}>Parafia</span>
+            <select className={style.control} name="parishId" defaultValue={card.parishId ?? ''}
+              disabled={!editable}>
               <option value="">— jak w kręgu —</option>
-              {opcje.parafie.map((p) => (
-                <option key={p.id} value={p.id}>{p.etykieta}</option>
+              {options.parishes.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </label>
 
-          <label className={`${style.pole} ${style.szeroko}`}>
-            <span className={style.etykieta}>Dzieci — imiona i roczniki</span>
-            <input className={style.kontrolka} name="dzieci" defaultValue={karta.dzieci}
-              placeholder="np. Marysia 2014, Antek 2017" disabled={!edytowalna} />
+          <label className={`${style.field} ${style.wide}`}>
+            <span className={style.label}>Dzieci — imiona i roczniki</span>
+            <input className={style.control} name="children" defaultValue={card.children}
+              placeholder="np. Marysia 2014, Antek 2017" disabled={!editable} />
           </label>
 
-          <label className={`${style.pole} ${style.szeroko}`}>
-            <span className={style.etykieta}>Notatki</span>
-            <textarea className={style.kontrolka} name="notatki" rows={3}
-              defaultValue={karta.notatki} disabled={!edytowalna} />
+          <label className={`${style.field} ${style.wide}`}>
+            <span className={style.label}>Notatki</span>
+            <textarea className={style.control} name="notes" rows={3}
+              defaultValue={card.notes} disabled={!editable} />
           </label>
 
-          <div className={style.szeroko}>
-            <SekcjaFormacji
-              wpisy={rekolekcje}
-              onZmiana={setRekolekcje}
-              edytowalna={edytowalna}
-            />
+          <div className={style.wide}>
+            <FormationSection entries={retreats} onChange={setRetreats} editable={editable} />
           </div>
 
-          {edytowalna && (
-            <div className={`${style.stopka} ${style.szeroko}`}>
-              <PrzyciskZapisu />
-              <button type="button" className={style.anuluj} onClick={zamknij}>Anuluj</button>
+          {editable && (
+            <div className={`${style.footer} ${style.wide}`}>
+              <SaveButton />
+              <button type="button" className={style.cancel} onClick={close}>Anuluj</button>
             </div>
           )}
         </form>
 
-        {edytowalna && !nowa && (
-          <form action={akcjaUsuwania}>
-            <input type="hidden" name="id" value={karta.id} />
-            <button type="submit" className={style.usun}>Usuń parę</button>
+        {editable && !isNew && (
+          <form action={deleteAction}>
+            <input type="hidden" name="id" value={card.id} />
+            <button type="submit" className={style.remove}>Usuń parę</button>
           </form>
         )}
 
-        <p className={style.notka}>
-          {edytowalna
+        <p className={style.note}>
+          {editable
             ? 'Każdy zapis trafia do historii zmian z Twoim kontem i datą.'
             : 'Podgląd bez możliwości edycji.'}
         </p>
@@ -1510,204 +1550,103 @@ git commit -m "feat: add couple drawer built on a native dialog"
 ### Task 7: Sekcja formacji
 
 **Files:**
-- Create: `src/app/(app)/pary/SekcjaFormacji.tsx`
-- Modify: `src/app/(app)/pary/karta.module.css`
+- Create: `src/app/(app)/pary/FormationSection.tsx`
 
-**Interfaces:**
-- Consumes: `RODZAJE_REKOLEKCJI`, `nastepnyStopien` z `@/lib/domena/rekolekcje`; `WpisFormacji`
-- Produces: `<SekcjaFormacji wpisy={…} onZmiana={…} edytowalna={…} />`
+Style są już w `card.module.css` z Zadania 6.
 
-- [ ] **Step 1: Dopisz style**
+- [ ] **Step 1: Napisz komponent**
 
-Na końcu `karta.module.css`:
-
-```css
-.formacja {
-  display: flex;
-  flex-direction: column;
-  gap: 11px;
-  border-top: 1px solid var(--bg-app);
-  padding-top: 16px;
-}
-
-.formacjaNaglowek {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.formacjaTytul {
-  font-family: var(--font-naglowek), Georgia, serif;
-  font-size: 20px;
-  font-weight: 400;
-}
-
-.formacjaLicznik {
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  color: var(--text-faint);
-}
-
-.wpis {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-  background: var(--bg-row-alt);
-  border: 1px solid var(--bg-app);
-  border-radius: var(--r-9);
-  padding: 8px;
-}
-
-.wpisKontrolka {
-  border: 1px solid var(--border-input);
-  border-radius: var(--r-7);
-  padding: 8px 10px;
-  font-size: 13px;
-  min-height: 38px;
-  background: var(--surface);
-  color: var(--text);
-}
-
-.wpisRodzaj { flex: 1 1 100%; }
-.wpisRok { width: 72px; flex: none; font-family: var(--font-mono), monospace; }
-.wpisMiejsce { flex: 1; min-width: 120px; }
-.wpisNazwa { flex: 1 1 100%; }
-
-.wpisUsun {
-  width: 34px;
-  height: 38px;
-  flex: none;
-  border: 1px solid var(--divider);
-  border-radius: var(--r-7);
-  background: var(--surface);
-  color: var(--placeholder);
-  cursor: pointer;
-}
-
-.wpisUsun:hover {
-  border-color: var(--danger-obwodka);
-  color: var(--danger-fg);
-}
-
-.brakWpisow {
-  font-size: 13px;
-  color: var(--text-faint);
-  margin: 0;
-}
-
-.dodajWpis {
-  align-self: flex-start;
-  background: var(--bg-row);
-  border: 1px dashed var(--border-input);
-  border-radius: var(--r-8);
-  padding: 10px 15px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--navy-700);
-  min-height: 42px;
-  cursor: pointer;
-}
-
-.dodajWpis:hover {
-  border-color: var(--navy-700);
-  background: var(--bg-panel);
-}
-```
-
-- [ ] **Step 2: Napisz komponent**
-
-`src/app/(app)/pary/SekcjaFormacji.tsx`:
+`src/app/(app)/pary/FormationSection.tsx`:
 
 ```tsx
 'use client';
 
-import type { RodzajRekolekcji } from '@/generated/prisma/enums';
-import { RODZAJE_REKOLEKCJI, nastepnyStopien } from '@/lib/domena/rekolekcje';
-import { WPISY, odmiana } from '@/lib/pl';
-import type { WpisFormacji } from '@/lib/pary/karta';
-import style from './karta.module.css';
+import type { RetreatKind } from '@/generated/prisma/enums';
+import type { FormationEntry } from '@/lib/couples/card';
+import { RETREAT_KINDS, nextDegree } from '@/lib/domain/retreats';
+import { ENTRIES, plural } from '@/lib/pl';
+import style from './card.module.css';
 
-export function SekcjaFormacji({
-  wpisy,
-  onZmiana,
-  edytowalna,
+export function FormationSection({
+  entries,
+  onChange,
+  editable,
 }: {
-  wpisy: WpisFormacji[];
-  onZmiana: (w: WpisFormacji[]) => void;
-  edytowalna: boolean;
+  entries: FormationEntry[];
+  onChange: (entries: FormationEntry[]) => void;
+  editable: boolean;
 }) {
-  function zmien(i: number, zmiana: Partial<WpisFormacji>) {
-    onZmiana(wpisy.map((w, j) => (j === i ? { ...w, ...zmiana } : w)));
+  function change(i: number, patch: Partial<FormationEntry>) {
+    onChange(entries.map((e, j) => (j === i ? { ...e, ...patch } : e)));
   }
 
-  function dodaj() {
+  function add() {
     // Suggests the earliest degree the couple is missing; once every degree is
     // present it falls through to INNE.
-    const rodzaj = nastepnyStopien(wpisy.map((w) => w.rodzaj));
-    onZmiana([...wpisy, { rodzaj, rok: '', miejsce: '', nazwa: '' }]);
+    const kind = nextDegree(entries.map((e) => e.kind));
+    onChange([...entries, { kind, year: '', place: '', name: '' }]);
   }
 
   return (
-    <section className={style.formacja}>
-      <div className={style.formacjaNaglowek}>
-        <h3 className={style.formacjaTytul}>Formacja — przebyte rekolekcje</h3>
-        <span className={style.formacjaLicznik}>{odmiana(wpisy.length, WPISY)}</span>
+    <section className={style.formation}>
+      <div className={style.formationHeader}>
+        <h3 className={style.formationTitle}>Formacja — przebyte rekolekcje</h3>
+        <span className={style.formationCount}>{plural(entries.length, ENTRIES)}</span>
       </div>
 
-      {wpisy.length === 0 && <p className={style.brakWpisow}>Brak wpisów o rekolekcjach.</p>}
+      {entries.length === 0 && <p className={style.noEntries}>Brak wpisów o rekolekcjach.</p>}
 
-      {wpisy.map((w, i) => (
-        <div className={style.wpis} key={i}>
+      {entries.map((e, i) => (
+        <div className={style.entry} key={i}>
           <select
-            className={`${style.wpisKontrolka} ${style.wpisRodzaj}`}
-            value={w.rodzaj}
+            className={`${style.entryControl} ${style.entryKind}`}
+            value={e.kind}
             aria-label={`Rodzaj rekolekcji ${i + 1}`}
-            disabled={!edytowalna}
-            onChange={(e) => zmien(i, { rodzaj: e.currentTarget.value as RodzajRekolekcji })}
+            disabled={!editable}
+            onChange={(ev) => change(i, { kind: ev.currentTarget.value as RetreatKind })}
           >
-            {RODZAJE_REKOLEKCJI.map((r) => (
-              <option key={r.rodzaj} value={r.rodzaj}>{r.nazwa}</option>
+            {RETREAT_KINDS.map((r) => (
+              <option key={r.kind} value={r.kind}>{r.name}</option>
             ))}
           </select>
 
           <input
-            className={`${style.wpisKontrolka} ${style.wpisRok}`}
-            value={w.rok}
+            className={`${style.entryControl} ${style.entryYear}`}
+            value={e.year}
             placeholder="rok"
             inputMode="numeric"
             aria-label={`Rok ${i + 1}`}
-            disabled={!edytowalna}
-            onChange={(e) => zmien(i, { rok: e.currentTarget.value })}
+            disabled={!editable}
+            onChange={(ev) => change(i, { year: ev.currentTarget.value })}
           />
 
           <input
-            className={`${style.wpisKontrolka} ${style.wpisMiejsce}`}
-            value={w.miejsce}
+            className={`${style.entryControl} ${style.entryPlace}`}
+            value={e.place}
             placeholder="miejsce"
             aria-label={`Miejsce ${i + 1}`}
-            disabled={!edytowalna}
-            onChange={(e) => zmien(i, { miejsce: e.currentTarget.value })}
+            disabled={!editable}
+            onChange={(ev) => change(i, { place: ev.currentTarget.value })}
           />
 
           {/* Only INNE carries a free-text name, and then it is required. */}
-          {w.rodzaj === 'INNE' && (
+          {e.kind === 'INNE' && (
             <input
-              className={`${style.wpisKontrolka} ${style.wpisNazwa}`}
-              value={w.nazwa}
+              className={`${style.entryControl} ${style.entryName}`}
+              value={e.name}
               placeholder="nazwa rekolekcji"
               aria-label={`Nazwa rekolekcji ${i + 1}`}
-              disabled={!edytowalna}
-              onChange={(e) => zmien(i, { nazwa: e.currentTarget.value })}
+              disabled={!editable}
+              onChange={(ev) => change(i, { name: ev.currentTarget.value })}
             />
           )}
 
-          {edytowalna && (
+          {editable && (
             <button
               type="button"
-              className={style.wpisUsun}
+              className={style.entryRemove}
               aria-label={`Usuń wpis ${i + 1}`}
-              onClick={() => onZmiana(wpisy.filter((_, j) => j !== i))}
+              onClick={() => onChange(entries.filter((_, j) => j !== i))}
             >
               ✕
             </button>
@@ -1715,8 +1654,8 @@ export function SekcjaFormacji({
         </div>
       ))}
 
-      {edytowalna && (
-        <button type="button" className={style.dodajWpis} onClick={dodaj}>
+      {editable && (
+        <button type="button" className={style.addEntry} onClick={add}>
           + Dodaj rekolekcje
         </button>
       )}
@@ -1725,22 +1664,7 @@ export function SekcjaFormacji({
 }
 ```
 
-- [ ] **Step 3: Dopasuj typ wpisu do schematu zapisu**
-
-`WpisFormacji.rok` jest `string` (pole formularza), a `schematRekolekcji` oczekuje
-`number`. Konwersja mieszka w server action — dopisz w `akcje.ts`, w miejscu budowania
-`surowe.rekolekcje`:
-
-```ts
-    rekolekcje: (JSON.parse(tekstAlbo(formData.get('rekolekcje')) || '[]') as {
-      rodzaj: string; rok: string; miejsce: string; nazwa: string;
-    }[]).map((r) => ({ ...r, rok: Number(r.rok) })),
-```
-
-Pusty rok da `NaN`, a `z.number().int()` go odrzuci z komunikatem „Rok poza zakresem" —
-to jest zamierzone, bo rok rekolekcji jest wymagany.
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add -A
@@ -1752,93 +1676,93 @@ git commit -m "feat: add formation section with next-degree suggestion"
 ### Task 8: Podpięcie panelu do listy
 
 **Files:**
-- Modify: `src/app/(app)/pary/page.tsx`
+- Modify: `src/app/(app)/pary/page.tsx`, `src/app/(app)/pary/couples.module.css`
 
-- [ ] **Step 1: Rozszerz stronę o odczyt `?karta`**
+- [ ] **Step 1: Dopisz importy i odczyt `?card`**
 
-Dopisz importy:
+W `page.tsx` dopisz:
 
 ```tsx
 import Link from 'next/link';
 import { Toast } from '@/components/Toast';
-import { mozeZmienicRejon } from '@/lib/auth/permissions';
-import { opcjeKarty, pobierzKarte, pustaKarta } from '@/lib/pary/karta';
-import { KartaPary } from './KartaPary';
+import { canChangeRegion } from '@/lib/auth/permissions';
+import { blankCard, cardOptions, loadCard } from '@/lib/couples/card';
+import { CoupleCard } from './CoupleCard';
 ```
 
-W `page.tsx`, po `parseFiltry`, dołóż:
+Zamień odczyt parametrów na:
 
 ```tsx
   const params = await searchParams;
-  const filtry = parseFiltry(params);
+  const filters = parseFilters(params);
 
-  const karta = (() => {
-    const v = params['karta'];
+  const cardParam = (() => {
+    const v = params['card'];
     return Array.isArray(v) ? v[0] : v;
   })();
 ```
 
-a przed `return`:
+- [ ] **Step 2: Zbuduj panel po stronie serwera**
+
+Przed `return`:
 
 ```tsx
   // The drawer is a URL state, so the back button works and a card can be
   // linked to. Its content is fetched here, on the server.
-  let panel: React.ReactNode = null;
-  if (karta === 'nowa' && u.rola !== 'podglad') {
-    const pusta = pustaKarta(u);
-    panel = (
-      <KartaPary
-        karta={pusta}
-        edytowalna
-        opcje={await opcjeKarty(pusta.rejonId)}
-        mozeZmienicRejon={mozeZmienicRejon(u)}
+  let drawer: React.ReactNode = null;
+  if (cardParam === 'new' && u.role !== 'viewer') {
+    const blank = blankCard(u);
+    drawer = (
+      <CoupleCard
+        card={blank}
+        editable
+        options={await cardOptions(blank.regionId)}
+        regionChangeable={canChangeRegion(u)}
       />
     );
-  } else if (karta && /^\d+$/.test(karta)) {
-    const wynik = await pobierzKarte(u, BigInt(karta));
-    if (wynik) {
-      panel = (
-        <KartaPary
-          karta={wynik.karta}
-          edytowalna={wynik.edytowalna}
-          opcje={await opcjeKarty(wynik.karta.rejonId)}
-          mozeZmienicRejon={mozeZmienicRejon(u)}
+  } else if (cardParam && /^\d+$/.test(cardParam)) {
+    const result = await loadCard(u, BigInt(cardParam));
+    if (result) {
+      drawer = (
+        <CoupleCard
+          card={result.card}
+          editable={result.editable}
+          options={await cardOptions(result.card.regionId)}
+          regionChangeable={canChangeRegion(u)}
         />
       );
     }
   }
 ```
 
-i na końcu JSX, po `<Paginacja …/>`:
+Na końcu JSX, po `<Pagination …/>`:
 
 ```tsx
-      {panel}
-      {params['zapisano'] && <Toast tekst="Zapisano zmiany" />}
-      {params['usunieto'] && <Toast tekst="Para usunięta z kartoteki" />}
+      {drawer}
+      {params['saved'] && <Toast text="Zapisano zmiany" />}
+      {params['deleted'] && <Toast text="Para usunięta z kartoteki" />}
 ```
 
-Nieistniejący albo usunięty identyfikator w `?karta` po prostu nie otwiera panelu —
-lista renderuje się normalnie. To celowe: stary link z historii przeglądarki nie ma
-prawa wywrócić strony.
+Nieistniejący albo usunięty identyfikator w `?card` po prostu nie otwiera panelu — lista renderuje się normalnie. To celowe: stary link z historii przeglądarki nie ma prawa wywrócić strony.
 
-- [ ] **Step 2: Dodaj przycisk „+ Dodaj parę" do nagłówka**
+- [ ] **Step 3: Dodaj przycisk „+ Dodaj parę"**
 
-W `page.tsx`, w `<NaglowekWidoku>`:
+W `<ViewHeader>`:
 
 ```tsx
-      <NaglowekWidoku tytul={tytul} podtytul={podtytul}>
-        {u.rola !== 'podglad' && (
-          <Link href="/pary?karta=nowa" className={style.przyciskDodaj}>
+      <ViewHeader title={title} subtitle={subtitle}>
+        {u.role !== 'viewer' && (
+          <Link href="/pary?card=new" className={style.addButton}>
             + Dodaj parę
           </Link>
         )}
-      </NaglowekWidoku>
+      </ViewHeader>
 ```
 
-i w `pary.module.css`:
+i na końcu `couples.module.css`:
 
 ```css
-.przyciskDodaj {
+.addButton {
   display: inline-flex;
   align-items: center;
   background: var(--navy-700);
@@ -1851,26 +1775,22 @@ i w `pary.module.css`:
   text-decoration: none;
 }
 
-.przyciskDodaj:hover { background: var(--navy-900); }
+.addButton:hover { background: var(--navy-900); }
 ```
 
-- [ ] **Step 3: Sprawdź w przeglądarce**
+- [ ] **Step 4: Sprawdź w przeglądarce**
 
 ```bash
 npm run dev
 ```
 
-Jako admin: klik „Edytuj →" otwiera panel z danymi pary. `Esc` zamyka. Klik w tło zamyka.
-Zmiana nazwiska i „Zapisz" — panel się zamyka, lista pokazuje nową wartość, pojawia się
-toast. „Anuluj" po zmianie pola — zmiana przepada.
+Jako admin: klik „Edytuj →" otwiera panel z danymi pary. `Esc` zamyka, klik w tło zamyka. Zmiana nazwiska i „Zapisz" — panel się zamyka, lista pokazuje nową wartość, pojawia się toast. „Anuluj" po zmianie pola — zmiana przepada.
 
-Jako `rejon7@example.pl`: para z rejonu VII edytowalna, pole „Rejon" **zablokowane**.
-Otwórz ręcznie kartę pary z innego rejonu — panel pokazuje **banner „Tylko podgląd"**
-i nie ma stopki z przyciskami.
+Jako `rejon7@example.pl`: para z rejonu VII edytowalna, pole „Rejon" zablokowane. Karta pary z innego rejonu (adres wpisany ręcznie) pokazuje banner „Tylko podgląd" i nie ma stopki z przyciskami.
 
 Jako `moderator@example.pl`: brak przycisku „+ Dodaj parę", każda karta w trybie podglądu.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1882,63 +1802,62 @@ git commit -m "feat: wire the couple drawer into the list view"
 ### Task 9: Testy end-to-end karty
 
 **Files:**
-- Create: `e2e/karta.spec.ts`
+- Create: `e2e/card.spec.ts`
 - Modify: `package.json`
 
-- [ ] **Step 1: Zapewnij deterministyczny stan bazy przed przebiegiem**
+- [ ] **Step 1: Zapewnij deterministyczny stan bazy**
 
-Zmień skrypt `e2e` w `package.json`, żeby zaczynał od przeseedowania:
+Testy karty **zmieniają dane**: dodają pary, zmieniają nazwiska, usuwają rekordy. `list.spec.ts` sprawdza tymczasem dokładnie `300 / 300`. Sprzątanie po sobie nie wystarczy — test zapisu zmienia nazwisko istniejącej pary i nie pamięta poprzedniego.
+
+Zmień skrypt `e2e` w `package.json`:
 
 ```json
-"e2e": "tsx prisma/seed.ts && tsx e2e/przygotuj.ts && playwright test"
+"e2e": "tsx prisma/seed.ts && tsx e2e/prepare.ts && playwright test"
 ```
 
-Seed trwa kilkanaście sekund i jest deterministyczny (PRNG z ustalonym ziarnem),
-więc każdy przebieg zaczyna od tych samych 300 par. Bez tego testy karty rozjeżdżają
-stan dla `lista.spec.ts`, który sprawdza dokładnie `300 / 300`, i drugi przebieg
-zaczyna padać bez zmiany w kodzie.
+Seed jest deterministyczny (PRNG ze stałym ziarnem), więc każdy przebieg zaczyna od tych samych 300 par.
 
 - [ ] **Step 2: Napisz testy**
 
-`e2e/karta.spec.ts`:
+`e2e/card.spec.ts`:
 
 ```ts
 import { type Page, expect, test } from '@playwright/test';
 
-const HASLO = 'kartoteka123';
+const PASSWORD = 'kartoteka123';
 
-async function zaloguj(page: Page, email: string) {
+async function signIn(page: Page, email: string) {
   await page.goto('/logowanie');
   await page.getByLabel('Adres e-mail').fill(email);
-  await page.getByLabel('Hasło').fill(HASLO);
+  await page.getByLabel('Hasło').fill(PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
   await expect(page).toHaveURL(/\/pary/);
 }
 
-async function otworzPierwszaKarte(page: Page) {
+async function openFirstCard(page: Page) {
   await page.getByRole('link', { name: /^(Edytuj|Podgląd) →$/ }).first().click();
   await expect(page.getByRole('dialog')).toBeVisible();
 }
 
 test('the drawer opens from the list and closes with Escape', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
-  await expect(page).toHaveURL(/karta=\d+/);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
+  await expect(page).toHaveURL(/card=\d+/);
 
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toBeHidden();
 });
 
 test('the drawer closes on the close button and returns to the list', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
   await page.getByRole('button', { name: 'Zamknij' }).click();
   await expect(page).toHaveURL(/\/pary$/);
 });
 
 test('a card can be opened directly by link', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
   const url = page.url();
 
   await page.goto(url);
@@ -1946,42 +1865,42 @@ test('a card can be opened directly by link', async ({ page }) => {
 });
 
 test('saving a change updates the list and shows a toast', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
 
-  const nazwisko = `Testowi${Date.now() % 100000}`;
-  await page.getByLabel('Nazwisko').fill(nazwisko);
+  const surname = `Testowi${Date.now() % 100000}`;
+  await page.getByLabel('Nazwisko').fill(surname);
   await page.getByRole('button', { name: 'Zapisz' }).click();
 
   await expect(page.getByRole('status').filter({ hasText: 'Zapisano zmiany' })).toBeVisible();
-  await page.goto(`/pary?q=${nazwisko}`);
+  await page.goto(`/pary?q=${surname}`);
   await expect(page.getByRole('status')).toContainText('1 / 300');
 });
 
 test('cancelling discards the change', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
 
-  const przed = await page.getByLabel('Nazwisko').inputValue();
+  const before = await page.getByLabel('Nazwisko').inputValue();
   await page.getByLabel('Nazwisko').fill('PorzuconaZmiana');
   await page.getByRole('button', { name: 'Anuluj' }).click();
 
-  await otworzPierwszaKarte(page);
-  await expect(page.getByLabel('Nazwisko')).toHaveValue(przed);
+  await openFirstCard(page);
+  await expect(page.getByLabel('Nazwisko')).toHaveValue(before);
 });
 
 test('an empty surname blocks the save', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await openFirstCard(page);
   await page.getByLabel('Nazwisko').fill('   ');
   await page.getByRole('button', { name: 'Zapisz' }).click();
   await expect(page.getByRole('alert')).toContainText('Podaj nazwisko');
 });
 
 test('adding a retreat suggests the first missing degree', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await page.goto('/pary?formacja=brak');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/pary?formation=none');
+  await openFirstCard(page);
 
   await expect(page.getByText('Brak wpisów o rekolekcjach.')).toBeVisible();
   await page.getByRole('button', { name: '+ Dodaj rekolekcje' }).click();
@@ -1989,9 +1908,9 @@ test('adding a retreat suggests the first missing degree', async ({ page }) => {
 });
 
 test('the name field appears only for INNE and is then required', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
-  await page.goto('/pary?formacja=brak');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/pary?formation=none');
+  await openFirstCard(page);
 
   await page.getByRole('button', { name: '+ Dodaj rekolekcje' }).click();
   await expect(page.getByLabel('Nazwa rekolekcji 1')).toHaveCount(0);
@@ -2005,60 +1924,48 @@ test('the name field appears only for INNE and is then required', async ({ page 
 });
 
 test('a region account cannot move a couple to another region', async ({ page }) => {
-  await zaloguj(page, 'rejon7@example.pl');
-  await otworzPierwszaKarte(page);
+  await signIn(page, 'rejon7@example.pl');
+  await openFirstCard(page);
   await expect(page.getByLabel('Rejon')).toBeDisabled();
 });
 
-test('a couple from another region opens read-only', async ({ page }) => {
-  await zaloguj(page, 'rejon7@example.pl');
-  // Reached by hand-written URL: the list never links there.
-  await page.goto('/pary');
-  await page.goto('/pary?karta=1');
-  const dialog = page.getByRole('dialog');
-  if (await dialog.isVisible()) {
-    await expect(page.getByText('Tylko podgląd')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Zapisz' })).toHaveCount(0);
-  }
-});
-
 test('the viewer gets no add button and no save', async ({ page }) => {
-  await zaloguj(page, 'moderator@example.pl');
+  await signIn(page, 'moderator@example.pl');
   await expect(page.getByRole('link', { name: '+ Dodaj parę' })).toHaveCount(0);
 
-  await otworzPierwszaKarte(page);
+  await openFirstCard(page);
   await expect(page.getByRole('button', { name: 'Zapisz' })).toHaveCount(0);
   await expect(page.getByText('Podgląd bez możliwości edycji.')).toBeVisible();
 });
 
 test('adding a couple works end to end', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
+  await signIn(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   await expect(page.getByRole('heading', { name: 'Dodaj parę' })).toBeVisible();
 
-  const nazwisko = `Nowi${Date.now() % 100000}`;
+  const surname = `Nowi${Date.now() % 100000}`;
   await page.getByLabel('Imię żony').fill('Zofia');
   await page.getByLabel('Imię męża').fill('Jan');
-  await page.getByLabel('Nazwisko').fill(nazwisko);
+  await page.getByLabel('Nazwisko').fill(surname);
   await page.getByRole('button', { name: 'Zapisz' }).click();
 
   // 301: the suite starts from a freshly seeded 300 and this test adds one.
-  await page.goto(`/pary?q=${nazwisko}`);
+  await page.goto(`/pary?q=${surname}`);
   await expect(page.getByRole('status')).toContainText('1 / 301');
 });
 
 test('deleting a couple removes it from the list', async ({ page }) => {
-  await zaloguj(page, 'admin@example.pl');
+  await signIn(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
-  const nazwisko = `DoUsuniecia${Date.now() % 100000}`;
-  await page.getByLabel('Nazwisko').fill(nazwisko);
+  const surname = `DoUsuniecia${Date.now() % 100000}`;
+  await page.getByLabel('Nazwisko').fill(surname);
   await page.getByRole('button', { name: 'Zapisz' }).click();
 
-  await page.goto(`/pary?q=${nazwisko}`);
-  await otworzPierwszaKarte(page);
+  await page.goto(`/pary?q=${surname}`);
+  await openFirstCard(page);
   await page.getByRole('button', { name: 'Usuń parę' }).click();
 
-  await page.goto(`/pary?q=${nazwisko}`);
+  await page.goto(`/pary?q=${surname}`);
   await expect(page.getByText('Brak wyników dla podanych kryteriów.').first()).toBeVisible();
 });
 ```
@@ -2066,16 +1973,9 @@ test('deleting a couple removes it from the list', async ({ page }) => {
 - [ ] **Step 3: Uruchom**
 
 Run: `npm run e2e`
-Expected: PASS — 22 z poprzednich planów + 13 nowych
+Expected: PASS — 22 z poprzednich planów + 12 nowych
 
-Testy tego pliku **zmieniają dane**: dodają pary, zmieniają nazwiska, usuwają rekordy.
-`lista.spec.ts` sprawdza tymczasem dokładnie `300 / 300`. Sprzątanie po sobie nie
-wystarczy — test zapisu zmienia nazwisko istniejącej pary i nie ma jak przywrócić
-poprzedniego bez pamiętania go. **Dlatego suite startuje od pełnego przeseedowania.**
-
-Zrób to **przed** uruchomieniem testów, w Kroku 1.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -2092,13 +1992,6 @@ git commit -m "test: add end-to-end coverage for the couple drawer"
 - Zapis, dodanie i usunięcie — każde z wpisem do historii zmian w tej samej transakcji
 - Uprawnienia sprawdzane po stronie serwera przy każdym zapisie
 
-**Poza zakresem, wchodzi później:** eksport i import (Plan 4), widoki rejonów, kont
-i historii (Plan 5), trwałe usunięcie na żądanie RODO (Plan 6). Comboboxy „+ nowy krąg"
-i „+ nowa parafia" są przygotowane w schemacie, ale interfejs dla nich powstaje razem
-z importem, bo tam ten sam mechanizm zakłada brakujące encje.
+**Poza zakresem:** eksport i import (Plan 4), widoki rejonów, kont i historii (Plan 5), trwałe usunięcie na żądanie RODO (Plan 6). Comboboxy „+ nowy krąg" i „+ nowa parafia" są przygotowane w schemacie, ale interfejs dla nich powstaje razem z importem, bo tam ten sam mechanizm zakłada brakujące encje.
 
-**Punkty listy odbioru, które ten plan zamyka:** wszystkie pola edytowalne · nazwisko
-wymagane · sekcja formacji z licznikiem i odmianą · pole nazwy tylko dla `Inne`
-· podpowiadanie stopnia · anulowanie porzuca zmiany · zapis/dodanie/usunięcie
-w historii zmian · drawer zamykany klikiem w tło, ✕ i `Esc` · banner „Tylko podgląd"
-· pole „Rejon" zablokowane dla pary rejonowej, z walidacją serwera.
+**Punkty listy odbioru:** wszystkie pola edytowalne · nazwisko wymagane · sekcja formacji z licznikiem i odmianą · pole nazwy tylko dla `Inne` · podpowiadanie stopnia · anulowanie porzuca zmiany · zapis/dodanie/usunięcie w historii zmian · drawer zamykany klikiem w tło, ✕ i `Esc` · banner „Tylko podgląd" · pole „Rejon" zablokowane dla pary rejonowej, z walidacją serwera.
