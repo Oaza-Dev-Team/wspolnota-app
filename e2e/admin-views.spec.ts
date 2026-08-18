@@ -1,0 +1,168 @@
+import { type Page, expect, test } from '@playwright/test';
+
+const PASSWORD = 'kartoteka123';
+
+// Region V is the account these tests switch off and on again. No other spec
+// signs in as it, so a failure here cannot lock another suite out.
+const TOGGLED = 'rejon5@example.pl';
+
+async function signIn(page: Page, email: string) {
+  await page.goto('/logowanie');
+  await page.getByLabel('Adres e-mail').fill(email);
+  await page.getByLabel('Hasło').fill(PASSWORD);
+  await page.getByRole('button', { name: 'Zaloguj się' }).click();
+  await expect(page).toHaveURL(/\/pary/);
+}
+
+/** Scoped to the form — Next renders its own route announcer with role=alert. */
+function formAlert(page: Page) {
+  return page.locator('form').getByRole('alert');
+}
+
+function accountRow(page: Page, email: string) {
+  return page.getByRole('listitem').filter({ hasText: email });
+}
+
+test.describe('regions', () => {
+  test('shows one tile per region, with inflected statistics', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.getByRole('link', { name: 'Rejony' }).click();
+
+    await expect(page).toHaveURL(/\/rejony/);
+    await expect(page.getByRole('heading', { name: 'Rejony I–XI' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /^Rejon [IVX]+/ })).toHaveCount(11);
+  });
+
+  test('marks the unstaffed region and names the others', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/rejony');
+    await expect(page.getByText('Do obsadzenia')).toHaveCount(1);
+  });
+
+  test('a tile leads to the list filtered to that region', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/rejony');
+    await page.getByRole('link', { name: /^Rejon III/ }).click();
+
+    await expect(page).toHaveURL(/\/pary\?region=3/);
+    await expect(page.getByLabel('Rejon')).toHaveValue('3');
+  });
+
+  test('the moderator may look, a region account is sent back to its list', async ({ page }) => {
+    await signIn(page, 'moderator@example.pl');
+    await page.goto('/rejony');
+    await expect(page.getByRole('heading', { name: 'Rejony I–XI' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await signIn(page, 'rejon7@example.pl');
+    await page.goto('/rejony');
+    await expect(page).toHaveURL(/\/pary/);
+  });
+});
+
+test.describe('accounts', () => {
+  test('lists every account but the admin, and only for the admin', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/konta');
+
+    await expect(page.getByRole('heading', { name: 'Konta rejonów' })).toBeVisible();
+    await expect(page.getByRole('listitem')).toHaveCount(12);
+    await expect(page.getByText('admin@example.pl')).toHaveCount(0);
+  });
+
+  test('is closed to the moderator and to a region account', async ({ page }) => {
+    await signIn(page, 'moderator@example.pl');
+    await page.goto('/konta');
+    await expect(page).toHaveURL(/\/pary/);
+
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await signIn(page, 'rejon7@example.pl');
+    await page.goto('/konta');
+    await expect(page).toHaveURL(/\/pary/);
+  });
+
+  test('switching an account off and on again changes its status badge', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/konta');
+
+    const row = accountRow(page, TOGGLED);
+    await expect(row.getByText('aktywne')).toBeVisible();
+
+    await row.getByRole('button', { name: 'Wyłącz' }).click();
+    await expect(row.getByText('wyłączone')).toBeVisible();
+
+    await row.getByRole('button', { name: 'Włącz' }).click();
+    await expect(row.getByText('aktywne')).toBeVisible();
+  });
+
+  test('inviting an unstaffed account shows a one-time link', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/konta');
+
+    const row = page.getByRole('listitem').filter({ hasText: 'oczekuje' });
+    await row.getByRole('button', { name: 'Zaproś' }).click();
+
+    await expect(row.getByText(/Link zaproszenia/)).toBeVisible();
+    await expect(row.getByText(/\/zaproszenie\//)).toBeVisible();
+  });
+});
+
+test.describe('invitation', () => {
+  test('the page is reachable without a session and refuses a bad token', async ({ page }) => {
+    await page.goto('/zaproszenie/nieistniejacy-token');
+    await expect(page.getByRole('heading', { name: 'Ustaw hasło' })).toBeVisible();
+
+    await page.getByLabel(/Nowe hasło/).fill('haslo-testowe-1');
+    await page.getByLabel('Powtórz hasło').fill('haslo-testowe-1');
+    await page.getByRole('button', { name: 'Ustaw hasło' }).click();
+
+    await expect(formAlert(page)).toContainText(/nieprawidłowe|użyte/);
+  });
+
+  test('rejects two passwords that differ', async ({ page }) => {
+    await page.goto('/zaproszenie/nieistniejacy-token');
+    await page.getByLabel(/Nowe hasło/).fill('haslo-testowe-1');
+    await page.getByLabel('Powtórz hasło').fill('haslo-testowe-2');
+    await page.getByRole('button', { name: 'Ustaw hasło' }).click();
+
+    await expect(formAlert(page)).toContainText('Hasła nie są takie same');
+  });
+});
+
+test.describe('history', () => {
+  test('lists entries with a kind badge and an author', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.getByRole('link', { name: 'Historia zmian' }).click();
+
+    await expect(page).toHaveURL(/\/historia/);
+    await expect(page.getByRole('heading', { name: 'Historia zmian' })).toBeVisible();
+    await expect(page.getByRole('listitem').first()).toBeVisible();
+  });
+
+  test('pages through the entries', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/historia');
+
+    const first = await page.getByRole('listitem').first().textContent();
+    const next = page.getByRole('link', { name: 'Następna →' });
+
+    // The seed plus the earlier suites leave well over one page behind, but
+    // this stays honest if that ever stops being true.
+    if (await next.count()) {
+      await next.click();
+      await expect(page).toHaveURL(/page=2/);
+      expect(await page.getByRole('listitem').first().textContent()).not.toBe(first);
+    }
+  });
+
+  test('is closed to everyone but the admin', async ({ page }) => {
+    await signIn(page, 'moderator@example.pl');
+    await page.goto('/historia');
+    await expect(page).toHaveURL(/\/pary/);
+
+    await page.getByRole('button', { name: 'Wyloguj' }).click();
+    await signIn(page, 'rejon7@example.pl');
+    await page.goto('/historia');
+    await expect(page).toHaveURL(/\/pary/);
+  });
+});

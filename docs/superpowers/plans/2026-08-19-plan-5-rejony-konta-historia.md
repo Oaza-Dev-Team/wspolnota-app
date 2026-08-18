@@ -64,7 +64,7 @@ e2e/
   - `type RegionStats = { id: number; roman: string; couples: number; circles: number; parishes: number; leadName: string | null }`
   - `regionStats(u: User): Promise<RegionStats[]>`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 `src/lib/regions/stats.int.test.ts`:
 
@@ -141,12 +141,12 @@ describe('regionStats', () => {
 });
 ```
 
-- [ ] **Step 2: Uruchom test — musi się wywalić**
+- [x] **Step 2: Uruchom test — musi się wywalić**
 
 Run: `npm run test:int -- stats`
 Expected: FAIL
 
-- [ ] **Step 3: Zaimplementuj**
+- [x] **Step 3: Zaimplementuj**
 
 `src/lib/regions/stats.ts`:
 
@@ -225,12 +225,12 @@ export async function regionStats(u: User): Promise<RegionStats[]> {
 }
 ```
 
-- [ ] **Step 4: Uruchom test — musi przejść**
+- [x] **Step 4: Uruchom test — musi przejść**
 
 Run: `npm run test:int -- stats`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -245,7 +245,7 @@ git commit -m "feat: add per-region statistics"
 - Create: `src/app/(app)/rejony/page.tsx`, `regions.module.css`
 - Modify: `src/app/(app)/layout.tsx` — aktywna pozycja nawigacji
 
-- [ ] **Step 1: Rozwiąż aktywną pozycję nawigacji**
+- [x] **Step 1: Rozwiąż aktywną pozycję nawigacji**
 
 Layout ustawia dziś `active="couples"` na sztywno, więc na `/rejony` podświetli się zła pozycja. Wyprowadź ją ze ścieżki:
 
@@ -301,7 +301,7 @@ export function Nav({
 
 Podmień blok nawigacji w `Shell.tsx` na `<Nav items={navItems(user)} counts={counts} />` i usuń prop `active` z `Shell` oraz z `layout.tsx`. **Zaktualizuj testy**, które sprawdzały liczbę pozycji — one nadal przechodzą, bo liczba się nie zmienia.
 
-- [ ] **Step 2: Napisz style**
+- [x] **Step 2: Napisz style**
 
 `src/app/(app)/rejony/regions.module.css`:
 
@@ -380,7 +380,7 @@ Podmień blok nawigacji w `Shell.tsx` na `<Nav items={navItems(user)} counts={co
 }
 ```
 
-- [ ] **Step 3: Napisz stronę**
+- [x] **Step 3: Napisz stronę**
 
 `src/app/(app)/rejony/page.tsx`:
 
@@ -439,11 +439,11 @@ export default async function RegionsPage() {
 }
 ```
 
-- [ ] **Step 4: Sprawdź w przeglądarce**
+- [x] **Step 4: Sprawdź w przeglądarce**
 
 Jako admin: `/rejony` pokazuje **11 kafelków**, każdy w swoim kolorze, z liczbą par i odmienioną statystyką „5 kręgów · 4 parafie". Ostatni ma „Do obsadzenia". Klik przenosi na listę z ustawionym filtrem rejonu. Jako para rejonowa: przekierowanie na `/pary`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -463,7 +463,7 @@ git commit -m "feat: add the regions overview"
   - `type AccountRow = { id: string; email: string; name: string; role: Role; status: AccountStatus; regionId: number | null; roman: string | null; couples: number; lastLoginAt: string | null }`
   - `accountRows(u: User): Promise<AccountRow[]>`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 `src/lib/accounts/list.int.test.ts`:
 
@@ -522,7 +522,7 @@ describe('accountRows', () => {
 });
 ```
 
-- [ ] **Step 2: Zaimplementuj**
+- [x] **Step 2: Zaimplementuj**
 
 `src/lib/accounts/list.ts`:
 
@@ -588,12 +588,12 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
 }
 ```
 
-- [ ] **Step 3: Uruchom test — musi przejść**
+- [x] **Step 3: Uruchom test — musi przejść**
 
 Run: `npm run test:int -- accounts`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -615,7 +615,7 @@ git commit -m "feat: add the account list read model"
   - `redeemInvite(token: string, password: string): Promise<void>`
   - `INVITE_DAYS = 7`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 `src/lib/accounts/manage.int.test.ts`:
 
@@ -748,7 +748,7 @@ describe('redeemInvite', () => {
 });
 ```
 
-- [ ] **Step 2: Zaimplementuj**
+- [x] **Step 2: Zaimplementuj**
 
 `src/lib/accounts/manage.ts`:
 
@@ -876,12 +876,12 @@ export async function redeemInvite(token: string, password: string): Promise<voi
 }
 ```
 
-- [ ] **Step 3: Uruchom test — musi przejść**
+- [x] **Step 3: Uruchom test — musi przejść**
 
 Run: `npm run test:int -- manage`
 Expected: PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -895,7 +895,7 @@ git commit -m "feat: add account status changes and one-time invites"
 **Files:**
 - Create: `src/app/(app)/konta/page.tsx`, `AccountRow.tsx`, `actions.ts`, `accounts.module.css`
 
-- [ ] **Step 1: Napisz server actions**
+- [x] **Step 1: Napisz server actions**
 
 `src/app/(app)/konta/actions.ts`:
 
@@ -958,7 +958,7 @@ export async function inviteAction(
 }
 ```
 
-- [ ] **Step 2: Napisz wiersz konta**
+- [x] **Step 2: Napisz wiersz konta**
 
 `src/app/(app)/konta/AccountRow.tsx` — kliencki, bo trzyma wynik akcji zaproszenia:
 
@@ -1050,7 +1050,7 @@ export function AccountRow({ row }: { row: Row }) {
 }
 ```
 
-- [ ] **Step 3: Napisz stronę**
+- [x] **Step 3: Napisz stronę**
 
 `src/app/(app)/konta/page.tsx`:
 
@@ -1080,7 +1080,7 @@ export default async function AccountsPage() {
 }
 ```
 
-- [ ] **Step 4: Napisz style**
+- [x] **Step 4: Napisz style**
 
 `src/app/(app)/konta/accounts.module.css`:
 
@@ -1200,7 +1200,7 @@ export default async function AccountsPage() {
 }
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add -A
@@ -1216,7 +1216,7 @@ git commit -m "feat: add the accounts view with invites and status changes"
 
 Trasa leży **poza** grupą `(app)`, bo osoba korzystająca z zaproszenia nie ma jeszcze sesji.
 
-- [ ] **Step 1: Napisz akcję**
+- [x] **Step 1: Napisz akcję**
 
 `src/app/zaproszenie/[token]/actions.ts`:
 
@@ -1249,7 +1249,7 @@ export async function redeemAction(_state: InviteState, formData: FormData): Pro
 }
 ```
 
-- [ ] **Step 2: Napisz stronę i formularz**
+- [x] **Step 2: Napisz stronę i formularz**
 
 Strona reużywa układu ekranu logowania (`login.module.css`) — ta sama lewa kolumna, po prawej formularz ustawienia hasła. Pełny kod w Kroku 3 planu wykonawczego; kluczowe elementy:
 
@@ -1258,7 +1258,7 @@ Strona reużywa układu ekranu logowania (`login.module.css`) — ta sama lewa k
 - dwa pola hasła, sprawdzane po stronie serwera
 - po sukcesie przekierowanie na `/logowanie?invited=1` z komunikatem „Hasło ustawione — możesz się zalogować"
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add -A
@@ -1279,7 +1279,7 @@ git commit -m "feat: add the invite redemption page"
   - `AUDIT_PAGE_SIZE = 50`
   - `auditPage(u: User, page: number): Promise<{ rows: AuditRow[]; total: number }>`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 `src/lib/audit/list.int.test.ts`:
 
@@ -1347,7 +1347,7 @@ describe('auditPage', () => {
 });
 ```
 
-- [ ] **Step 2: Zaimplementuj**
+- [x] **Step 2: Zaimplementuj**
 
 `src/lib/audit/list.ts`:
 
@@ -1400,7 +1400,7 @@ export async function auditPage(
 }
 ```
 
-- [ ] **Step 3: Napisz widok**
+- [x] **Step 3: Napisz widok**
 
 `src/app/(app)/historia/page.tsx` — server component z paginacją w URL (`?page=`), plakietki rodzajów wg §7 handoffu. Etykiety po polsku:
 
@@ -1416,7 +1416,7 @@ const KIND_LABEL: Record<AuditKind, string> = {
 
 Kolory plakietek z tokenów: `edit` → `--bg-row`/`--navy-700`, `create` → success, `delete` → danger, `export` → warn, `account` → purple.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add -A
@@ -1434,9 +1434,9 @@ Zakres: dostępność widoków wg roli (rejony — admin i moderator, konta i hi
 
 **Uwaga:** testy zmieniające status konta muszą przywrócić stan — inaczej `login.spec.ts` zacznie padać, bo któreś konto testowe przestanie się logować. Najbezpieczniej operować na `rejon5@example.pl`, którego żaden inny test nie używa, i przywracać `active` na końcu.
 
-- [ ] **Step 1: Napisz testy**
-- [ ] **Step 2: Uruchom** — `npm run e2e`
-- [ ] **Step 3: Commit**
+- [x] **Step 1: Napisz testy**
+- [x] **Step 2: Uruchom** — `npm run e2e`
+- [x] **Step 3: Commit**
 
 ---
 

@@ -167,3 +167,12 @@
   .title { font-size: 38px; }
   .right { padding: 26px 20px 40px; }
 }
+
+.notice {
+  background: var(--success-bg);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--success-fg);
+  margin: 0 0 14px;
+}

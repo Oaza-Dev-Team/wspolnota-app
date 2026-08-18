@@ -22,7 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <Shell user={u} accountName={account.name} active="couples" counts={counts}>
+    <Shell user={u} accountName={account.name} counts={counts}>
       {children}
     </Shell>
   );

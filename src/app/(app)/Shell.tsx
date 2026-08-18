@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import type { User } from '@/lib/auth/permissions';
 import { romanNumeral } from '@/lib/domain/regions';
 import { type ViewKey, navItems } from '@/lib/navigation';
+import { Nav } from './Nav';
 import style from './shell.module.css';
 
 const ROLE_LABELS: Record<User['role'], string> = {
@@ -19,13 +19,11 @@ function accountCode(u: User): string {
 export function Shell({
   user,
   accountName,
-  active,
   counts,
   children,
 }: {
   user: User;
   accountName: string;
-  active: ViewKey;
   counts: Partial<Record<ViewKey, number>>;
   children: React.ReactNode;
 }) {
@@ -41,21 +39,7 @@ export function Shell({
           </span>
         </div>
 
-        <div className={style.nav}>
-          {navItems(user).map((item) => (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={`${style.navItem} ${item.key === active ? style.navItemActive : ''}`}
-              aria-current={item.key === active ? 'page' : undefined}
-            >
-              <span>{item.label}</span>
-              {counts[item.key] !== undefined && (
-                <span className={style.count}>{counts[item.key]}</span>
-              )}
-            </Link>
-          ))}
-        </div>
+        <Nav items={navItems(user)} counts={counts} />
 
         <div className={style.footer}>
           <div className={style.account}>
