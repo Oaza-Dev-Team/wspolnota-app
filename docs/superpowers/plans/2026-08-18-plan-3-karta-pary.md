@@ -1832,6 +1832,20 @@ Zmień skrypt `e2e` w `package.json`:
 
 Seed jest deterministyczny (PRNG ze stałym ziarnem), więc każdy przebieg zaczyna od tych samych 300 par.
 
+**Dwie rzeczy, które inaczej dadzą losowo padające testy.**
+
+Po pierwsze: **kliknięcie przycisku nie czeka na zakończenie server action.** Każdy test,
+który po „Zapisz" albo „Usuń parę" nawiguje gdzie indziej, musi najpierw poczekać na
+przekierowanie — `await expect(page).toHaveURL(/saved=1/)` albo `/deleted=1/`. Bez tego
+`page.goto` wyprzedza commit i test widzi stan sprzed operacji. Objaw jest mylący:
+rekord w bazie **jest**, a test twierdzi, że go nie ma.
+
+Po drugie: **uruchamiaj przez `npm run e2e`, nie przez `npx playwright test`.** Ten drugi
+pomija `e2e/prepare.ts`, więc nieudane próby logowania z `login.spec.ts` kumulują się
+między przebiegami i po kilku uruchomieniach `admin@example.pl` wpada w limit 10 prób
+na 15 minut. Wtedy padają losowe testy z komunikatem, który nie ma nic wspólnego
+z ich treścią.
+
 - [ ] **Step 2: Napisz testy**
 
 `e2e/card.spec.ts`:
