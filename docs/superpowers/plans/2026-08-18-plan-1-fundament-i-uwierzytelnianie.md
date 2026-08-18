@@ -114,8 +114,11 @@ Jeśli polecenie odmówi z powodu niepustego katalogu: wygeneruj w katalogu obok
 - [ ] **Step 2: Zainstaluj zależności deweloperskie**
 
 ```bash
-npm i -D vitest@4 @vitejs/plugin-react vite-tsconfig-paths
+npm i -D vitest@4
 ```
+
+Vitest 4 rozwiazuje alias `@/*` z tsconfig natywnie, a testy Planu 1 sa wylacznie
+w `.ts` — ani `vite-tsconfig-paths`, ani `@vitejs/plugin-react` nie sa potrzebne.
 
 - [ ] **Step 3: Włącz tryb strict i sprawdź alias**
 
@@ -133,15 +136,15 @@ W `tsconfig.json` upewnij się, że `compilerOptions` zawiera:
 
 - [ ] **Step 4: Skonfiguruj Vitest**
 
-`vitest.config.ts`:
+`vitest.config.mts` — **rozszerzenie `.mts`, nie `.ts`**: Vite laduje `.ts` jako
+CommonJS i ostrzega przy kazdym uruchomieniu, ze plik uzywa skladni ESM.
 
 ```ts
 import { defineConfig } from 'vitest/config';
-import react from '@vitejs/plugin-react';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  // Vite resolves the "@/*" alias from tsconfig natively.
+  resolve: { tsconfigPaths: true },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
@@ -158,7 +161,7 @@ Dopisz do `package.json`:
 "scripts": {
   "test": "vitest run",
   "test:watch": "vitest",
-  "test:int": "vitest run --config vitest.int.config.ts"
+  "test:int": "vitest run --config vitest.int.config.mts"
 }
 ```
 
@@ -189,17 +192,40 @@ Expected: kompilacja bez błędów
 
 - [ ] **Step 8: Uzupełnij `.gitignore`**
 
-Dopisz na końcu:
+`create-next-app` generuje juz `.env*`, ktore **polyka rowniez `.env.example`** —
+a ten musi byc w repozytorium. Dopisz na koncu:
 
 ```
+# the template must stay tracked; .env* above would swallow it
+!.env.example
+
+# Prisma client is generated on postinstall
 /src/generated
-.env
-.env.local
+
+# Playwright
 /test-results
 /playwright-report
 ```
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 9: Wyklucz handoff z lintowania**
+
+Bez tego `npm run lint` lintuje `docs/handoff/support.js` — 69 KB runtime'u prototypu —
+i zglasza 2 bledy oraz 8 ostrzezen w kodzie, ktorego nie piszemy i nie budujemy.
+
+W `eslint.config.mjs`, wewnatrz `globalIgnores([...])`, dopisz:
+
+```js
+    // The design handoff ships a throwaway HTML prototype and its runtime.
+    // It is reference material, not source, and must never be linted or built.
+    "docs/**",
+    // Prisma emits TypeScript sources; they are generated, not authored.
+    "src/generated/**",
+```
+
+Run: `npm run lint`
+Expected: brak wyjscia (zero problemow)
+
+- [ ] **Step 10: Commit**
 
 ```bash
 git add -A
@@ -478,7 +504,9 @@ services:
       # ICU collation for Polish sorting; see prisma/migrations
       LANG: pl_PL.utf8
     ports:
-      - '5432:5432'
+      # Host 5432 is taken by another project's Postgres on this machine,
+      # so the container port is published on 5433 instead.
+      - '5433:5432'
     volumes:
       - kartoteka-db-data:/var/lib/postgresql/data
     healthcheck:
@@ -496,7 +524,7 @@ volumes:
 `.env.example`:
 
 ```
-DATABASE_URL="postgresql://kartoteka:kartoteka_dev@localhost:5432/kartoteka?schema=public"
+DATABASE_URL="postgresql://kartoteka:kartoteka_dev@localhost:5433/kartoteka?schema=public"
 SESSION_SECRET="wygeneruj: node -e \"console.log(require('crypto').randomBytes(32).toString('base64url'))\""
 APP_URL="http://localhost:3000"
 ```
@@ -746,14 +774,13 @@ npx prisma migrate reset --force
 
 - [ ] **Step 4: Skonfiguruj testy integracyjne**
 
-`vitest.int.config.ts`:
+`vitest.int.config.mts`:
 
 ```ts
 import { defineConfig } from 'vitest/config';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
-  plugins: [tsconfigPaths()],
+  resolve: { tsconfigPaths: true },
   test: {
     environment: 'node',
     include: ['src/**/*.int.test.ts', 'prisma/**/*.int.test.ts'],
