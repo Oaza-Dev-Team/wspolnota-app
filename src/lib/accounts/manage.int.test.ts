@@ -5,6 +5,8 @@ import { createSession, userFromToken } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { createInvite, redeemInvite, setAccountStatus } from './manage';
 
+const TARGET_NAME = 'Konto testowe zarządzania';
+
 let admin: User;
 let regionVII: User;
 let targetId: bigint;
@@ -22,7 +24,7 @@ beforeAll(async () => {
   const target = await prisma.account.create({
     data: {
       email: 'zarzadzanie.test@example.pl',
-      name: 'Konto testowe',
+      name: TARGET_NAME,
       role: 'region',
       regionId: 5,
       status: 'active',
@@ -49,7 +51,9 @@ afterEach(async () => {
       inviteExpiresAt: null,
     },
   });
-  await prisma.audit.deleteMany({ where: { kind: 'account' } });
+  // Narrowed to this test's own account: deleting every account-kind entry
+  // would wipe genuine history that other suites and the app itself wrote.
+  await prisma.audit.deleteMany({ where: { description: { contains: TARGET_NAME } } });
   await prisma.session.deleteMany({ where: { accountId: targetId } });
 });
 
@@ -58,7 +62,11 @@ describe('setAccountStatus', () => {
     await setAccountStatus(admin, targetId, 'disabled');
     const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
     expect(account.status).toBe('disabled');
-    expect(await prisma.audit.count({ where: { kind: 'account' } })).toBe(1);
+    expect(
+      await prisma.audit.count({
+        where: { kind: 'account', description: { contains: TARGET_NAME } },
+      }),
+    ).toBe(1);
   });
 
   // The checklist requires a disabled account to lose access immediately.
