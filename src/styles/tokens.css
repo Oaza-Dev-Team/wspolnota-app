@@ -1,0 +1,85 @@
+:root {
+  /* Kolory */
+  --navy-900: #0d2439;
+  --navy-700: #10365c;
+  --blue-500: #1c5f96;
+  --gold-500: #e2b04a;
+
+  --bg-app: #eef1f5;
+  --bg-panel: #f7f9fb;
+  --bg-row: #f4f7fa;
+  --bg-row-alt: #f9fbfc;
+  --surface: #ffffff;
+
+  --border: #dfe5ec;
+  --border-input: #d5dde6;
+  --divider: #f0f3f7;
+
+  --text: #101c2b;
+  --text-body: #3c4b5c;
+  --text-muted: #6c7d8f;
+  --text-faint: #8b99a8;
+  --placeholder: #9aa6b4;
+
+  --success-bg: #e9f4ec;
+  --success-fg: #2c6b41;
+  --warn-bg: #fdf6e6;
+  --warn-fg: #8a6a1c;
+  --danger-bg: #fdf1f1;
+  --danger-fg: #9c3a3a;
+  --purple-bg: #f0ecf7;
+  --purple-fg: #57407a;
+
+  /* Paleta 12 rejonow — jednolita jasnosc, rozne odcienie.
+     Uzywana na tlach z alfa 1a/18; proporcji alfy nie zmieniac
+     bez ponownego pomiaru kontrastu (AA dla 12 px). */
+  --rejon-1: #1c5f96;
+  --rejon-2: #2f7d6a;
+  --rejon-3: #7a6ca8;
+  --rejon-4: #b07d2b;
+  --rejon-5: #a3524f;
+  --rejon-6: #3f7d3a;
+  --rejon-7: #4f6fbd;
+  --rejon-8: #96603f;
+  --rejon-9: #2b7f8f;
+  --rejon-10: #8a5b8f;
+  --rejon-11: #6b7d2f;
+  --rejon-12: #b05c7d;
+
+  /* Promienie */
+  --r-4: 4px;
+  --r-5: 5px;
+  --r-7: 7px;
+  --r-8: 8px;
+  --r-9: 9px;
+  --r-10: 10px;
+  --r-11: 11px;
+  --r-12: 12px;
+  --r-20: 20px;
+
+  /* Cienie */
+  --cien-tabela: 0 1px 2px rgba(16, 54, 92, .04);
+  --cien-kafelek: 0 4px 14px rgba(16, 54, 92, .08);
+  --cien-karta: 0 4px 14px rgba(16, 54, 92, .1);
+  --cien-drawer: -18px 0 50px rgba(13, 36, 57, .2);
+  --cien-toast: 0 8px 24px rgba(13, 36, 57, .28);
+
+  /* Animacje */
+  --czas-drawer: 220ms;
+  --czas-overlay: 150ms;
+  --czas-hover: 150ms;
+
+  /* Punkty zalamania — do dokumentacji; media queries wymagaja literalow */
+  --bp-mobile: 860px;
+  --bp-waski: 1120px;
+}
+
+@keyframes slidein {
+  from { transform: translateX(30px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+@keyframes fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}

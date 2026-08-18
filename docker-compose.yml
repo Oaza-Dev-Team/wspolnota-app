@@ -1,0 +1,25 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kartoteka-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kartoteka
+      POSTGRES_PASSWORD: kartoteka_dev
+      POSTGRES_DB: kartoteka
+      # ICU collation for Polish sorting; see prisma/migrations
+      LANG: pl_PL.utf8
+    ports:
+      # Host 5432 is taken by another project's Postgres on this machine,
+      # so the container port is published on 5433 instead.
+      - '5433:5432'
+    volumes:
+      - kartoteka-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U kartoteka -d kartoteka']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  kartoteka-db-data:

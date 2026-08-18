@@ -279,13 +279,42 @@ describe('design tokens', () => {
     }
   });
 
-  it('defines the three font family tokens', () => {
-    expect(css).toContain('--font-ui:');
-    expect(css).toContain('--font-naglowek:');
-    expect(css).toContain('--font-mono:');
+});
+
+// The three --font-* custom properties are produced by next/font and injected
+// through a class on <html>; defining them in tokens.css would override the
+// generated families. The wiring is therefore asserted on the layout instead.
+describe('font wiring', () => {
+  const layout = readFileSync(join(process.cwd(), 'src/app/layout.tsx'), 'utf8');
+
+  it('declares all three families with their token names', () => {
+    for (const [rodzina, token] of [
+      ['Source_Sans_3', '--font-ui'],
+      ['Source_Serif_4', '--font-naglowek'],
+      ['IBM_Plex_Mono', '--font-mono'],
+    ]) {
+      expect(layout, `missing ${rodzina}`).toContain(rodzina);
+      expect(layout, `missing ${token}`).toContain(token);
+    }
+  });
+
+  it('requests the latin-ext subset so Polish glyphs are covered', () => {
+    const wystapienia = layout.match(/latin-ext/g) ?? [];
+    expect(wystapienia).toHaveLength(3);
+  });
+
+  it('self-hosts rather than linking Google stylesheets', () => {
+    // Looks for a real remote reference, not a mention: the file explains in a
+    // comment why it does not contact fonts.gstatic.com.
+    expect(layout).not.toMatch(/href=["'{`]?\s*(?:https?:)?\/\/fonts\.(googleapis|gstatic)\.com/);
+    expect(layout).not.toContain('<link');
   });
 });
 ```
+
+**Uwaga:** tokenow `--font-ui`, `--font-naglowek` i `--font-mono` **nie umieszczamy**
+w `tokens.css`. Generuje je `next/font` i wstrzykuje przez `className` na `<html>` —
+zdefiniowanie ich w arkuszu nadpisaloby wygenerowane rodziny.
 
 - [ ] **Step 2: Uruchom test — musi się wywalić**
 
