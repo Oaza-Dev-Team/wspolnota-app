@@ -1,0 +1,204 @@
+.aplikacja {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 244px;
+  flex: none;
+  padding: 20px 14px;
+  background: var(--navy-900);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.monogram {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: var(--r-7);
+  background: var(--surface);
+  color: var(--navy-700);
+  font-family: var(--font-naglowek), Georgia, serif;
+  font-size: 15px;
+}
+
+.brandNazwa {
+  font-family: var(--font-naglowek), Georgia, serif;
+  font-size: 18px;
+  color: var(--sidebar-tekst);
+  line-height: 1.2;
+}
+
+.brandPodpis {
+  font-family: var(--font-mono), monospace;
+  font-size: 9px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--sidebar-tekst-slaby);
+}
+
+.nawigacja {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pozycja {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--r-8);
+  font-size: 14px;
+  color: var(--sidebar-tekst-przygaszony);
+  text-decoration: none;
+}
+
+.pozycja:hover {
+  background: var(--sidebar-hover);
+}
+
+.pozycjaAktywna {
+  background: var(--nawigacja-aktywna-tlo);
+  color: var(--gold-500);
+  font-weight: 600;
+}
+
+.licznik {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  opacity: .65;
+}
+
+.stopka {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--sidebar-linia);
+  padding-top: 15px;
+}
+
+.konto {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.awatar {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: var(--r-8);
+  background: var(--awatar-tlo);
+  color: var(--gold-500);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
+
+.kontoNazwa {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sidebar-tekst);
+}
+
+.kontoRola {
+  font-size: 11px;
+  color: var(--sidebar-tekst-slaby);
+}
+
+.wyloguj {
+  background: none;
+  border: 1px solid var(--sidebar-obwodka);
+  border-radius: var(--r-8);
+  padding: 8px;
+  font-size: 12px;
+  color: var(--sidebar-tekst-przygaszony);
+  cursor: pointer;
+  min-height: 36px;
+  width: 100%;
+}
+
+.wyloguj:hover {
+  background: var(--sidebar-hover);
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 26px 32px 64px;
+}
+
+@media (max-width: 860px) {
+  .aplikacja {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'brand user'
+      'nav nav';
+    gap: 10px;
+    width: auto;
+    height: auto;
+    padding: 11px 14px 9px;
+    z-index: 40;
+  }
+
+  .brand { grid-area: brand; }
+
+  .stopka {
+    grid-area: user;
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .nawigacja {
+    grid-area: nav;
+    flex-direction: row;
+    overflow-x: auto;
+    gap: 6px;
+  }
+
+  .pozycja {
+    flex: none;
+    white-space: nowrap;
+    min-height: 44px;
+  }
+
+  /* Only the account code and the sign-out button fit on a phone. */
+  .kontoNazwa,
+  .kontoRola {
+    display: none;
+  }
+
+  .wyloguj { width: auto; }
+
+  .main {
+    padding: 18px 16px 56px;
+  }
+}

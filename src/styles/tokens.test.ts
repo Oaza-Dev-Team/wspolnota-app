@@ -14,6 +14,10 @@ describe('design tokens', () => {
       '--text', '--text-body', '--text-muted', '--text-faint', '--placeholder',
       '--success-bg', '--success-fg', '--warn-bg', '--warn-fg',
       '--danger-bg', '--danger-fg', '--purple-bg', '--purple-fg',
+      '--sidebar-tekst', '--sidebar-tekst-przygaszony', '--sidebar-tekst-slaby',
+      '--sidebar-hover', '--sidebar-linia', '--sidebar-obwodka',
+      '--nawigacja-aktywna-tlo', '--awatar-tlo',
+      '--focus-obwodka', '--wiersz-hover',
     ];
     for (const token of wymagane) {
       expect(css, `missing ${token}`).toContain(`${token}:`);

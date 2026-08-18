@@ -45,6 +45,22 @@
   --rejon-10: #8a5b8f;
   --rejon-11: #6b7d2f;
 
+  /* Sidebar — jedyne miejsce, gdzie tekst lezy na navy */
+  --sidebar-tekst: #e7edf4;
+  --sidebar-tekst-przygaszony: #c3d3e1;
+  --sidebar-tekst-slaby: #7d97ad;
+  --sidebar-hover: rgba(255, 255, 255, .08);
+  --sidebar-linia: rgba(255, 255, 255, .13);
+  --sidebar-obwodka: rgba(255, 255, 255, .2);
+  --nawigacja-aktywna-tlo: rgba(226, 176, 74, .16);
+  --awatar-tlo: rgba(226, 176, 74, .18);
+
+  /* Obwodka focusu na kontrolkach — powtarza sie na logowaniu i w filtrach */
+  --focus-obwodka: 0 0 0 3px rgba(28, 95, 150, .12);
+
+  /* Tlo wiersza pod kursorem — o ton chlodniejsze niz --bg-row-alt */
+  --wiersz-hover: #f7f9fc;
+
   /* Promienie */
   --r-4: 4px;
   --r-5: 5px;

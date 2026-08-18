@@ -6,14 +6,8 @@ export default async function StronaPar() {
   const zakres = u.rejonId === null ? 'cała wspólnota' : `rejon ${numerRzymski(u.rejonId)}`;
 
   return (
-    <main style={{ padding: 32 }}>
-      <h1>Pary wspólnoty</h1>
-      <p>
-        Zalogowano jako <strong>{u.rola}</strong> — {zakres}.
-      </p>
-      <form action="/wyloguj" method="post">
-        <button type="submit">Wyloguj</button>
-      </form>
-    </main>
+    <p>
+      Zalogowano jako <strong>{u.rola}</strong> — {zakres}. Lista wchodzi w zadaniu 10.
+    </p>
   );
 }
