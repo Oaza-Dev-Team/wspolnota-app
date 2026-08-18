@@ -217,8 +217,36 @@ zapytaniu — jest strukturalne. Ten sam moduł zasila UI (ukrywanie przycisków
 - **Ograniczenie prób logowania:** 10 prób / 15 min na adres e-mail i na IP,
   licznik w Postgresie.
 - **Zaproszenia:** token jednorazowy, ważny 7 dni, ustawia hasło i przełącza konto
-  z `oczekuje` na `aktywne`.
+  z `oczekuje` na `aktywne`. **Budowane dopiero w Planie 5** — patrz §6.1.
 - **Wylogowanie** kasuje wiersz sesji. **Wyłączenie konta** kasuje wszystkie jego sesje.
+
+### 6.1 Logowanie kontem Google — decyzja odłożona do Planu 5
+
+Rozważane jako zamiennik hasła. Zalety: dziedziczenie 2FA z konta Google oraz
+zniknięcie całego przepływu zaproszeń — admin dopisuje adres do tabeli `konto`,
+osoba loguje się przyciskiem. Wada: część par rejonowych to użytkownicy `wp.pl`
+i `o2.pl`, dla których założenie konta Google jest realnym tarciem wdrożeniowym.
+
+**Odłożenie nic nie kosztuje, bo szew jest już we właściwym miejscu.** Obie metody
+schodzą się w `utworzSesje(kontoId)`; wszystko za tym punktem — sesje, `requireUser()`,
+uprawnienia, widoki — jest wspólne. Dodanie Google to dopisanie pary tras
+(`/logowanie/google` + callback) kończących się wywołaniem tej samej funkcji,
+plus jedna przyrostowa migracja z kolumną `konto.google_sub` (unikalna, nullable).
+`konto.hash_hasla` jest już nullable, więc nie wymaga zmiany.
+
+Gdyby decyzja wypadła na Google, do wyrzucenia idzie około stu linii: hashowanie
+argon2id i ograniczenie prób logowania. **Kosztowny jest wyłącznie przepływ zaproszeń** —
+i właśnie dlatego nie powstaje w Planie 1. Konto w statusie `oczekuje` po prostu się
+nie loguje.
+
+Warunek nienegocjowalny przy wariancie Google: **tabela `konto` działa jako twarda lista
+dostępu.** Logowanie kończy się sukcesem tylko dla adresu już obecnego w tabeli ze
+statusem `aktywne` — inaczej dowolny posiadacz konta Google wchodzi do kartoteki.
+Wiązanie tożsamości po `sub` z tokenu (stabilny), dopasowanie po adresie e-mail wyłącznie
+przy pierwszym logowaniu.
+
+Sesje pozostają w bazie niezależnie od wybranej metody: Google nie wie o wyłączeniu
+konta, więc wymóg natychmiastowej utraty dostępu i tak wymaga tabeli `sesja`.
 
 ---
 

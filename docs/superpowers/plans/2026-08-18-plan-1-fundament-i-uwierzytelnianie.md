@@ -11,6 +11,18 @@
 **Spec:** `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md`
 **Wymagania źródłowe:** `docs/handoff/README.md` (wygląd), `docs/handoff/IMPLEMENTATION.md` (lista odbioru)
 
+## Uwaga o trwałości zadań 9 i 11
+
+Logowanie kontem Google jest rozważane jako zamiennik hasła, decyzja zapada w Planie 5
+(spec §6.1). Zadania **9 (argon2id)** i **11 (limit prób logowania)** to jedyne miejsca,
+które wtedy zniknęłyby — łącznie około stu linii. Wszystko pozostałe, w szczególności
+sesje (zad. 10), `requireUser()` (zad. 12) i uprawnienia (zad. 8), jest wspólne dla obu
+metod: obie schodzą się w `utworzSesje(kontoId)`.
+
+Praktyczny wniosek dla wykonawcy: **nie dobudowuj tu przepływu zaproszeń ani resetu
+hasła.** Konto w statusie `oczekuje` ma się po prostu nie logować — zadanie 15 to
+testuje. To właśnie ten przepływ byłby kosztowną stratą przy zmianie decyzji.
+
 ## Global Constraints
 
 Obowiązują w **każdym** zadaniu tego planu.
