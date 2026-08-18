@@ -7,6 +7,8 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "noEmit": true,
+    // Integration tests import scripts/*.mts directly; nothing is emitted.
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
