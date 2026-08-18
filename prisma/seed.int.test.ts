@@ -10,7 +10,9 @@ afterAll(async () => {
 describe('seed data', () => {
   it('creates one region per Roman numeral and 300 couples', async () => {
     expect(await prisma.region.count()).toBe(REGION_COUNT);
-    expect(await prisma.couple.count()).toBe(300);
+    // Live couples only. A bare count() would include rows the e2e suite
+    // soft-deleted, which no user-facing count ever shows.
+    expect(await prisma.couple.count({ where: { deletedAt: null } })).toBe(300);
   });
 
   it('creates an account per region plus admin and moderator', async () => {
