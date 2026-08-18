@@ -25,7 +25,7 @@ export default async function StronaLogowania() {
             <em>Domowego Kościoła</em>
           </h1>
           <p className={style.lead}>
-            Dwanaście rejonów, jedna wspólna baza. Pary rejonowe prowadzą swoją część
+            Jedenaście rejonów, jedna wspólna baza. Pary rejonowe prowadzą swoją część
             kartoteki, para odpowiedzialna za wspólnotę widzi całość.
           </p>
         </div>

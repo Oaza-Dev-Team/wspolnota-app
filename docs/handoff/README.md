@@ -1,5 +1,19 @@
 # Handoff: Kartoteka Domowego Kościoła — zarządzanie danymi członków wspólnoty
 
+> **Korekta z 18.08.2026: rejonów jest 11, nie 12.**
+> Ten dokument opisywał pierwotnie dwanaście rejonów — tyle wynikało z założeń przed
+> weryfikacją u zamawiającego. Wspólnota ma **jedenaście** rejonów, I–XI. Tekst poniżej
+> został poprawiony.
+>
+> **Czego nie dało się poprawić:** `screenshots/05-rejony.png` i `screenshots/06-konta-rejonow.png`
+> nadal pokazują dwanaście kafelków, a prototyp `Wspolnota.dc.html` nadal generuje
+> dwanaście rejonów. Zrzuty są renderowane, nie rysowane, więc nie da się ich edytować
+> bez ponownego uruchomienia narzędzia; prototyp jest materiałem do wyrzucenia i nie
+> warto go migrować. **Przy rozbieżności obowiązuje tekst, nie obrazek.**
+>
+> W kodzie liczba rejonów nie jest literałem — wynika ze stałej `LICZBA_REJONOW`
+> w `src/lib/domena/rejony.ts`.
+
 ## Start tutaj
 
 1. Otwórz `Wspolnota.dc.html` w przeglądarce i przeklikaj prototyp — zaloguj się kolejno
@@ -12,7 +26,7 @@
 
 Aplikacja do prowadzenia kartoteki małżeństw należących do wspólnoty Domowego Kościoła
 (Ruch Światło-Życie, archidiecezja gdańska). Wspólnota liczy ~300 par podzielonych na
-**12 rejonów** (numeracja rzymska I–XII). W każdym rejonie działa **para rejonowa**
+**11 rejonów** (numeracja rzymska I–XI). W każdym rejonie działa **para rejonowa**
 (jedno konto), która prowadzi dane swojego rejonu. Nad nimi stoi **para odpowiedzialna
 za wspólnotę** z uprawnieniami administratora. Osobna rola: **moderator** (kapłan) —
 podgląd całości bez prawa edycji.
@@ -73,7 +87,7 @@ ekran wyboru konta demonstracyjnego (4 konta).
 | `nazwisko` | string | w formie mnogiej, np. „Kowalscy", „Formela" |
 | `email` | string | jeden adres na parę |
 | `telefon` | string | format `+48 XXX XXX XXX` |
-| `rejon` | int 1–12 | wyświetlany rzymsko: `ROMAN[rejon-1]` |
+| `rejon` | int 1–11 | wyświetlany rzymsko: `ROMAN[rejon-1]` |
 | `parafia` | string | nazwa + miasto, np. „św. Brygidy, Gdańsk" |
 | `krag` | string | numer w rejonie + patron, np. `3 · św. Rity` |
 | `rekolekcje` | `Rekolekcje[]` | patrz niżej |
@@ -110,7 +124,7 @@ może być kilka.
 
 ### `KontoRejonu`
 
-`{ rejon: 1–12, nazwaPary: string|null, email: string, status: 'aktywne'|'wyłączone'|'oczekuje', ostatnieLogowanie: date|null }`
+`{ rejon: 1–11, nazwaPary: string|null, email: string, status: 'aktywne'|'wyłączone'|'oczekuje', ostatnieLogowanie: date|null }`
 
 `status: 'oczekuje'` = rejon bez obsadzonej pary; akcja to „Zaproś" (wysyłka
 zaproszenia e-mail). Dla obsadzonych: „Wyłącz" / „Włącz".
@@ -142,7 +156,7 @@ Zapisywany przy każdym zapisie, usunięciu, eksporcie i zmianie konta.
 - Środek: H1 Source Serif 4 400, **62px** desktop / **38px** mobile,
   `line-height: 1.05`, `letter-spacing: -0.015em`: „Kartoteka" + `<br>` +
   `<em>` „Domowego Kościoła" w kolorze `#e2b04a`. Pod nim akapit 17px/1.55,
-  `#b8cbdc`, `max-width: 45ch`: „Dwanaście rejonów, jedna wspólna baza. Pary rejonowe
+  `#b8cbdc`, `max-width: 45ch`: „Jedenaście rejonów, jedna wspólna baza. Pary rejonowe
   prowadzą swoją część kartoteki, para odpowiedzialna za wspólnotę widzi całość."
 - Dół: 13px `#7d97ad`: „Prototyp — dane przykładowe, wygenerowane"
 
@@ -198,8 +212,8 @@ pod nim podtytuł 14px `#6c7d8f`.
 
 Tytuły / podtytuły:
 - `lista` (rola rejon): „Rejon VII" / „Twoje pary — możesz dodawać i edytować dane"
-- `lista` (admin, moderator): „Pary wspólnoty" / „Cała wspólnota — 302 pary w 12 rejonach"
-- `rejony`: „Rejony I–XII" / „Kliknij rejon, aby przejść do jego listy par"
+- `lista` (admin, moderator): „Pary wspólnoty" / „Cała wspólnota — 302 pary w 11 rejonach"
+- `rejony`: „Rejony I–XI" / „Kliknij rejon, aby przejść do jego listy par"
 - `konta`: „Konta rejonów" / „Dostępy par rejonowych i moderatora"
 - `audyt`: „Historia zmian" / „Kto, co i kiedy zmienił"
 
@@ -221,7 +235,7 @@ Focus na input: `border-color: #1c5f96`, `box-shadow: 0 0 0 3px rgba(28,95,150,.
 1. **Szukaj** — `min-width: 100%` (własny wiersz), 15px, placeholder
    „Szukaj: nazwisko, imię, e-mail…". Przeszukuje: nazwisko, imię żony, imię męża,
    e-mail, telefon, parafia, krąg — case-insensitive `includes`.
-2. **Rejon** — `flex: 1; min-width: 130px`. Opcje: „Wszystkie rejony" + Rejon I…XII.
+2. **Rejon** — `flex: 1; min-width: 130px`. Opcje: „Wszystkie rejony" + Rejon I…XI.
 3. **Parafia** — `flex: 2; min-width: 190px`. Lista parafii **zawężona do wybranego
    rejonu**. Etykieta „all": „Wszystkie — 6 parafii" (poprawna odmiana liczebnika).
 4. **Krąg** — `flex: 2; min-width: 180px`. Lista kręgów **zawężona do rejonu i parafii**.
@@ -297,7 +311,7 @@ rejonowa lub odpowiedzialni za wspólnotę."
 focus `border-color: #1c5f96`.
 
 Pola w kolejności: **Imię żony** · **Imię męża** · **Nazwisko** (`span 2`) ·
-**E-mail** · **Telefon** · **Rejon** (select I–XII; `disabled` gdy read-only **albo**
+**E-mail** · **Telefon** · **Rejon** (select I–XI; `disabled` gdy read-only **albo**
 rola = `rejon`) · **Krąg — numer i patron** (placeholder „np. 3 · św. Rity") ·
 **Parafia** (`span 2`) · **Dzieci — imiona i roczniki** (`span 2`, placeholder
 „np. Marysia 2014, Antek 2017") · **Notatki** (`span 2`, `textarea rows=3`).
@@ -338,7 +352,7 @@ wymagana nazwa przy typie `Inne`.
 
 ### 5. Rejony (admin, moderator)
 
-**Purpose**: przegląd wielkości i obsadzenia 12 rejonów; wejście w listę rejonu.
+**Purpose**: przegląd wielkości i obsadzenia 11 rejonów; wejście w listę rejonu.
 
 `display: grid`, `grid-template-columns: repeat(auto-fill, minmax(264px, 1fr))`,
 `gap: 13px`.
@@ -427,7 +441,7 @@ Kontener jak wyżej. Wiersz: `display: flex`, `gap: 16px`, `padding: 13px 18px`,
 user            : { id, name, role, role_: 'admin'|'rejon'|'podglad', rejon: int|null, tag }
 view            : 'lista' | 'rejony' | 'konta' | 'audyt'
 query           : string
-fRejon          : 'all' | '1'…'12'
+fRejon          : 'all' | '1'…'11'
 fParafia        : 'all' | <nazwa parafii>
 fKrag           : 'all' | <string kręgu>
 fRek            : 'all' | <kod typu> | 'bez:<kod typu>' | 'Inne' | 'brak'
@@ -471,10 +485,10 @@ ale kartoteka będzie rosła.
 | danger-bg / fg | `#fdf1f1` / `#9c3a3a` | usunięcie |
 | purple-bg / fg | `#f0ecf7` / `#57407a` | wpis „konto" w audycie |
 
-**Paleta 12 rejonów** (indeks 0 = rejon I) — jednolita jasność, różne odcienie; używana
+**Paleta 11 rejonów** (indeks 0 = rejon I) — jednolita jasność, różne odcienie; używana
 na tłach plakietek z alfą `1a`/`18`:
 `#1c5f96` `#2f7d6a` `#7a6ca8` `#b07d2b` `#a3524f` `#3f7d3a`
-`#4f6fbd` `#96603f` `#2b7f8f` `#8a5b8f` `#6b7d2f` `#b05c7d`
+`#4f6fbd` `#96603f` `#2b7f8f` `#8a5b8f` `#6b7d2f`
 
 **Typografia** — Google Fonts: `Source Sans 3` (400/500/600/700) UI ·
 `Source Serif 4` (400/600) nagłówki · `IBM Plex Mono` (400/500) dane techniczne

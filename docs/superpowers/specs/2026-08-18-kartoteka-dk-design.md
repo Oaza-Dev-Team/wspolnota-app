@@ -18,11 +18,14 @@ Kartoteka ~300 małżeństw wspólnoty Domowego Kościoła (Ruch Światło-Życi
 gdańska), podzielonych na **11 rejonów**. Siedem widoków: logowanie, lista par, karta pary
 (drawer), rejony, konta rejonów, historia zmian, plus import danych.
 
-> **Liczba rejonów: 11, nie 12.** Handoff (`docs/handoff/`) opisuje dwanaście rejonów
-> i tyle też pokazują zrzuty ekranu — to jest stan sprzed weryfikacji u zamawiającego.
-> Wspólnota ma **jedenaście** rejonów, I–XI. Dokumentów handoffu **nie modyfikujemy**:
-> to otrzymany brief i ma pozostać wiernym zapisem tego, co dostaliśmy. Punkt listy
-> odbioru mówiący „12 kafelków" czytamy jako „po jednym kafelku na rejon".
+> **Liczba rejonów: 11, nie 12.** Pierwotny handoff opisywał dwanaście rejonów — stan
+> sprzed weryfikacji u zamawiającego. Wspólnota ma **jedenaście**, I–XI.
+>
+> Teksty handoffu (`docs/handoff/README.md` i `IMPLEMENTATION.md`) zostały poprawione
+> 18.08.2026 i oba niosą notę o korekcie. **Zrzuty ekranu i prototyp `Wspolnota.dc.html`
+> nadal pokazują dwanaście** — zrzuty są renderowane, więc nie da się ich edytować bez
+> ponownego uruchomienia narzędzia, a prototyp jest materiałem do wyrzucenia.
+> Przy rozbieżności obowiązuje tekst, nie obrazek.
 >
 > W kodzie liczba rejonów **nie jest literałem** — wynika z długości tablicy `ROMAN`
 > w `src/lib/domena/rejony.ts` (stała `LICZBA_REJONOW`). Zakres w bazie pilnuje

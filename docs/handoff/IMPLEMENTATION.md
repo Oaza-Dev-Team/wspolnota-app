@@ -1,5 +1,19 @@
 # IMPLEMENTATION.md — instrukcja wykonawcza
 
+> **Korekta z 18.08.2026: rejonów jest 11, nie 12.**
+> Ten dokument opisywał pierwotnie dwanaście rejonów — tyle wynikało z założeń przed
+> weryfikacją u zamawiającego. Wspólnota ma **jedenaście** rejonów, I–XI. Tekst poniżej
+> został poprawiony.
+>
+> **Czego nie dało się poprawić:** `screenshots/05-rejony.png` i `screenshots/06-konta-rejonow.png`
+> nadal pokazują dwanaście kafelków, a prototyp `Wspolnota.dc.html` nadal generuje
+> dwanaście rejonów. Zrzuty są renderowane, nie rysowane, więc nie da się ich edytować
+> bez ponownego uruchomienia narzędzia; prototyp jest materiałem do wyrzucenia i nie
+> warto go migrować. **Przy rozbieżności obowiązuje tekst, nie obrazek.**
+>
+> W kodzie liczba rejonów nie jest literałem — wynika ze stałej `LICZBA_REJONOW`
+> w `src/lib/domena/rejony.ts`.
+
 Dokument dla agenta/dewelopera implementującego kartotekę. `README.md` opisuje **jak to
 wygląda i jak się zachowuje** (specyfikacja wizualna). Ten plik mówi **co dokładnie
 zbudować, w jakiej kolejności i kiedy zadanie jest skończone**.
@@ -69,8 +83,8 @@ CREATE TYPE rodzaj_rekolekcji AS ENUM
 CREATE TYPE status_konta AS ENUM ('aktywne','wylaczone','oczekuje');
 
 CREATE TABLE rejon (
-  id          smallint PRIMARY KEY CHECK (id BETWEEN 1 AND 12),
-  numer_rzym  text NOT NULL          -- 'I'…'XII'
+  id          smallint PRIMARY KEY CHECK (id BETWEEN 1 AND 11),
+  numer_rzym  text NOT NULL          -- 'I'…'XI'
 );
 
 CREATE TABLE parafia (
@@ -155,7 +169,7 @@ to ścieżka formacji):
 | `ORD` | ORD | Oaza Rekolekcyjna Diakonii |
 | `INNE` | Inne | Inne rekolekcje |
 
-Seed: 12 rejonów z numerami rzymskimi + konta 12 par rejonowych (jedno `oczekuje`) +
+Seed: 11 rejonów z numerami rzymskimi + konta 11 par rejonowych (jedno `oczekuje`) +
 konto admina + konto moderatora.
 
 ## 5. API (jeśli budujesz warstwę serwerową)
@@ -185,7 +199,7 @@ Reguły serwerowe:
 
 ## 6. Kolejność pracy
 
-1. **Schemat i seed** — DDL z sekcji 4, 12 rejonów, konta, ~30 parafii, kręgi, ~300 par
+1. **Schemat i seed** — DDL z sekcji 4, 11 rejonów, konta, ~30 parafii, kręgi, ~300 par
    z realistycznym rozkładem formacji (część par bez wpisów, część z lukami w stopniach,
    wszystkie 7 rodzajów obecne w danych).
 2. **Auth i role** — logowanie, sesja, `canEdit(user, para)`, guard na endpointach.
@@ -196,7 +210,7 @@ Reguły serwerowe:
 7. **Sekcja formacji** — lista wpisów, dodawanie/usuwanie, pole `nazwa` dla `INNE`,
    podpowiadanie kolejnego stopnia.
 8. **Eksport** — CSV (`;`, BOM, CRLF) i XLSX (prawdziwy generator) z aktualnych filtrów.
-9. **Rejony** — 12 kafelków z paletą kolorów, statystyki, przejście do listy z filtrem.
+9. **Rejony** — 11 kafelków z paletą kolorów, statystyki, przejście do listy z filtrem.
 10. **Konta rejonów** — statusy, włączanie/wyłączanie, zaproszenia.
 11. **Historia zmian** — lista z paginacją, plakietki rodzajów.
 12. **Dostępność i RODO** — sekcja 7 poniżej.
@@ -251,7 +265,7 @@ usunięcia na żądanie osoby).
 | `screenshots/02-lista-par-admin.png` | Lista par jako admin — powłoka, header, filtry, tabela |
 | `screenshots/03-karta-pary-pelna.png` | Karta pary w całości: formularz + sekcja formacji + stopka akcji |
 | `screenshots/04-formacja-rekolekcje.png` | Zbliżenie na sekcję formacji (wiersze wpisów) |
-| `screenshots/05-rejony.png` | Rejony I–XII — 12 kafelków, paleta kolorów, statystyki |
+| `screenshots/05-rejony.png` | Rejony — kafelki, paleta kolorów, statystyki (zrzut pokazuje 12, jest 11) |
 | `screenshots/06-konta-rejonow.png` | Konta rejonów — statusy i akcje |
 | `screenshots/07-historia-zmian.png` | Historia zmian — plakietki rodzajów wpisów |
 | `screenshots/08-mobile-lista.png` | Widok mobilny (412 px): topbar, przewijana nawigacja, karty par |
@@ -311,11 +325,11 @@ Zadanie jest skończone, gdy **każdy** punkt jest spełniony i sprawdzony ręcz
 - [ ] Eksport dopisuje wpis do historii zmian
 
 **Rejony / konta / audyt**
-- [ ] 12 kafelków, każdy z własnym kolorem z palety, liczbą par, parą odpowiedzialną
+- [ ] 11 kafelków, każdy z własnym kolorem z palety, liczbą par, parą odpowiedzialną
       i statystyką „N kręgów · M parafii" (odmiana!)
 - [ ] Rejon bez obsadzonej pary pokazuje „Do obsadzenia"
 - [ ] Klik w kafelek przenosi do listy z ustawionym filtrem rejonu
-- [ ] Konta: 12 rejonów + moderator; statusy aktywne/wyłączone/oczekuje z właściwymi
+- [ ] Konta: 11 rejonów + moderator; statusy aktywne/wyłączone/oczekuje z właściwymi
       kolorami; akcje Wyłącz/Włącz/Zaproś działają
 - [ ] Wyłączone konto faktycznie nie może się zalogować
 - [ ] Kolumna „ostatnie logowanie" chowa się poniżej 1120 px
@@ -326,7 +340,7 @@ Zadanie jest skończone, gdy **każdy** punkt jest spełniony i sprawdzony ręcz
 - [ ] Trzy rodziny fontów: Source Sans 3 (UI), Source Serif 4 (nagłówki),
       IBM Plex Mono (dane techniczne — telefony, kody, liczniki, daty)
 - [ ] Aktywna pozycja nawigacji: złote `#e2b04a` na tle `rgba(226,176,74,.16)`
-- [ ] Plakietka rejonu i kafelek rejonu używają koloru z 12-barwnej palety
+- [ ] Plakietka rejonu i kafelek rejonu używają koloru z 11-barwnej palety
 - [ ] Plakietka formacji pokazuje najwyższy stopień + `+N`, a przy braku wpisów `—`
 - [ ] Animacje: drawer 220 ms `slidein`, overlay 150 ms `fadein`, toast auto-hide 2600 ms
 - [ ] Na mobile żaden element interaktywny nie jest niższy niż 44 px
