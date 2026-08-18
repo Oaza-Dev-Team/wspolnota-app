@@ -1,0 +1,90 @@
+.page {
+  min-height: 100dvh;
+  background: var(--bg-app);
+  padding: 40px 24px 64px;
+}
+
+.sheet {
+  max-width: 760px;
+  margin: 0 auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
+  box-shadow: var(--shadow-card);
+  padding: 36px 40px 40px;
+}
+
+.title {
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 32px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.lead {
+  font-size: 15px;
+  color: var(--text-muted);
+  margin: 0 0 28px;
+}
+
+.section {
+  margin: 0 0 22px;
+}
+
+.heading {
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.body {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-body);
+  margin: 0 0 10px;
+}
+
+.list {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-body);
+  margin: 0;
+  padding-left: 22px;
+}
+
+/* Gaps the controller has to fill in. Marked, not hidden: a privacy notice
+   with invented legal content is worse than one that is visibly unfinished. */
+.gap {
+  background: var(--warn-bg);
+  border-radius: var(--r-5);
+  padding: 1px 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--warn-strong);
+}
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 12px;
+  font-size: 14px;
+  color: var(--navy-700);
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding: 20px 12px 40px;
+  }
+
+  .sheet {
+    padding: 24px 20px 28px;
+  }
+
+  .title {
+    font-size: 26px;
+  }
+}

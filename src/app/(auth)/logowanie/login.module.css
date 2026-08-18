@@ -176,3 +176,10 @@
   color: var(--success-fg);
   margin: 0 0 14px;
 }
+
+.noticeLink {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--navy-700);
+  font-size: 13px;
+}

@@ -11,9 +11,10 @@
 import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import 'dotenv/config';
+import { AUDIT_RETENTION_MONTHS } from '../src/lib/audit/policy';
 import { prisma } from '../src/lib/db';
 
-export const AUDIT_RETENTION_MONTHS = 24;
+export { AUDIT_RETENTION_MONTHS };
 
 export function auditCutoff(now: Date): Date {
   const cutoff = new Date(now);

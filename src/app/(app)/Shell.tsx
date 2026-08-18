@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { User } from '@/lib/auth/permissions';
 import { romanNumeral } from '@/lib/domain/regions';
 import { type ViewKey, navItems } from '@/lib/navigation';
@@ -53,6 +54,9 @@ export function Shell({
           <form action="/wyloguj" method="post">
             <button type="submit" className={style.signOut}>Wyloguj</button>
           </form>
+          <Link href="/informacja-o-danych" className={style.noticeLink}>
+            Informacja o danych
+          </Link>
         </div>
       </nav>
 
