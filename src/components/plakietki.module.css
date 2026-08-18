@@ -1,0 +1,25 @@
+.plakietka {
+  display: inline-block;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  border-radius: var(--r-5);
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+/* The region colour arrives as a custom property so the palette stays in
+   tokens.css; color-mix produces the 1a alpha the handoff specifies (26/255). */
+.rejon {
+  color: var(--kolor-rejonu);
+  background: color-mix(in srgb, var(--kolor-rejonu) 10%, transparent);
+}
+
+.formacjaMa {
+  background: var(--success-bg);
+  color: var(--success-fg);
+}
+
+.formacjaBrak {
+  background: var(--bg-row);
+  color: var(--placeholder);
+}
