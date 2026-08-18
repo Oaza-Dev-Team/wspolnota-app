@@ -3,7 +3,7 @@ import { Toast } from '@/components/Toast';
 import { canChangeRegion } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { blankCard, cardOptions, loadCard } from '@/lib/couples/card';
-import { type ClientFilters, hasActiveFilter, parseFilters } from '@/lib/couples/filters';
+import { type ClientFilters, hasActiveFilter, parseFilters, toSearchParams } from '@/lib/couples/filters';
 import { filterOptions, queryCouples } from '@/lib/couples/queries';
 import { listHeading } from '@/lib/navigation';
 import { ViewHeader } from '../ViewHeader';
@@ -35,6 +35,11 @@ export default async function CouplesPage({
   ]);
 
   const { title, subtitle } = listHeading(u, total);
+
+  // The export must carry whatever the user is looking at, so its address is
+  // built from the same filters the list was rendered with.
+  const exportQuery = toSearchParams(filters).toString();
+  const exportHref = exportQuery ? `/eksport?${exportQuery}` : '/eksport';
 
   // The drawer is a URL state, so the back button works and a card can be
   // linked to. Its content is fetched here, on the server.
@@ -80,6 +85,7 @@ export default async function CouplesPage({
   return (
     <>
       <ViewHeader title={title} subtitle={subtitle}>
+        <a href={exportHref} className={style.exportButton}>Eksport XLSX</a>
         {u.role !== 'viewer' && (
           <Link href="/pary?card=new" className={style.addButton}>
             + Dodaj parę

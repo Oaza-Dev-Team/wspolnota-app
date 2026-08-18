@@ -167,3 +167,19 @@
 }
 
 .addButton:hover { background: var(--navy-900); }
+
+.exportButton {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  padding: 12px 15px;
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 44px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.exportButton:hover { border-color: var(--navy-700); }

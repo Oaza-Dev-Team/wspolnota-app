@@ -59,7 +59,11 @@ function searchCondition(q: string): Prisma.CoupleWhereInput {
   };
 }
 
-function where(u: User, f: Filters): Prisma.CoupleWhereInput {
+/**
+ * Shared with the export so the list and the file narrow identically. Two
+ * definitions of scope is exactly the class of bug this project avoids.
+ */
+export function whereForExport(u: User, f: Filters): Prisma.CoupleWhereInput {
   const conditions: Prisma.CoupleWhereInput[] = [
     // Always first and never optional: this is what keeps a region account
     // inside its region and soft-deleted couples out of every list.
@@ -99,7 +103,7 @@ export async function queryCouples(
   u: User,
   f: Filters,
 ): Promise<{ rows: CoupleRow[]; found: number; total: number }> {
-  const condition = where(u, f);
+  const condition = whereForExport(u, f);
 
   const [records, found, total] = await Promise.all([
     prisma.couple.findMany({
