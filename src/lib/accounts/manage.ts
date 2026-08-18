@@ -4,9 +4,9 @@ import { hashPassword } from '@/lib/auth/password';
 import { Forbidden, type User, canManageAccounts } from '@/lib/auth/permissions';
 import { deleteAccountSessions } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { INVITE_DAYS, MIN_PASSWORD_LENGTH } from './policy';
 
-export const INVITE_DAYS = 7;
-export const MIN_PASSWORD_LENGTH = 10;
+export { INVITE_DAYS, MIN_PASSWORD_LENGTH };
 
 export class InviteError extends Error {
   constructor(message: string) {
