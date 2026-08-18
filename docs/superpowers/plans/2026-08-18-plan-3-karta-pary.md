@@ -269,15 +269,27 @@ Serce planu: audyt w tej samej transakcji co zmiana i uprawnienia sprawdzane po 
 `src/lib/couples/save.int.test.ts`:
 
 ```ts
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Forbidden, type User } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 import type { SaveInput } from './schema';
 import { NotFound, createCouple, deleteCouple, updateCouple } from './save';
 
-const admin: User = { id: 0n, role: 'admin', regionId: null };
-const regionVII: User = { id: 0n, role: 'region', regionId: 7 };
-const viewer: User = { id: 0n, role: 'viewer', regionId: null };
+// Audit rows carry a foreign key to account, so these must be real accounts
+// from the seed — a placeholder id violates audit_account_id_fkey.
+let admin: User;
+let regionVII: User;
+let viewer: User;
+
+beforeAll(async () => {
+  const byEmail = async (email: string): Promise<User> => {
+    const a = await prisma.account.findUniqueOrThrow({ where: { email } });
+    return { id: a.id, role: a.role, regionId: a.regionId };
+  };
+  admin = await byEmail('admin@example.pl');
+  regionVII = await byEmail('rejon7@example.pl');
+  viewer = await byEmail('moderator@example.pl');
+});
 
 const created: bigint[] = [];
 
