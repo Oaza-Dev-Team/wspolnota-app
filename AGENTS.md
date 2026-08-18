@@ -24,6 +24,7 @@ z `REGION_COUNT` w `src/lib/domain/regions.ts`.
 
 | Plik | Rola |
 |---|---|
+| `docs/STATUS.md` | **zacznij tutaj** — gdzie jesteśmy, co dalej, jak wznowić |
 | `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md` | projekt techniczny — decyzje i uzasadnienia |
 | `docs/superpowers/plans/` | plany wykonawcze w krokach TDD |
 | `docs/handoff/README.md` | **specyfikacja wizualna — nadrzędna** dla wyglądu i zachowań |
