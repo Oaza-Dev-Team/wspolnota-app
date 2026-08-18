@@ -50,7 +50,7 @@ PostgreSQL 16 · Prisma 7.9
 Zod 4 — jeden schemat walidacji dla formularza, server action i importu
 CSS Modules + tokens.css (custom properties)
 next/font — Source Sans 3 · Source Serif 4 · IBM Plex Mono
-exceljs 4.4 — XLSX (odczyt i zapis) · CSV pisany ręcznie
+exceljs 4.4 — XLSX, odczyt i zapis (CSV poza zakresem, patrz §10)
 @node-rs/argon2 — hashowanie haseł
 Vitest 4 — testy jednostkowe · Playwright — e2e wg listy odbioru
 Docker Compose — aplikacja + Postgres + reverse proxy z TLS
@@ -373,17 +373,26 @@ przełączane CSS-em (nie `window.innerWidth`), żeby uniknąć skoku przy hydra
 
 ## 10. Eksport
 
-Route handler `GET /eksport?format=csv|xlsx&<te same parametry co lista>`.
+> **Korekta zakresu z 19.08.2026: eksport wyłącznie XLSX. CSV wypada.**
+> Handoff wymagał obu formatów i lista odbioru ma osobne punkty na CSV
+> (separator `;`, BOM, CRLF, podwajane cudzysłowy). Zamawiający rozstrzygnął,
+> że potrzebny jest tylko XLSX. **Punkty listy odbioru dotyczące CSV traktujemy
+> jako nieaktualne** — nie jako niespełnione. Trasa nie przyjmuje parametru
+> `format`, bo nie ma z czego wybierać.
+>
+> Zysk uboczny jest realny: znika najbardziej kruchy fragment eksportu. Poprawność
+> CSV dla Excela PL zależy od bajtów (BOM, kodowanie, separator listy zależny od
+> ustawień regionalnych) i to tam najczęściej psują się polskie znaki. XLSX niesie
+> kodowanie w sobie.
 
-Używa **tego samego** `parseFilters()` i tego samego `zakresListy(user)` co lista.
+Route handler `GET /eksport?<te same parametry co lista>`.
+
+Używa **tego samego** `parseFilters()` i tego samego `listScope(user)` co lista.
 Dzięki temu „eksportuje aktualnie przefiltrowaną listę" jest prawdziwe z konstrukcji,
 a nie z pamiętania o tym w dwóch miejscach.
 
-**CSV:** separator `;`, BOM `﻿`, `\r\n`, cudzysłowy podwajane. Testowane
-bajtowo w Vitest — Excel PL psuje ogonki przy każdym odstępstwie.
-
-**XLSX:** `exceljs`, prawdziwy plik (nie CSV z rozszerzeniem), nagłówki pogrubione,
-kolumny o sensownej szerokości.
+**XLSX:** `exceljs`, prawdziwy plik, nagłówki pogrubione i zamrożone, kolumny
+o sensownej szerokości.
 
 **Kolumny** (kolejność wiążąca — to również układ szablonu importu):
 
@@ -395,7 +404,7 @@ Inne rekolekcje · Dzieci · Notatki
 
 Wartość kolumny stopnia: `„2014 / Krościenko n. Dunajcem"`.
 Wiele wpisów `Inne` sklejonych znakiem `|`.
-Każdy eksport dopisuje wpis do audytu (kto, ile rekordów, jaki format, jakie filtry).
+Każdy eksport dopisuje wpis do audytu (kto, ile rekordów, jakie filtry).
 
 ---
 
@@ -425,7 +434,7 @@ Rozpoznawanie duplikatów bez kolumny `ID`: `(nazwisko, imię żony, imię męż
 
 ### Przebieg
 
-1. Wgranie `.xlsx` lub `.csv` (oba czyta `exceljs`).
+1. Wgranie `.xlsx` (czyta `exceljs`).
 2. Walidacja wiersz po wierszu przez **ten sam schemat Zod** co formularz.
 3. **Podgląd przed zapisem:** ile rekordów nowych, ile do aktualizacji, ile błędnych —
    z numerem wiersza i treścią błędu. Nic nie trafia do bazy przed potwierdzeniem.
@@ -502,7 +511,7 @@ Trzy rodziny fontów przez `next/font/google` z `display: swap` i podzbiorem
 **Vitest** — logika bez UI:
 - macierz uprawnień (§5), wyczerpująca
 - `odmiana()` — przypadki 1, 2, 4, 5, 11, 12, 14, 22, 112
-- CSV — porównanie bajtowe: BOM, CRLF, separator, podwajanie cudzysłowów
+- eksport XLSX — nagłówki, liczba wierszy, wartości kolumn stopni
 - plakietka formacji — najwyższy stopień + `+N`, brak wpisów → `—`
 - 17 opcji filtra formacji — każda zwraca niepusty wynik na danych seed
 - parser importu — każda reguła z §11
@@ -567,7 +576,7 @@ Każda kończy się stanem, który da się uruchomić i obejrzeć.
 | 5 | Filtry | szukanie, kaskada rejon → parafia → krąg, 17 opcji formacji |
 | 6 | Karta pary | `<dialog>`, formularz, walidacja, zapis, soft-delete, audyt |
 | 7 | Formacja | wpisy, rodzaj `Inne`, podpowiadanie kolejnego stopnia |
-| 8 | Eksport | CSV bajtowo poprawny + XLSX, wpis do audytu |
+| 8 | Eksport | XLSX z aktualnych filtrów, wpis do audytu |
 | 9 | Rejony · Konta · Historia | 11 kafelków, statusy kont, zaproszenia, paginowany audyt |
 | 10 | Import | szablon do pobrania, walidacja, podgląd, zapis transakcyjny |
 | 11 | RODO | trwała purga, retencja audytu, strona klauzuli informacyjnej |
