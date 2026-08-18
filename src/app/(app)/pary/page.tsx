@@ -1,8 +1,13 @@
+import Link from 'next/link';
+import { Toast } from '@/components/Toast';
+import { canChangeRegion } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
+import { blankCard, cardOptions, loadCard } from '@/lib/couples/card';
 import { type ClientFilters, hasActiveFilter, parseFilters } from '@/lib/couples/filters';
 import { filterOptions, queryCouples } from '@/lib/couples/queries';
 import { listHeading } from '@/lib/navigation';
 import { ViewHeader } from '../ViewHeader';
+import { CoupleCard } from './CoupleCard';
 import { CoupleCards } from './CoupleCards';
 import { CoupleTable } from './CoupleTable';
 import { FilterBar } from './FilterBar';
@@ -16,7 +21,13 @@ export default async function CouplesPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const u = await requireUser();
-  const filters = parseFilters(await searchParams);
+  const params = await searchParams;
+  const filters = parseFilters(params);
+
+  const cardParam = (() => {
+    const v = params['card'];
+    return Array.isArray(v) ? v[0] : v;
+  })();
 
   const [{ rows, found, total }, options] = await Promise.all([
     queryCouples(u, filters),
@@ -24,6 +35,35 @@ export default async function CouplesPage({
   ]);
 
   const { title, subtitle } = listHeading(u, total);
+
+  // The drawer is a URL state, so the back button works and a card can be
+  // linked to. Its content is fetched here, on the server.
+  let drawer: React.ReactNode = null;
+  if (cardParam === 'new' && u.role !== 'viewer') {
+    const blank = blankCard(u);
+    drawer = (
+      <CoupleCard
+        card={blank}
+        editable
+        options={await cardOptions(blank.regionId)}
+        regionChangeable={canChangeRegion(u)}
+      />
+    );
+  } else if (cardParam && /^\d+$/.test(cardParam)) {
+    // An unknown or soft-deleted id simply opens nothing — a stale link from
+    // browser history has no business breaking the page.
+    const result = await loadCard(u, BigInt(cardParam));
+    if (result) {
+      drawer = (
+        <CoupleCard
+          card={result.card}
+          editable={result.editable}
+          options={await cardOptions(result.card.regionId)}
+          regionChangeable={canChangeRegion(u)}
+        />
+      );
+    }
+  }
 
   // bigint does not cross the server/client boundary — the filter bar is a
   // client component, so ids travel as strings.
@@ -39,7 +79,13 @@ export default async function CouplesPage({
 
   return (
     <>
-      <ViewHeader title={title} subtitle={subtitle} />
+      <ViewHeader title={title} subtitle={subtitle}>
+        {u.role !== 'viewer' && (
+          <Link href="/pary?card=new" className={style.addButton}>
+            + Dodaj parę
+          </Link>
+        )}
+      </ViewHeader>
 
       <FilterBar
         filters={clientFilters}
@@ -60,6 +106,10 @@ export default async function CouplesPage({
       </div>
 
       <Pagination filters={filters} found={found} />
+
+      {drawer}
+      {params['saved'] && <Toast text="Zapisano zmiany" />}
+      {params['deleted'] && <Toast text="Para usunięta z kartoteki" />}
     </>
   );
 }

@@ -167,6 +167,7 @@ Expected: FAIL — brak modułu
 
 ```ts
 import { z } from 'zod';
+import type { RetreatKind } from '@/generated/prisma/enums';
 import { REGION_COUNT } from '@/lib/domain/regions';
 import { RETREAT_KINDS } from '@/lib/domain/retreats';
 
@@ -176,7 +177,9 @@ const blankToNull = z
   .transform((s) => s.trim())
   .transform((s) => (s === '' ? null : s));
 
-const KINDS = RETREAT_KINDS.map((r) => r.kind) as [string, ...string[]];
+// Cast to a tuple of RetreatKind, not of string: z.enum needs the literal
+// union to survive, or `kind` infers as string and Prisma rejects it.
+const KINDS = RETREAT_KINDS.map((r) => r.kind) as [RetreatKind, ...RetreatKind[]];
 
 export const retreatSchema = z
   .object({
