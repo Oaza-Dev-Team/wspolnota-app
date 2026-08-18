@@ -24,6 +24,7 @@ model Rejon {
 
   kregi Krag[]
   pary  Para[]
+  konta Konto[]
 
   @@map("rejon")
 }
@@ -96,4 +97,83 @@ model Rekolekcje {
   @@index([paraId])
   @@index([rodzaj])
   @@map("rekolekcje")
+}
+
+enum Rola {
+  admin
+  rejon
+  podglad
+}
+
+enum StatusKonta {
+  aktywne
+  wylaczone
+  oczekuje
+}
+
+enum RodzajAudytu {
+  edycja
+  dodanie
+  usuniecie
+  eksport
+  konto
+}
+
+model Konto {
+  id                   BigInt      @id @default(autoincrement())
+  email                String      @unique
+  hashHasla            String?     @map("hash_hasla")
+  nazwa                String
+  rola                 Rola
+  rejonId              Int?        @map("rejon_id") @db.SmallInt
+  status               StatusKonta @default(oczekuje)
+  ostatnieLogowanie    DateTime?   @map("ostatnie_logowanie") @db.Timestamptz(6)
+  zaproszenieTokenHash String?     @map("zaproszenie_token_hash")
+  zaproszenieWygasa    DateTime?   @map("zaproszenie_wygasa") @db.Timestamptz(6)
+
+  rejon Rejon?  @relation(fields: [rejonId], references: [id])
+  sesje Sesja[]
+  audyt Audyt[]
+
+  @@map("konto")
+}
+
+model Sesja {
+  id      BigInt @id @default(autoincrement())
+  kontoId BigInt @map("konto_id")
+  /// SHA-256 of the token. The raw token exists only in the user's cookie,
+  /// so a database dump does not hand over live sessions.
+  tokenHash         String   @unique @map("token_hash")
+  utworzono         DateTime @default(now()) @db.Timestamptz(6)
+  wygasa            DateTime @db.Timestamptz(6)
+  ostatniaAktywnosc DateTime @default(now()) @map("ostatnia_aktywnosc") @db.Timestamptz(6)
+
+  konto Konto @relation(fields: [kontoId], references: [id], onDelete: Cascade)
+
+  @@index([kontoId])
+  @@map("sesja")
+}
+
+model Audyt {
+  id      BigInt       @id @default(autoincrement())
+  kiedy   DateTime     @default(now()) @db.Timestamptz(6)
+  rodzaj  RodzajAudytu
+  opis    String
+  kontoId BigInt?      @map("konto_id")
+  /// Deliberately not a foreign key: the record may already be gone.
+  paraId  BigInt?      @map("para_id")
+
+  konto Konto? @relation(fields: [kontoId], references: [id])
+
+  @@index([kiedy])
+  @@map("audyt")
+}
+
+model ProbaLogowania {
+  id    BigInt   @id @default(autoincrement())
+  klucz String
+  kiedy DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([klucz, kiedy])
+  @@map("proba_logowania")
 }

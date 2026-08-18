@@ -1025,15 +1025,29 @@ model ProbaLogowania {
 }
 ```
 
-- [ ] **Step 2: Wygeneruj migrację**
+Pamietaj o relacji zwrotnej w modelu `Rejon` — bez niej schemat sie nie zwaliduje:
 
-```bash
-npx prisma migrate dev --name konta_i_audyt
+```prisma
+model Rejon {
+  // …
+  konta Konto[]
+}
 ```
 
-- [ ] **Step 3: Dopisz ograniczenie spójności roli**
+- [ ] **Step 2: Wygeneruj migracje BEZ zastosowania**
 
-Na końcu wygenerowanego `migration.sql`:
+```bash
+npx prisma migrate dev --create-only --name konta_i_audyt
+```
+
+`--create-only` tworzy plik migracji i zatrzymuje sie. Dzieki temu dopiszemy wlasny SQL
+**zanim** cokolwiek trafi do bazy — i unikniemy `migrate reset`, ktory kasuje dane
+i wymaga osobnej zgody uzytkownika. **To jest wlasciwy wzorzec dla kazdej migracji
+z recznie dopisanym SQL-em**, rowniez tej z Zadania 4.
+
+- [ ] **Step 3: Dopisz ograniczenie spojnosci roli i zastosuj**
+
+Na koncu wygenerowanego `migration.sql`:
 
 ```sql
 -- A region account must name its region; admin and viewer must not.
@@ -1042,7 +1056,8 @@ ALTER TABLE "konto" ADD CONSTRAINT konto_rejon_zgodny_z_rola
 ```
 
 ```bash
-npx prisma migrate reset --force
+npx prisma migrate dev
+npx prisma generate
 ```
 
 - [ ] **Step 4: Napisz test ograniczenia**

@@ -49,3 +49,31 @@ describe('schema', () => {
     await prisma.para.deleteMany({ where: { nazwisko: { in: nazwiska } } });
   });
 });
+
+describe('account constraints', () => {
+  it('rejects an admin account bound to a region', async () => {
+    await prisma.rejon.upsert({ where: { id: 1 }, update: {}, create: { id: 1, numerRzym: 'I' } });
+    await expect(
+      prisma.konto.create({
+        data: { email: 'zly@example.pl', nazwa: 'Zły Admin', rola: 'admin', rejonId: 1 },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('rejects a region account without a region', async () => {
+    await expect(
+      prisma.konto.create({
+        data: { email: 'zly2@example.pl', nazwa: 'Zła Para', rola: 'rejon' },
+      }),
+    ).rejects.toThrow();
+  });
+
+  it('accepts a correctly shaped region account', async () => {
+    await prisma.rejon.upsert({ where: { id: 7 }, update: {}, create: { id: 7, numerRzym: 'VII' } });
+    const konto = await prisma.konto.create({
+      data: { email: 'dobry@example.pl', nazwa: 'Anna i Marek Sowa', rola: 'rejon', rejonId: 7 },
+    });
+    expect(konto.status).toBe('oczekuje');
+    await prisma.konto.delete({ where: { id: konto.id } });
+  });
+});
