@@ -1,0 +1,163 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
+  padding: 18px;
+  box-shadow: var(--shadow-table);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 240px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.file {
+  font-size: 14px;
+  min-height: 44px;
+  color: var(--text-body);
+}
+
+.primary,
+.confirm {
+  border: none;
+  border-radius: var(--r-8);
+  padding: 12px 17px;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+  cursor: pointer;
+  align-self: flex-start;
+}
+
+.primary {
+  background: var(--navy-700);
+  color: var(--surface);
+}
+
+.primary:hover {
+  background: var(--navy-900);
+}
+
+/* The confirming step is the one that writes, so it reads as a commit, not
+   as another neutral step. */
+.confirm {
+  background: var(--success-fg);
+  color: var(--surface);
+}
+
+.confirm:hover {
+  filter: brightness(0.92);
+}
+
+.primary:disabled,
+.confirm:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
+  padding: 18px;
+  box-shadow: var(--shadow-table);
+}
+
+.previewTitle {
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 20px;
+  font-weight: 400;
+  margin: 0;
+}
+
+.summary {
+  font-size: 14px;
+  color: var(--text-body);
+  margin: 0;
+}
+
+.issues {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 320px;
+  overflow-y: auto;
+  align-self: stretch;
+}
+
+.issue {
+  display: flex;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--danger-fg);
+  background: var(--danger-bg);
+  border-radius: var(--r-7);
+  padding: 8px 10px;
+}
+
+.issueRow {
+  font-family: var(--font-mono), monospace;
+  flex: none;
+  min-width: 74px;
+}
+
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--danger-fg);
+  margin: 0;
+}
+
+.success {
+  background: var(--success-bg);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--success-fg);
+  margin: 0;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.link {
+  color: var(--navy-700);
+}

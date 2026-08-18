@@ -29,6 +29,7 @@ export const CIRCLES: PluralForms = ['krąg', 'kręgi', 'kręgów'];
 export const PARISHES: PluralForms = ['parafia', 'parafie', 'parafii'];
 export const ENTRIES: PluralForms = ['wpis', 'wpisy', 'wpisów'];
 export const RECORDS: PluralForms = ['rekord', 'rekordy', 'rekordów'];
+export const ROWS: PluralForms = ['wiersz', 'wiersze', 'wierszy'];
 
 // Locative case: used only in the list subtitle, "… w N rejonach".
 export const REGIONS_IN: PluralForms = ['rejonie', 'rejonach', 'rejonach'];

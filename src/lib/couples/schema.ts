@@ -30,7 +30,10 @@ export const retreatSchema = z
 const newCircleSchema = z.object({
   number: z.number().int().min(1).max(99),
   patron: blankToNull,
-  parishId: z.string().regex(/^\d+$/),
+  // Null means "the parish this same save is creating". The import needs that:
+  // a row can introduce a circle and its parish at once, and the parish has no
+  // id until the transaction is under way.
+  parishId: z.string().regex(/^\d+$/).nullable(),
 });
 
 const newParishSchema = z.object({

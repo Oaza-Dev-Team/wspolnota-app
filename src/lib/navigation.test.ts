@@ -7,10 +7,10 @@ const regionVII: User = { id: 2n, role: 'region', regionId: 7 };
 const viewer: User = { id: 3n, role: 'viewer', regionId: null };
 
 describe('navItems', () => {
-  // The acceptance checklist counts these exactly: admin 4, region 1, viewer 2.
-  it('gives admin all four entries', () => {
+  // The acceptance checklist counts these exactly: admin 5, region 1, viewer 2.
+  it('gives admin every entry, import included', () => {
     expect(navItems(admin).map((i) => i.key)).toEqual([
-      'couples', 'regions', 'accounts', 'audit',
+      'couples', 'regions', 'accounts', 'audit', 'import',
     ]);
   });
 
@@ -22,6 +22,11 @@ describe('navItems', () => {
 
   it('gives the viewer the list and the regions, without administration', () => {
     expect(navItems(viewer).map((i) => i.key)).toEqual(['couples', 'regions']);
+  });
+
+  // Import writes to every region, so it stays with the account that owns them all.
+  it('keeps import out of the viewer menu', () => {
+    expect(navItems(viewer).map((i) => i.key)).not.toContain('import');
   });
 });
 

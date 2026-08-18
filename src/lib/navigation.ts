@@ -1,8 +1,8 @@
-import { type User, canManageAccounts, canReadAudit } from '@/lib/auth/permissions';
+import { type User, canImport, canManageAccounts, canReadAudit } from '@/lib/auth/permissions';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
 import { COUPLES, REGIONS_IN, plural } from '@/lib/pl';
 
-export type ViewKey = 'couples' | 'regions' | 'accounts' | 'audit';
+export type ViewKey = 'couples' | 'regions' | 'accounts' | 'audit' | 'import';
 
 export type NavItem = {
   href: string;
@@ -27,6 +27,9 @@ export function navItems(u: User): NavItem[] {
   }
   if (canReadAudit(u)) {
     items.push({ href: '/historia', label: 'Historia zmian', key: 'audit' });
+  }
+  if (canImport(u)) {
+    items.push({ href: '/import', label: 'Import', key: 'import' });
   }
   return items;
 }
