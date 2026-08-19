@@ -21,8 +21,9 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
 
   const [accounts, counts] = await Promise.all([
     prisma.account.findMany({
-      // The admin manages other people's access, not their own.
-      where: { role: { not: 'admin' } },
+      // The admin is listed too: the couple responsible for the community
+      // changes like any other, and its name and address have to be reachable.
+      // What stays out of reach is disabling it — see AccountRow.
       select: {
         id: true, email: true, name: true, role: true, status: true,
         regionId: true, lastLoginAt: true,
@@ -51,8 +52,11 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
 
   // Regions in numerical order, the moderator at the bottom — the handoff
   // shows it as the last row.
+  // Admin first, then regions in numerical order, moderator last — the handoff
+  // shows the moderator as the closing row.
+  const rank = (r: AccountRow) => (r.role === 'admin' ? 0 : r.role === 'region' ? 1 : 2);
   return rows.sort((a, b) => {
-    if (a.role !== b.role) return a.role === 'region' ? -1 : 1;
+    if (rank(a) !== rank(b)) return rank(a) - rank(b);
     return (a.regionId ?? 0) - (b.regionId ?? 0);
   });
 }

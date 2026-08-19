@@ -143,6 +143,129 @@ export async function createInvite(u: User, id: bigint): Promise<string> {
   return token;
 }
 
+export class EmailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'EmailError';
+  }
+}
+
+/** Same shape the login form accepts, so an address that saves here can sign in. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normaliseEmail(raw: string): string {
+  const email = raw.trim().toLowerCase();
+  if (!EMAIL.test(email)) throw new EmailError('Podaj poprawny adres e-mail');
+  return email;
+}
+
+async function assertEmailFree(email: string, exceptId: bigint): Promise<void> {
+  const taken = await prisma.account.findFirst({
+    where: { email, id: { not: exceptId } },
+    select: { id: true },
+  });
+  if (taken) throw new EmailError('Ten adres jest już przypisany do innego konta');
+}
+
+/**
+ * Corrects the address on an existing account — a typo, a changed domain. The
+ * password and the sessions survive on purpose: it is the same people, reached
+ * at a different address. Handing the region to a different couple is
+ * handOverRegion, which revokes instead.
+ */
+export async function changeEmail(u: User, id: bigint, rawEmail: string): Promise<void> {
+  if (!canManageAccounts(u)) {
+    throw new Forbidden('Zarządzanie kontami wymaga uprawnień administratora');
+  }
+
+  const email = normaliseEmail(rawEmail);
+  const account = await prisma.account.findUniqueOrThrow({
+    where: { id },
+    select: { email: true, name: true },
+  });
+  if (account.email === email) return;
+
+  await assertEmailFree(email, id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.account.update({ where: { id }, data: { email } });
+    await tx.audit.create({
+      data: {
+        kind: 'account',
+        description: `Zmieniono adres konta ${account.name}: „${account.email}" na „${email}"`,
+        accountId: u.id,
+      },
+    });
+  });
+}
+
+/**
+ * A different couple takes over the region. Everything the outgoing couple
+ * could use to get back in is revoked — password and sessions — and the
+ * incoming one receives a fresh invite. Returns the raw token, the only
+ * moment it exists.
+ */
+export async function handOverRegion(
+  u: User,
+  id: bigint,
+  rawName: string,
+  rawEmail: string,
+): Promise<string> {
+  if (!canManageAccounts(u)) {
+    throw new Forbidden('Zarządzanie kontami wymaga uprawnień administratora');
+  }
+
+  const name = rawName.trim();
+  if (name === '') throw new AccountNameError('Podaj nazwę pary');
+  if (name.length > MAX_ACCOUNT_NAME) {
+    throw new AccountNameError(`Nazwa może mieć najwyżej ${MAX_ACCOUNT_NAME} znaków`);
+  }
+
+  const email = normaliseEmail(rawEmail);
+
+  const account = await prisma.account.findUniqueOrThrow({
+    where: { id },
+    select: { name: true, email: true, role: true },
+  });
+  if (account.role === 'admin') {
+    throw new Forbidden('Konto administratora przekazuje się zmieniając nazwę i adres');
+  }
+
+  await assertEmailFree(email, id);
+
+  const token = randomBytes(32).toString('base64url');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.account.update({
+      where: { id },
+      data: {
+        name,
+        email,
+        // The outgoing couple knows the old password; leaving it would let
+        // them sign in at the new address.
+        passwordHash: null,
+        status: 'pending',
+        inviteTokenHash: hashToken(token),
+        inviteExpiresAt: new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    await tx.audit.create({
+      data: {
+        kind: 'account',
+        description: `Przekazano rejon: „${account.name}" (${account.email}) → „${name}" (${email})`,
+        accountId: u.id,
+      },
+    });
+  });
+
+  // Outside the transaction for the same reason as disabling an account: the
+  // sessions must end whether or not the audit row committed first.
+  await deleteAccountSessions(id);
+
+  return token;
+}
+
 export async function redeemInvite(token: string, password: string): Promise<void> {
   if (password.length < MIN_PASSWORD_LENGTH) {
     throw new InviteError(`Hasło musi mieć co najmniej ${MIN_PASSWORD_LENGTH} znaków`);

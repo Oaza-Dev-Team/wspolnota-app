@@ -61,13 +61,46 @@ test.describe('regions', () => {
 });
 
 test.describe('accounts', () => {
-  test('lists every account but the admin, and only for the admin', async ({ page }) => {
+  test('lists every account, admin included, and only for the admin', async ({ page }) => {
     await signIn(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await expect(page.getByRole('heading', { name: 'Konta rejonów' })).toBeVisible();
-    await expect(page.getByRole('listitem')).toHaveCount(12);
-    await expect(page.getByText('admin@example.pl')).toHaveCount(0);
+    // Eleven regions, the moderator, and the admin itself.
+    await expect(page.getByRole('listitem')).toHaveCount(13);
+    await expect(page.getByText('admin@example.pl')).toBeVisible();
+  });
+
+  // Disabling it would need database access to undo, so the row keeps its
+  // identity editable and nothing else.
+  test('offers the admin no way to disable or hand over its own account', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    const adminRow = page.getByRole('listitem').filter({ hasText: 'admin@example.pl' });
+    await expect(adminRow.getByRole('button', { name: 'Wyłącz' })).toHaveCount(0);
+    await expect(adminRow.getByRole('button', { name: /^Przekaż rejon/ })).toHaveCount(0);
+    // The visible text is "Zmień"/"Popraw", but each button carries an
+    // aria-label naming the account, so thirteen of them stay distinguishable.
+    await expect(adminRow.getByRole('button', { name: /^Zmień nazwę pary/ })).toBeVisible();
+    await expect(adminRow.getByRole('button', { name: /^Popraw adres/ })).toBeVisible();
+  });
+
+  test('correcting an address keeps the couple signed in', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    // Filtered on the scope, not the address: opening the editor turns the
+    // address into an input value and the row would stop matching.
+    const row = page.getByRole('listitem').filter({ hasText: 'Rejon III ·' });
+    await row.getByRole('button', { name: /^Popraw adres/ }).click();
+    await row.getByLabel(/^Adres e-mail konta/).fill('rejon3.nowy@example.pl');
+    await row.getByRole('button', { name: 'Zapisz' }).click();
+
+    await expect(page.getByText('rejon3.nowy@example.pl')).toBeVisible();
+    // Status untouched: the same people, reached at a different address.
+    const moved = page.getByRole('listitem').filter({ hasText: 'rejon3.nowy@example.pl' });
+    await expect(moved.getByText('aktywne')).toBeVisible();
   });
 
   test('is closed to the moderator and to a region account', async ({ page }) => {
@@ -164,5 +197,29 @@ test.describe('history', () => {
     await signIn(page, 'rejon7@example.pl');
     await page.goto('/history');
     await expect(page).toHaveURL(/\/couples/);
+  });
+
+});
+
+/**
+ * Last on purpose. Handing over a region leaves the account waiting for its
+ * invite, and the tests above count how many accounts are in that state.
+ */
+test.describe('accounts — handover', () => {
+  test('handing over a region revokes the outgoing couple and offers an invite', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    const row = page.getByRole('listitem').filter({ hasText: 'Rejon IV ·' });
+    await row.getByRole('button', { name: /^Przekaż rejon/ }).click();
+    await row.getByLabel(/^Nowa para dla rejonu/).fill('Ewa i Jan Cichy');
+    await row.getByLabel(/^Adres e-mail nowej pary/).fill('cichy.nowi@example.pl');
+    await row.getByRole('button', { name: 'Potwierdź przekazanie' }).click();
+
+    const handed = page.getByRole('listitem').filter({ hasText: 'cichy.nowi@example.pl' });
+    await expect(handed.getByText('Ewa i Jan Cichy')).toBeVisible();
+    // No password yet, so the account waits for the invite to be redeemed.
+    await expect(handed.getByText('oczekuje')).toBeVisible();
+    await expect(handed.getByText('/invite/')).toBeVisible();
   });
 });

@@ -124,6 +124,10 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 - **E2E tylko na buildzie produkcyjnym** — na `next dev` kompilacja tras na żądanie
   daje losowo padające testy. Uruchamiaj `npm run e2e`, nie `npx playwright test`:
   bez `e2e/prepare.ts` limiter prób logowania zablokuje konto testowe.
+- **Po `npm run e2e` przeseeduj bazę, zanim puścisz `npm run test:int`.** Suite e2e
+  zaczyna od seeda, ale **kończy z bazą zmienioną** — przekazanie rejonu zostawia konto
+  w stanie `pending`, testy karty zostawiają parafię i krąg. Testy integracyjne zakładają
+  stan seeda i wtedy padają na czymś, co nie jest regresją.
 - **Testy integracyjne muszą zawężać zapytania do własnych danych.** Dwa razy złapaliśmy
   test, który liczył wiersze cudzej roboty albo kasował je przy sprzątaniu.
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts` przez `prisma` → devDependency).

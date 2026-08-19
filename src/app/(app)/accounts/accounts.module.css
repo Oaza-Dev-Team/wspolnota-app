@@ -167,14 +167,14 @@
   }
 }
 
-.renameForm {
+.editForm {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
   align-items: center;
 }
 
-.renameInput {
+.editInput {
   flex: 1;
   min-width: 160px;
   min-height: 36px;
@@ -186,8 +186,54 @@
   color: var(--text);
 }
 
-.renameInput:focus {
+.editInput:focus {
   border-color: var(--blue-500);
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+.buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* The handover form takes the full width of the row: it asks for two fields
+   and warns about what it revokes. */
+.handover {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 9px;
+  background: var(--bg-row-alt);
+  border: 1px solid var(--bg-app);
+  border-radius: var(--r-9);
+  padding: 12px;
+}
+
+.handoverNote {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 180px;
+}
+
+.editLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.handoverButtons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
 }

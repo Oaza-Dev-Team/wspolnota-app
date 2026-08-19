@@ -21,16 +21,19 @@ afterAll(async () => {
 });
 
 describe('accountRows', () => {
-  it('lists every region account plus the moderator, and never the admin', async () => {
+  // The admin is listed too: the couple responsible for the community changes
+  // like any other, so its name and address have to be reachable from here.
+  it('lists every account, admin included', async () => {
     const rows = await accountRows(admin);
-    expect(rows).toHaveLength(REGION_COUNT + 1);
-    expect(rows.some((r) => r.role === 'admin')).toBe(false);
+    expect(rows).toHaveLength(REGION_COUNT + 2);
+    expect(rows.filter((r) => r.role === 'admin')).toHaveLength(1);
     expect(rows.filter((r) => r.role === 'viewer')).toHaveLength(1);
   });
 
-  it('orders regions first, moderator last', async () => {
+  it('orders admin first, then regions, moderator last', async () => {
     const rows = await accountRows(admin);
-    expect(rows[0]!.regionId).toBe(1);
+    expect(rows[0]!.role).toBe('admin');
+    expect(rows[1]!.regionId).toBe(1);
     expect(rows.at(-1)!.role).toBe('viewer');
   });
 

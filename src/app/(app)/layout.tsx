@@ -18,7 +18,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const counts: Partial<Record<ViewKey, number>> = { couples: coupleCount };
   if (u.role !== 'region') counts.regions = REGION_COUNT;
   if (canManageAccounts(u)) {
-    counts.accounts = await prisma.account.count({ where: { role: { not: 'admin' } } });
+    // Matches what the accounts view lists, admin included.
+    counts.accounts = await prisma.account.count();
   }
 
   return (

@@ -3,9 +3,12 @@ import { Forbidden, type User } from '@/lib/auth/permissions';
 import { verifyPassword } from '@/lib/auth/password';
 import { createSession, userFromToken } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { createInvite, redeemInvite, renameAccount, setAccountStatus } from './manage';
+import {
+  changeEmail, createInvite, handOverRegion, redeemInvite, renameAccount, setAccountStatus,
+} from './manage';
 
 const TARGET_NAME = 'Konto testowe zarządzania';
+const TARGET_EMAIL = 'zarzadzanie.test@example.pl';
 
 let admin: User;
 let regionVII: User;
@@ -23,7 +26,7 @@ beforeAll(async () => {
   // unable to sign in for every later test.
   const target = await prisma.account.create({
     data: {
-      email: 'zarzadzanie.test@example.pl',
+      email: TARGET_EMAIL,
       name: TARGET_NAME,
       role: 'region',
       regionId: 5,
@@ -48,6 +51,7 @@ afterEach(async () => {
       // The name is reset too: the rename tests change it, and later ones
       // assert against the original.
       name: TARGET_NAME,
+      email: TARGET_EMAIL,
       status: 'active',
       passwordHash: null,
       inviteTokenHash: null,
@@ -198,5 +202,106 @@ describe('renameAccount', () => {
   // Same rule as every other account operation: administration is admin-only.
   it('refuses a region account', async () => {
     await expect(renameAccount(regionVII, targetId, 'Podszyci')).rejects.toThrow(Forbidden);
+  });
+});
+
+describe('changeEmail', () => {
+  it('changes the address the account signs in with', async () => {
+    await changeEmail(admin, targetId, 'nowy.adres@example.pl');
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.email).toBe('nowy.adres@example.pl');
+  });
+
+  it('lower-cases and trims, so the address matches what the login form sends', async () => {
+    await changeEmail(admin, targetId, '  MIESZANY.Adres@Example.PL  ');
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.email).toBe('mieszany.adres@example.pl');
+  });
+
+  // The point of the separate operation: same people, different address.
+  it('leaves the password and the sessions alone', async () => {
+    await prisma.account.update({
+      where: { id: targetId },
+      data: { passwordHash: 'nietkniety', status: 'active' },
+    });
+    const token = await createSession(targetId);
+
+    await changeEmail(admin, targetId, 'bez.skutkow@example.pl');
+
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.passwordHash).toBe('nietkniety');
+    expect(account.status).toBe('active');
+    expect(await userFromToken(token)).not.toBeNull();
+  });
+
+  it('refuses an address another account already uses', async () => {
+    await expect(changeEmail(admin, targetId, 'admin@example.pl')).rejects.toThrow();
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.email).toBe(TARGET_EMAIL);
+  });
+
+  it('refuses something that is not an address', async () => {
+    await expect(changeEmail(admin, targetId, 'to nie jest adres')).rejects.toThrow();
+  });
+
+  it('refuses a region account', async () => {
+    await expect(changeEmail(regionVII, targetId, 'podszyci@example.pl')).rejects.toThrow(Forbidden);
+  });
+});
+
+describe('handOverRegion', () => {
+  it('sets both the new name and the new address', async () => {
+    await handOverRegion(admin, targetId, 'Ewa i Jan Cichy', 'cichy@example.pl');
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.name).toBe('Ewa i Jan Cichy');
+    expect(account.email).toBe('cichy@example.pl');
+  });
+
+  // Everything the outgoing couple could use to get back in has to go.
+  it('revokes the password and every session of the outgoing couple', async () => {
+    await prisma.account.update({
+      where: { id: targetId },
+      data: { passwordHash: 'stare-haslo', status: 'active' },
+    });
+    const token = await createSession(targetId);
+
+    await handOverRegion(admin, targetId, 'Nowa Para', 'nowa.para@example.pl');
+
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.passwordHash).toBeNull();
+    expect(account.status).toBe('pending');
+    expect(await userFromToken(token)).toBeNull();
+  });
+
+  it('returns an invite the incoming couple can redeem', async () => {
+    const token = await handOverRegion(admin, targetId, 'Kolejna Para', 'kolejna@example.pl');
+    await redeemInvite(token, 'hasloNowejPary1');
+
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.status).toBe('active');
+    expect(await verifyPassword(account.passwordHash!, 'hasloNowejPary1')).toBe(true);
+  });
+
+  it('records both couples in the audit trail', async () => {
+    await handOverRegion(admin, targetId, 'Trzecia Para', 'trzecia@example.pl');
+    const entry = await prisma.audit.findFirstOrThrow({
+      where: { kind: 'account', description: { contains: 'Trzecia Para' } },
+      orderBy: { id: 'desc' },
+    });
+    expect(entry.description).toContain(TARGET_NAME);
+    expect(entry.description).toContain(TARGET_EMAIL);
+    await prisma.audit.deleteMany({ where: { id: entry.id } });
+  });
+
+  it('refuses an address another account already uses', async () => {
+    await expect(
+      handOverRegion(admin, targetId, 'Podszywajaca', 'admin@example.pl'),
+    ).rejects.toThrow();
+  });
+
+  it('refuses a region account', async () => {
+    await expect(
+      handOverRegion(regionVII, targetId, 'Podszywajaca', 'x@example.pl'),
+    ).rejects.toThrow(Forbidden);
   });
 });

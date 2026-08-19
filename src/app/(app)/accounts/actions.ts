@@ -1,11 +1,23 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AccountNameError, createInvite, renameAccount, setAccountStatus } from '@/lib/accounts/manage';
+import {
+  AccountNameError, EmailError, changeEmail, createInvite, handOverRegion,
+  renameAccount, setAccountStatus,
+} from '@/lib/accounts/manage';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 
 export type AccountsState = { error?: string; inviteLink?: string };
+
+/**
+ * The raw token exists only in the response that carries it: the database
+ * keeps a digest, so the link is unrecoverable once the screen is gone.
+ */
+function inviteUrl(token: string): string {
+  const base = process.env.APP_URL ?? 'http://localhost:3000';
+  return `${base}/invite/${token}`;
+}
 
 function idFrom(formData: FormData): bigint | null {
   const raw = formData.get('id');
@@ -44,11 +56,8 @@ export async function inviteAction(
 
   try {
     const token = await createInvite(u, id);
-    const base = process.env.APP_URL ?? 'http://localhost:3000';
     revalidatePath('/accounts');
-    // The raw token exists only here; the row shows it once and it is never
-    // recoverable afterwards, because only its digest was stored.
-    return { inviteLink: `${base}/invite/${token}` };
+    return { inviteLink: inviteUrl(token) };
   } catch (e) {
     if (e instanceof Forbidden) return { error: e.message };
     throw e;
@@ -77,4 +86,57 @@ export async function renameAccountAction(
   // The regions overview shows the same name on its tiles.
   revalidatePath('/regions');
   return {};
+}
+
+export async function changeEmailAction(
+  _state: AccountsState,
+  formData: FormData,
+): Promise<AccountsState> {
+  const u = await requireUser();
+  const id = idFrom(formData);
+  if (id === null) return { error: 'Brak identyfikatora konta' };
+
+  const email = formData.get('email');
+  if (typeof email !== 'string') return { error: 'Podaj adres e-mail' };
+
+  try {
+    await changeEmail(u, id, email);
+  } catch (e) {
+    if (e instanceof Forbidden || e instanceof EmailError) return { error: e.message };
+    throw e;
+  }
+
+  revalidatePath('/accounts');
+  return {};
+}
+
+export async function handOverAction(
+  _state: AccountsState,
+  formData: FormData,
+): Promise<AccountsState> {
+  const u = await requireUser();
+  const id = idFrom(formData);
+  if (id === null) return { error: 'Brak identyfikatora konta' };
+
+  const name = formData.get('name');
+  const email = formData.get('email');
+  if (typeof name !== 'string' || typeof email !== 'string') {
+    return { error: 'Podaj nazwę pary i adres e-mail' };
+  }
+
+  let token: string;
+  try {
+    token = await handOverRegion(u, id, name, email);
+  } catch (e) {
+    if (e instanceof Forbidden || e instanceof EmailError || e instanceof AccountNameError) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  revalidatePath('/accounts');
+  revalidatePath('/regions');
+  // The incoming couple has no password yet, so the invite is the whole point
+  // of the operation and has to come back to the screen.
+  return { inviteLink: inviteUrl(token) };
 }
