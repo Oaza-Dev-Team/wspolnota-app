@@ -52,22 +52,22 @@ DECISIONS.md                    odstępstwa od specyfikacji
 **Interfaces:**
 - Produces: `purgeCouple(u: User, id: bigint): Promise<void>`
 
-- [ ] **Step 1: Napisz test**
+- [x] **Step 1: Napisz test**
 
 Testy pokrywają: usunięcie pary i jej rekolekcji, **przetrwanie** wpisów audytu z `coupleId = null` i podmienionym opisem, odmowę dla nie-admina, odmowę dla nieistniejącego id, oraz dopisanie wpisu `delete` o samym fakcie żądania.
 
-- [ ] **Step 2: Uruchom test — musi się wywalić**
+- [x] **Step 2: Uruchom test — musi się wywalić**
 
 Run: `npm run test:int -- purge`
 Expected: FAIL
 
-- [ ] **Step 3: Zaimplementuj**
+- [x] **Step 3: Zaimplementuj**
 
 Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie pary → wpis o wykonaniu żądania. Kolejność ma znaczenie: gdyby para poszła pierwsza, klucz obcy `audit.couple_id` albo zablokowałby operację, albo (przy `ON DELETE SET NULL`) zabrałby nam informację, które wpisy anonimizować.
 
-- [ ] **Step 4: Uruchom test — musi przejść**
+- [x] **Step 4: Uruchom test — musi przejść**
 
-- [ ] **Step 5: Commit** — `feat: add permanent erasure for data subject requests`
+- [x] **Step 5: Commit** — `feat: add permanent erasure for data subject requests`
 
 ---
 
@@ -76,11 +76,11 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 **Files:**
 - Modify: `src/lib/couples/filters.ts`, `src/lib/couples/queries.ts`, `src/lib/auth/permissions.ts`, `src/app/(app)/pary/FilterBar.tsx`
 
-- [ ] **Step 1: Napisz test** — `listScope(u, { deleted: true })` zwraca `deletedAt: { not: null }` dla admina i **ignoruje** flagę dla pozostałych ról. Fail closed: para rejonowa, która dopisze `?deleted=1`, dostaje swoją zwykłą listę, nie cudze usunięte rekordy.
+- [x] **Step 1: Napisz test** — `listScope(u, { deleted: true })` zwraca `deletedAt: { not: null }` dla admina i **ignoruje** flagę dla pozostałych ról. Fail closed: para rejonowa, która dopisze `?deleted=1`, dostaje swoją zwykłą listę, nie cudze usunięte rekordy.
 
-- [ ] **Step 2: Zaimplementuj** — `deleted: boolean` w `Filters`, przepuszczony przez `toSearchParams`; w `FilterBar` checkbox „Pokaż usunięte" renderowany tylko dla admina.
+- [x] **Step 2: Zaimplementuj** — `deleted: boolean` w `Filters`, przepuszczony przez `toSearchParams`; w `FilterBar` checkbox „Pokaż usunięte" renderowany tylko dla admina.
 
-- [ ] **Step 3: Commit** — `feat: let the admin reach soft-deleted couples`
+- [x] **Step 3: Commit** — `feat: let the admin reach soft-deleted couples`
 
 ---
 
@@ -90,9 +90,9 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 - Create: `src/app/(app)/pary/PurgeForm.tsx`
 - Modify: `src/app/(app)/pary/actions.ts`, `CoupleCard.tsx`, `card.module.css`
 
-- [ ] **Step 1: Napisz akcję** — `purgeCoupleAction` sprawdza `canPurge`, porównuje przepisane nazwisko z prawdziwym, wywołuje `purgeCouple`.
-- [ ] **Step 2: Napisz formularz** — sekcja „Strefa nieodwracalna" na dole karty, widoczna wyłącznie dla admina.
-- [ ] **Step 3: Commit** — `feat: add the erasure confirmation to the couple card`
+- [x] **Step 1: Napisz akcję** — `purgeCoupleAction` sprawdza `canPurge`, porównuje przepisane nazwisko z prawdziwym, wywołuje `purgeCouple`.
+- [x] **Step 2: Napisz formularz** — sekcja „Strefa nieodwracalna" na dole karty, widoczna wyłącznie dla admina.
+- [x] **Step 3: Commit** — `feat: add the erasure confirmation to the couple card`
 
 ---
 
@@ -103,9 +103,9 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 - Test: `scripts/retention.int.test.ts`
 - Modify: `package.json` — `"retention": "tsx scripts/retention.mts"`
 
-- [ ] **Step 1: Napisz test** — kasuje wpisy audytu starsze niż 24 miesiące, **zostawia** młodsze, kasuje wygasłe sesje, zostawia ważne, zwraca liczby.
-- [ ] **Step 2: Zaimplementuj** — `retention.mts` eksportuje `runRetention()` i wywołuje ją, gdy jest uruchamiany bezpośrednio; test importuje samą funkcję.
-- [ ] **Step 3: Commit** — `feat: add the retention job for audit and sessions`
+- [x] **Step 1: Napisz test** — kasuje wpisy audytu starsze niż 24 miesiące, **zostawia** młodsze, kasuje wygasłe sesje, zostawia ważne, zwraca liczby.
+- [x] **Step 2: Zaimplementuj** — `retention.mts` eksportuje `runRetention()` i wywołuje ją, gdy jest uruchamiany bezpośrednio; test importuje samą funkcję.
+- [x] **Step 3: Commit** — `feat: add the retention job for audit and sessions`
 
 ---
 
@@ -115,9 +115,9 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 - Create: `src/app/(auth)/informacja-o-danych/page.tsx`, `notice.module.css`
 - Modify: `src/app/(auth)/logowanie/page.tsx` (odnośnik), `src/app/(app)/Shell.tsx` (odnośnik w stopce)
 
-- [ ] **Step 1: Napisz stronę** — rusztowanie z jawnymi lukami `[do uzupełnienia: …]`.
-- [ ] **Step 2: Podepnij odnośniki**
-- [ ] **Step 3: Commit** — `feat: add the privacy notice page`
+- [x] **Step 1: Napisz stronę** — rusztowanie z jawnymi lukami `[do uzupełnienia: …]`.
+- [x] **Step 2: Podepnij odnośniki**
+- [x] **Step 3: Commit** — `feat: add the privacy notice page`
 
 ---
 
@@ -126,10 +126,10 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 **Files:**
 - Modify: `src/styles/tokens.css` lub arkusze modułów — tam, gdzie brakuje `:focus-visible`
 
-- [ ] **Step 1: Zbadaj** — wypisz wszystkie kontrolki i sprawdź: widoczny obrys `:focus-visible`, minimum 44 px na mobile, `<label for>` przy każdym polu.
-- [ ] **Step 2: Napraw braki**
-- [ ] **Step 3: Test e2e** — nawigacja klawiaturą po liście i karcie.
-- [ ] **Step 4: Commit** — `fix: complete the keyboard and touch-target pass`
+- [x] **Step 1: Zbadaj** — wypisz wszystkie kontrolki i sprawdź: widoczny obrys `:focus-visible`, minimum 44 px na mobile, `<label for>` przy każdym polu.
+- [x] **Step 2: Napraw braki**
+- [x] **Step 3: Test e2e** — nawigacja klawiaturą po liście i karcie.
+- [x] **Step 4: Commit** — `fix: complete the keyboard and touch-target pass`
 
 ---
 
@@ -139,9 +139,9 @@ Jedna transakcja: anonimizacja audytu → kasowanie rekolekcji → kasowanie par
 - Create: `DECISIONS.md`
 - Modify: `docs/STATUS.md`
 
-- [ ] **Step 1: Napisz `DECISIONS.md`** — każde odstępstwo od handoffu z uzasadnieniem: 11 rejonów zamiast 12, brak CSV, zaproszenia bez SMTP, brak logowania Google, soft-delete + trwałe usunięcie, retencja 24 miesiące.
-- [ ] **Step 2: Przejdź listę odbioru** — 46 punktów z `IMPLEMENTATION.md` §9, każdy zweryfikowany testem albo ręcznie; wynik w `DECISIONS.md`.
-- [ ] **Step 3: Commit** — `docs: record decisions and the acceptance walk-through`
+- [x] **Step 1: Napisz `DECISIONS.md`** — każde odstępstwo od handoffu z uzasadnieniem: 11 rejonów zamiast 12, brak CSV, zaproszenia bez SMTP, brak logowania Google, soft-delete + trwałe usunięcie, retencja 24 miesiące.
+- [x] **Step 2: Przejdź listę odbioru** — 46 punktów z `IMPLEMENTATION.md` §9, każdy zweryfikowany testem albo ręcznie; wynik w `DECISIONS.md`.
+- [x] **Step 3: Commit** — `docs: record decisions and the acceptance walk-through`
 
 ---
 

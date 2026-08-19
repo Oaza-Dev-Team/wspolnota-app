@@ -1,0 +1,203 @@
+# Odstępstwa od specyfikacji i wynik odbioru
+
+Stan na 19.08.2026. Handoff projektowy (`docs/handoff/`) jest nadrzędny dla wyglądu
+i zachowań; ten dokument spisuje miejsca, w których świadomie od niego odeszliśmy,
+oraz wynik przejścia listy kontrolnej z `docs/handoff/IMPLEMENTATION.md` §9.
+
+## 1. Odstępstwa
+
+### 1.1 Rejonów jest 11, nie 12
+
+Handoff i wszystkie zrzuty ekranu pokazują 12 rejonów. Zweryfikowane u zamawiającego:
+jest ich **11 (I–XI)**. Teksty poprawiliśmy, zrzutów i prototypu nie — zostają jako
+materiał historyczny. Liczba nigdy nie jest w kodzie literałem: wynika z `REGION_COUNT`
+w `src/lib/domain/regions.ts`, więc kolejna korekta to jedna linia.
+
+### 1.2 Eksport i import wyłącznie XLSX, bez CSV
+
+Zakres zawężony 19.08.2026 na prośbę zamawiającego. Punkty listy odbioru mówiące
+o CSV (separator `;`, BOM, CRLF, podwajanie cudzysłowów) są **nieaktualne** i nie
+były realizowane. XLSX to prawdziwy plik ZIP-owy, co sprawdza asercja na sygnaturze
+`PK` w `src/lib/couples/export.int.test.ts` — nie da się przypadkiem podać CSV-a
+z podmienionym rozszerzeniem.
+
+### 1.3 Zaproszenia bez SMTP
+
+Handoff mówi „wysyłka zaproszenia e-mail". Poczta nie jest w tym projekcie
+skonfigurowana, a dołożenie jej oznaczałoby serwer SMTP do wdrożenia i utrzymania.
+Zamiast tego „Zaproś" generuje **jednorazowy link ważny 7 dni**, który administrator
+kopiuje i przekazuje sam. Przy piętnastu kontach zakładanych raz to tańsze, a przy
+okazji nie zostawia zaproszeń w cudzych skrzynkach.
+
+**Odwracalne:** gdy SMTP się pojawi, wysyłka to jedno wywołanie w tej samej akcji.
+
+### 1.4 Logowanie Google odłożone
+
+Spec §6.1 wyznaczał Plan 5 jako moment decyzji. Decyzja wymaga wiedzy, której nie
+mamy: czy te konkretne piętnaście osób ma konta Google. Wariant z linkiem zaproszenia
+jest neutralny — działa tak samo przy haśle i przy Google — więc odłożenie nic nie
+kosztuje. **Pytanie otwarte do zamawiającego.**
+
+### 1.5 Usuwanie dwustopniowe
+
+Handoff pytał: soft-delete czy trwałe usunięcie? Odpowiedź: **oba**, bo służą różnym
+rzeczom.
+
+| Akcja | Kto | Efekt |
+|---|---|---|
+| „Usuń parę" | admin, para rejonowa we własnym rejonie | `deletedAt = now()`, rekord znika z list i eksportów |
+| „Trwale usuń (żądanie RODO)" | wyłącznie admin | `DELETE` rekordu i rekolekcji, wpisy audytu **anonimizowane** |
+
+Miękkie usunięcie chroni przed pomyłką; trwałe realizuje żądanie osoby. Wpisy audytu
+przeżywają trwałe usunięcie z `coupleId = NULL` i podmienionym opisem — rejestr
+rozliczalności, który da się skasować razem z rekordem, nie jest rejestrem.
+
+**Dodatek poza handoffem:** admin ma na liście przełącznik „Usunięte". Bez niego
+miękko usunięty rekord byłby nieosiągalny, a **nie da się usunąć na żądanie czegoś,
+czego nie da się znaleźć**.
+
+### 1.6 Potwierdzenie trwałego usunięcia przez przepisanie nazwiska
+
+Zwykłe „na pewno?" przy operacji nieodwracalnej klika się odruchowo. Administrator
+przepisuje nazwisko pary — ta sama technika, co przy kasowaniu repozytorium na
+GitHubie, i z tego samego powodu.
+
+### 1.7 Retencja jako zadanie crona hosta
+
+`npm run retention` kasuje wpisy audytu starsze niż 24 miesiące i wygasłe sesje.
+Świadomie **nie** jest to scheduler wewnątrz aplikacji: przy kilku instancjach
+kontenera każda odpalałaby własny timer i ścigałyby się o te same wiersze. Host
+uruchamia to raz na dobę, obok `pg_dump`.
+
+### 1.8 Klauzula informacyjna z widocznymi lukami
+
+`/informacja-o-danych` to rusztowanie z jawnie oznaczonymi miejscami do uzupełnienia
+(administrator danych, podstawa prawna, dostawca hostingu, okres przechowywania po
+odejściu ze wspólnoty). Treść wiążąca należy do zamawiającego. Zmyślona klauzula,
+która wygląda na gotową, jest gorsza niż taka, po której widać, że gotowa nie jest.
+
+### 1.9 Nawigacja ma pięć pozycji dla admina, nie cztery
+
+Lista odbioru mówi „admin widzi 4 pozycje". Doszedł **Import**, którego handoff nie
+przewidywał jako osobnego widoku. Para rejonowa nadal widzi 1, moderator 2.
+
+### 1.10 Ścieżki tras po polsku, reszta po angielsku
+
+`/pary`, `/logowanie`, `/rejony` — to adresy, które widzi użytkownik. Identyfikatory,
+nazwy plików, klasy CSS, schemat bazy, komentarze i commity są po angielsku.
+Potwierdzone z zamawiającym, nie otwieramy ponownie.
+
+### 1.11 Poprawka językowa: „Bez pilotowania"
+
+Filtr formacji budował etykiety jako `Bez ${kod}`, co dawało „Bez Pilotowanie".
+Skróty (ONŻ I, ORAR II, ORD) się nie odmieniają, ale „pilotowanie" to polski
+rzeczownik. Kody zostały nietknięte, bo trafiają do nagłówków kolumn eksportu —
+forma dopełniacza to osobne pole `genitive`.
+
+---
+
+## 2. Lista odbioru — wynik
+
+Legenda: ✅ spełnione i pokryte testem · ☑️ spełnione, sprawdzone ręcznie ·
+⛔ nieaktualne wskutek zmiany zakresu.
+
+### Uprawnienia
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Para rejonowa widzi tylko swój rejon — także w eksporcie i API | ✅ | `permissions.test.ts`, `queries.int.test.ts`, `export.int.test.ts`, `list.spec.ts` |
+| Para rejonowa nie zmieni rejonu pary (pole i walidacja serwera) | ✅ | `save.int.test.ts`, `card.spec.ts` |
+| Moderator widzi całość, każdy zapis odmawiany (UI + API) | ✅ | `save.int.test.ts`, `card.spec.ts` |
+| Liczba pozycji nawigacji | ✅ | `navigation.test.ts`, `list.spec.ts` — **5 / 1 / 2**, patrz §1.9 |
+| Baner „Tylko podgląd" w karcie bez prawa edycji | ✅ | `card.spec.ts` |
+| „Edytuj →" albo „Podgląd →" zależnie od uprawnień | ✅ | `list.spec.ts` |
+
+### Lista i filtry
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Szukanie po nazwisku, imionach, e-mailu, telefonie, parafii i kręgu | ✅ | `queries.int.test.ts` |
+| Rejon zawęża parafie, parafia zawęża kręgi | ✅ | `queries.int.test.ts`, `list.spec.ts` |
+| Zmiana rejonu zeruje parafię i krąg | ✅ | `list.spec.ts` |
+| 17 opcji formacji, każda z niepustym wynikiem na seedzie | ✅ | `filters.test.ts`, `list.spec.ts` |
+| Licznik „N / M" z dopiskiem „(filtr)" | ✅ | `list.spec.ts` |
+| Sortowanie 7 kolumn, dwukierunkowo, ze strzałką | ✅ | `list.spec.ts` |
+| Stan filtrów i sortowania w URL | ✅ | `filters.test.ts`, `list.spec.ts` |
+| Poniżej 860 px karty zamiast tabeli | ✅ | `list.spec.ts` |
+| „Brak wyników dla podanych kryteriów." | ✅ | `list.spec.ts` |
+
+### Karta pary
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Wszystkie pola modelu edytowalne (bez daty ślubu i roku wstąpienia) | ☑️ | pola nie zostały dodane |
+| Nazwisko wymagane, „Podaj nazwisko" | ✅ | `schema.test.ts`, `card.spec.ts` |
+| Formacja: dodawanie, usuwanie, licznik z odmianą | ✅ | `card.spec.ts` |
+| „Nazwa rekolekcji" tylko dla „Inne", wtedy wymagana | ✅ | `schema.test.ts`, `card.spec.ts` |
+| „+ Dodaj rekolekcje" podpowiada pierwszy brakujący stopień | ✅ | `retreats.test.ts`, `card.spec.ts` |
+| Anulowanie porzuca zmiany | ✅ | `card.spec.ts` |
+| Zapis, dodanie i usunięcie trafiają do historii z autorem i datą | ✅ | `save.int.test.ts` |
+| Drawer: tło, ✕, `Esc`, powrót focusu | ✅ | `card.spec.ts` |
+
+### Eksport i import
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Eksportuje aktualnie przefiltrowaną listę | ✅ | `export.int.test.ts`, `export-import.spec.ts` |
+| CSV: separator, BOM, CRLF, cudzysłowy | ⛔ | zakres zawężony, patrz §1.2 |
+| XLSX to prawdziwy plik XLSX | ✅ | `export.int.test.ts` — sygnatura `PK` |
+| Komplet kolumn: 8 + 7 stopni + Inne + Dzieci + Notatki | ✅ | `columns.test.ts` — 19 kolumn |
+| Eksport dopisuje wpis do historii | ✅ | `src/app/eksport/route.ts`, `historia` |
+| Import z podglądem przed zapisem (**poza handoffem**) | ✅ | `import.int.test.ts`, `export-import.spec.ts` |
+
+### Rejony, konta, audyt
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| 11 kafelków, kolor z palety, liczba par, para odpowiedzialna, „N kręgów · M parafii" | ✅ | `stats.int.test.ts`, `admin-views.spec.ts` |
+| „Do obsadzenia" na nieobsadzonym rejonie | ✅ | `admin-views.spec.ts` |
+| Klik w kafelek ustawia filtr rejonu | ✅ | `admin-views.spec.ts` |
+| Konta: 11 rejonów + moderator, trzy statusy, akcje działają | ✅ | `accounts/list.int.test.ts`, `accounts/manage.int.test.ts`, `admin-views.spec.ts` |
+| Wyłączone konto nie zaloguje się | ✅ | `session.int.test.ts`; akcja logowania odrzuca każdy status inny niż `active` jedną gałęzią, e2e sprawdza `pending` |
+| „Ostatnie logowanie" chowa się poniżej 1120 px | ☑️ | `accounts.module.css` |
+| Historia: 5 rodzajów z odrębnymi kolorami, paginacja | ✅ | `audit/list.int.test.ts`, `admin-views.spec.ts` |
+
+### Wygląd
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Zgodność z „Design Tokens" | ✅ | `tokens.test.ts`; literał koloru w `.module.css` jest błędem review |
+| Trzy rodziny fontów, self-hostowane | ✅ | `tokens.test.ts`, `layout.tsx` — `next/font`, zero żądań do Google |
+| Aktywna pozycja: `--gold-500` na `--nav-active-bg` | ☑️ | `shell.module.css` |
+| Plakietka i kafelek rejonu z 11-barwnej palety | ✅ | `regions.test.ts` |
+| Plakietka formacji: najwyższy stopień + `+N`, przy braku `—` | ✅ | `formation.test.ts` |
+| Animacje 220 / 150 / 2600 ms | ☑️ | `tokens.css`, `Toast.tsx` |
+| Na mobile nic interaktywnego poniżej 44 px | ✅ | `accessibility.spec.ts` — mierzone, nie oglądane |
+
+### Jakość
+
+| Punkt | Stan | Dowód |
+|---|---|---|
+| Brak błędów w konsoli | ✅ | `accessibility.spec.ts` |
+| Uprawnienia testowane na poziomie API, nie tylko UI | ✅ | cała warstwa `*.int.test.ts` woła funkcje domenowe wprost |
+| Walidacja serwerowa wszystkich pól | ✅ | `schema.test.ts`, `save.int.test.ts` |
+| `DECISIONS.md` | ✅ | ten dokument |
+
+---
+
+## 3. Czego jeszcze nie ma
+
+- **Wdrożenie.** Docker Compose produkcyjny, TLS, kopie zapasowe i umowa powierzenia
+  czekają na decyzję o hostingu. To osobny plan.
+- **Treść klauzuli informacyjnej.** Rusztowanie stoi, luki są oznaczone.
+- **Logowanie Google.** Patrz §1.4.
+
+## 4. Weryfikacja
+
+```
+npm test          121 testów jednostkowych
+npm run test:int  141 integracyjnych (wymagają bazy)
+npm run e2e       60 testów Playwright, na buildzie produkcyjnym
+npm run lint
+npm run build
+```
