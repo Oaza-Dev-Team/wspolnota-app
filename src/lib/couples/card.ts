@@ -18,7 +18,8 @@ export type CardData = {
   phone: string;
   regionId: number;
   circleId: string | null;
-  parishId: string | null;
+  /** Label as typed in the field, "" when the parish is inherited from the circle. */
+  parish: string;
   children: string;
   notes: string;
   retreats: FormationEntry[];
@@ -27,6 +28,10 @@ export type CardData = {
 // Everything crosses into a client component and feeds uncontrolled inputs,
 // where null would flip an input to controlled and trigger a React warning.
 const asText = (v: string | null): string => v ?? '';
+
+/** The one spelling of a parish the user ever sees, and the one they type back. */
+export const parishLabel = (p: { name: string; city: string }): string =>
+  `${p.name}, ${p.city}`;
 
 export async function loadCard(
   u: User,
@@ -38,8 +43,9 @@ export async function loadCard(
     where: canPurge(u) ? { id } : { id, deletedAt: null },
     select: {
       id: true, wifeName: true, husbandName: true, surname: true,
-      email: true, phone: true, regionId: true, circleId: true, parishId: true,
+      email: true, phone: true, regionId: true, circleId: true,
       children: true, notes: true, deletedAt: true,
+      parish: { select: { name: true, city: true } },
       retreats: {
         select: { kind: true, year: true, place: true, name: true },
         orderBy: { year: 'asc' },
@@ -61,7 +67,7 @@ export async function loadCard(
       phone: asText(couple.phone),
       regionId: couple.regionId,
       circleId: couple.circleId === null ? null : String(couple.circleId),
-      parishId: couple.parishId === null ? null : String(couple.parishId),
+      parish: couple.parish ? parishLabel(couple.parish) : '',
       children: asText(couple.children),
       notes: asText(couple.notes),
       retreats: couple.retreats.map((r) => ({
@@ -81,7 +87,7 @@ export function blankCard(u: User): CardData {
     // A region account may only ever create inside its own region, so the
     // field starts there and stays disabled.
     regionId: u.regionId ?? 1,
-    circleId: null, parishId: null, children: '', notes: '',
+    circleId: null, parish: '', children: '', notes: '',
     retreats: [],
   };
 }
@@ -107,9 +113,6 @@ export async function cardOptions(regionId: number): Promise<{
       id: String(c.id),
       label: c.patron ? `${c.number} · ${c.patron}` : String(c.number),
     })),
-    parishes: parishes.map((p) => ({
-      id: String(p.id),
-      label: `${p.name}, ${p.city}`,
-    })),
+    parishes: parishes.map((p) => ({ id: String(p.id), label: parishLabel(p) })),
   };
 }

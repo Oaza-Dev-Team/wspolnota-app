@@ -44,10 +44,8 @@ export function CoupleCard({
   // list behind it was never touched.
   const [retreats, setRetreats] = useState<FormationEntry[]>(card.retreats);
 
-  // "__new__" in either select swaps that field for the inputs that describe
-  // the entity to create. The save layer already knows how to make them; only
-  // the controls were missing.
-  const [parishMode, setParishMode] = useState(card.parishId ?? '');
+  // "__new__" in the circle select swaps it for the inputs describing the one
+  // to create. The parish needs no mode: its field is free text throughout.
   const [circleMode, setCircleMode] = useState(card.circleId ?? '');
 
   // showModal is what gives the focus trap, Esc handling and the backdrop.
@@ -186,46 +184,32 @@ export function CoupleCard({
 
           <label className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Parafia</span>
-            <select
+            {/*
+              A text field with a datalist rather than a select: an archdiocese
+              has far more parishes than fit a dropdown, and the browser gives
+              filtering, keyboard handling and screen-reader support for free.
+              It doubles as the way to add one — save.ts upserts on (name, city),
+              so typing an existing parish finds it and a new one creates it.
+            */}
+            <input
               className={style.control}
-              name="parishId"
-              value={parishMode}
+              name="parish"
+              list="parish-options"
+              defaultValue={card.parish}
+              placeholder="np. św. Brygidy, Gdańsk"
+              autoComplete="off"
               disabled={!editable}
-              onChange={(e) => setParishMode(e.currentTarget.value)}
-            >
-              <option value="">— jak w kręgu —</option>
+            />
+            <datalist id="parish-options">
               {options.parishes.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
+                <option key={p.id} value={p.label} />
               ))}
-              <option value="__new__">+ nowa parafia…</option>
-            </select>
+            </datalist>
+            <span className={style.fieldHint}>
+              Zacznij pisać, żeby wybrać z listy. Parafia spoza listy zostanie utworzona.
+              Puste pole znaczy „jak w kręgu”.
+            </span>
           </label>
-
-          {parishMode === '__new__' && (
-            <div className={`${style.newEntity} ${style.wide}`}>
-              <label className={style.field}>
-                <span className={style.label}>Nazwa parafii</span>
-                <input
-                  className={style.control}
-                  name="newParishName"
-                  placeholder="np. św. Brygidy"
-                  disabled={!editable}
-                />
-              </label>
-              <label className={style.field}>
-                <span className={style.label}>Miasto</span>
-                <input
-                  className={style.control}
-                  name="newParishCity"
-                  placeholder="np. Gdańsk"
-                  disabled={!editable}
-                />
-              </label>
-              <p className={style.hint}>
-                Jeśli taka parafia już istnieje, zostanie użyta zamiast utworzenia drugiej.
-              </p>
-            </div>
-          )}
 
           <label className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Dzieci — imiona i roczniki</span>

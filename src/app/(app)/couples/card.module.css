@@ -375,6 +375,11 @@
   color: var(--text-faint);
   margin: 0;
 }
+/* Same note, but under a field in the main grid, where .hint's span would not apply. */
+.fieldHint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
 
 @media (max-width: 860px) {
   .newEntity { grid-template-columns: 1fr; }

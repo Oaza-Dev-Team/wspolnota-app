@@ -40,7 +40,8 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
 - lista par z filtrami, wyszukiwaniem bez znaków diakrytycznych, paginacją i kartami
   poniżej 860 px
 - karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie, audyt
-  w tej samej transakcji
+  w tej samej transakcji; **parafia to pole z podpowiedziami** (`<input list>`) —
+  wpisanie nieznanej tworzy ją, znanej używa ponownie
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
 - kafelki rejonów ze statystykami, konta rejonów (włącz / wyłącz / zaproś),
@@ -78,10 +79,10 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 
 ```bash
 npm test          # 121 testów jednostkowych
-npm run test:int  # 141 integracyjnych (wymagają bazy)
+npm run test:int  # 165 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 61 testów Playwright, na buildzie produkcyjnym
+npm run e2e       # 68 testów Playwright, na buildzie produkcyjnym
 npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 

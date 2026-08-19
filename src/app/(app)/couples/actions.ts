@@ -6,6 +6,7 @@ import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { purgeCouple } from '@/lib/couples/purge';
 import { MissingParish, NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
+import { parseParishCell } from '@/lib/couples/columns';
 import { saveSchema } from '@/lib/couples/schema';
 
 export type CardState = { error?: string };
@@ -41,8 +42,17 @@ export async function saveCoupleAction(
     kind: string; year: string; place: string; name: string;
   }[];
 
-  const newParishWanted = formData.get('parishId') === '__new__';
   const newCircleWanted = formData.get('circleId') === '__new__';
+
+  // The parish arrives as text, whether picked from the suggestions or typed
+  // fresh. Both take the same road: the save layer upserts on (name, city), so
+  // a known parish is found and an unknown one created. Blank means the couple
+  // inherits whichever parish its circle belongs to.
+  const parishText = textOr(formData.get('parish')).trim();
+  const parish = parishText === '' ? null : parseParishCell(parishText);
+  if (parishText !== '' && parish === null) {
+    return { error: 'Parafię podaj jako „nazwa, miasto" — np. św. Brygidy, Gdańsk' };
+  }
 
   const parsed = saveSchema.safeParse({
     couple: {
@@ -64,13 +74,8 @@ export async function saveCoupleAction(
             parishId: null,
           }
         : null,
-      parishId: newParishWanted ? null : emptyToNull(formData.get('parishId')),
-      newParish: newParishWanted
-        ? {
-            name: textOr(formData.get('newParishName')),
-            city: textOr(formData.get('newParishCity')),
-          }
-        : null,
+      parishId: null,
+      newParish: parish,
       children: textOr(formData.get('children')),
       notes: textOr(formData.get('notes')),
     },
@@ -91,7 +96,7 @@ export async function saveCoupleAction(
     if (e instanceof NotFound) return { error: 'Ta para już nie istnieje' };
     // A new circle needs a parish; without one the row would violate the FK.
     if (e instanceof MissingParish) {
-      return { error: 'Nowy krąg musi mieć parafię — wybierz ją albo utwórz w polu „Parafia"' };
+      return { error: 'Nowy krąg musi mieć parafię — wpisz ją w polu „Parafia"' };
     }
     throw e;
   }
