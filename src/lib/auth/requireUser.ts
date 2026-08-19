@@ -36,6 +36,6 @@ export async function currentUser(): Promise<User | null> {
  */
 export async function requireUser(): Promise<User> {
   const u = await currentUser();
-  if (!u) redirect('/logowanie');
+  if (!u) redirect('/login');
   return u;
 }

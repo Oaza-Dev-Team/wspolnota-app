@@ -60,11 +60,18 @@ Audyt zapisuje się w **tej samej transakcji** co zmiana.
 **Po polsku jest tylko to, co czyta człowiek. Reszta po angielsku.**
 
 Angielski: identyfikatory, nazwy plików, klasy CSS, tokeny, schemat bazy (modele
-Prismy oraz tabele i kolumny), komentarze, nazwy testów, commity, parametry zapytania
-w URL.
+Prismy oraz tabele i kolumny), komentarze, nazwy testów, commity oraz **całe URL-e** —
+ścieżki tras i parametry zapytania.
 
-Polski: teksty interfejsu, formy odmiany liczebników, **ścieżki tras** (`/pary`,
-`/logowanie` — to adres, który widzi użytkownik) oraz kody rekolekcji (`ONŻ I`).
+Polski: teksty interfejsu, formy odmiany liczebników i kody rekolekcji (`ONŻ I`).
+
+**Ścieżki tras były po polsku i przestały nimi być 19.08.2026.** Uzasadnieniem był
+„adres, który widzi użytkownik", ale w aplikacji za logowaniem, po której chodzi się
+klikając, tego adresu nikt nie czyta ani nie wpisuje — jedyny wysyłany komuś link to
+zaproszenie, a ono niesie nieczytelny token. Polski kosztował za to przy każdej trasie:
+odmiana (`/pary/1` czy `/para/1`?), ryzyko znaków diakrytycznych (`/kręgi` →
+`/kr%C4%99gi`) i dwie nazwy na jedno pojęcie w każdym pliku. Powód i rachunek kosztów
+są w `DECISIONS.md` §1.10.
 
 Liczebniki odmieniaj przez `plural()` z `src/lib/pl/`, sortuj przez
 `localeCompare(…, 'pl')`; w bazie działa kolacja `pl-PL-x-icu`.

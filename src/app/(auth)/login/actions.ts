@@ -63,5 +63,5 @@ export async function signIn(_state: LoginState, formData: FormData): Promise<Lo
 
   const token = await createSession(account.id);
   await setSessionCookie(token);
-  redirect('/pary');
+  redirect('/couples');
 }

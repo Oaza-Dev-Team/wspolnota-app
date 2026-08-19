@@ -51,7 +51,7 @@ export function CoupleCard({
   }, []);
 
   function close() {
-    router.push('/pary');
+    router.push('/couples');
   }
 
   const isNew = card.id === '';

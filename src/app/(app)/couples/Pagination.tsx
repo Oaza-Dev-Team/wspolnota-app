@@ -4,7 +4,7 @@ import style from './couples.module.css';
 
 function href(f: Filters, page: number): string {
   const qs = toSearchParams({ ...f, page }).toString();
-  return qs ? `/pary?${qs}` : '/pary';
+  return qs ? `/couples?${qs}` : '/couples';
 }
 
 export function Pagination({ filters, found }: { filters: Filters; found: number }) {

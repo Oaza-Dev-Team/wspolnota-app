@@ -11,7 +11,7 @@ export default async function RegionsPage() {
   const u = await requireUser();
   // A region account has exactly one region; the overview would be a page
   // with a single tile leading back to the list it is already on.
-  if (u.role === 'region') redirect('/pary');
+  if (u.role === 'region') redirect('/couples');
 
   const stats = await regionStats(u);
 
@@ -26,7 +26,7 @@ export default async function RegionsPage() {
         {stats.map((r) => (
           <Link
             key={r.id}
-            href={`/pary?region=${r.id}`}
+            href={`/couples?region=${r.id}`}
             className={style.tile}
             style={{ '--region-color': regionColor(r.id) } as React.CSSProperties}
           >

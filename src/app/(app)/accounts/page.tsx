@@ -9,7 +9,7 @@ import style from './accounts.module.css';
 export default async function AccountsPage() {
   const u = await requireUser();
   // The nav hides the entry, but the address bar does not respect the nav.
-  if (!canManageAccounts(u)) redirect('/pary');
+  if (!canManageAccounts(u)) redirect('/couples');
 
   const rows = await accountRows(u);
 

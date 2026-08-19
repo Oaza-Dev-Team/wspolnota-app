@@ -53,10 +53,10 @@ export function Shell({
               <span className={style.accountRole}>{ROLE_LABELS[user.role]}</span>
             </span>
           </div>
-          <form action="/wyloguj" method="post">
+          <form action="/logout" method="post">
             <button type="submit" className={style.signOut}>Wyloguj</button>
           </form>
-          <Link href="/informacja-o-danych" className={style.noticeLink}>
+          <Link href="/privacy" className={style.noticeLink}>
             Informacja o danych
           </Link>
         </div>

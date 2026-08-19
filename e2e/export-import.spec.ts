@@ -5,11 +5,11 @@ import { COLUMNS } from '../src/lib/couples/columns';
 const PASSWORD = 'kartoteka123';
 
 async function signIn(page: Page, email: string) {
-  await page.goto('/logowanie');
+  await page.goto('/login');
   await page.getByLabel('Adres e-mail').fill(email);
   await page.getByLabel('Hasło').fill(PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/pary/);
+  await expect(page).toHaveURL(/\/couples/);
 }
 
 /** A workbook in memory, handed straight to the file input as bytes. */
@@ -42,7 +42,7 @@ async function upload(page: Page, buffer: Buffer) {
 
 test('the export downloads an xlsx carrying the current filters', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?region=3');
+  await page.goto('/couples?region=3');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -54,7 +54,7 @@ test('the export downloads an xlsx carrying the current filters', async ({ page 
 
 test('the export link keeps the filters in its address', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?region=3&formation=ONZ_I');
+  await page.goto('/couples?region=3&formation=ONZ_I');
   const href = await page.getByRole('link', { name: 'Eksport XLSX' }).getAttribute('href');
   expect(href).toContain('region=3');
   expect(href).toContain('formation=ONZ_I');
@@ -73,7 +73,7 @@ test('import is admin-only', async ({ page }) => {
   await signIn(page, 'rejon7@example.pl');
   await expect(page.getByRole('link', { name: 'Import' })).toHaveCount(0);
   await page.goto('/import');
-  await expect(page).toHaveURL(/\/pary/);
+  await expect(page).toHaveURL(/\/couples/);
 });
 
 test('the template downloads for admin', async ({ page }) => {
@@ -114,14 +114,14 @@ test('a broken row is reported with its number and blocks the import', async ({ 
 // line in a document claiming it works.
 test('an export leaves an entry in the change history', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?region=3');
+  await page.goto('/couples?region=3');
 
   await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('link', { name: 'Eksport XLSX' }).click(),
   ]);
 
-  await page.goto('/historia');
+  await page.goto('/history');
   const newest = page.getByRole('listitem').first();
   await expect(newest).toContainText('eksport');
   await expect(newest).toContainText('Wyeksportowano');

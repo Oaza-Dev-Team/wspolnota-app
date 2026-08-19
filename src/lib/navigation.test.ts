@@ -17,7 +17,7 @@ describe('navItems', () => {
   it('gives a region account only its own list', () => {
     const items = navItems(regionVII);
     expect(items).toHaveLength(1);
-    expect(items[0]).toEqual({ href: '/pary', label: 'Mój rejon', key: 'couples' });
+    expect(items[0]).toEqual({ href: '/couples', label: 'Mój rejon', key: 'couples' });
   });
 
   it('gives the viewer the list and the regions, without administration', () => {

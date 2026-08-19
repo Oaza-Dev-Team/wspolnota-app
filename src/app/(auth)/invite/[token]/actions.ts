@@ -28,5 +28,5 @@ export async function redeemAction(
 
   // Redeeming does not sign anyone in: the new password should be typed once
   // more before it is trusted, and the login screen is where that belongs.
-  redirect('/logowanie?invited=1');
+  redirect('/login?invited=1');
 }

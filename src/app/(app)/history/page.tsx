@@ -28,7 +28,7 @@ export default async function AuditPage({
 }) {
   const u = await requireUser();
   // The nav hides the entry, but the address bar does not respect the nav.
-  if (!canReadAudit(u)) redirect('/pary');
+  if (!canReadAudit(u)) redirect('/couples');
 
   const page = pageFrom((await searchParams).page);
   const { rows, total } = await auditPage(u, page);
@@ -59,7 +59,7 @@ export default async function AuditPage({
       {pages > 1 && (
         <nav className={style.pagination} aria-label="Strony historii">
           {page > 1 && (
-            <Link href={`/historia?page=${page - 1}`} className={style.pageLink}>
+            <Link href={`/history?page=${page - 1}`} className={style.pageLink}>
               ← Poprzednia
             </Link>
           )}
@@ -67,7 +67,7 @@ export default async function AuditPage({
             Strona {page} z {pages}
           </span>
           {page < pages && (
-            <Link href={`/historia?page=${page + 1}`} className={style.pageLink}>
+            <Link href={`/history?page=${page + 1}`} className={style.pageLink}>
               Następna →
             </Link>
           )}
