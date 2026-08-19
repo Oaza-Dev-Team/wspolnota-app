@@ -13,7 +13,7 @@ Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
 
 ## Gałąź i commity
 
-**Aktualna gałąź: `main`** — drzewo czyste, plany 1–6 scalone.
+**Aktualna gałąź: `main`** — drzewo czyste, plany 1–7 scalone.
 
 `main` jest **wiele commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
 (`github.com/Oaza-Dev-Team/wspolnota-app`). To świadoma decyzja, czeka na Twoją zgodę.
@@ -29,8 +29,10 @@ Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
 | 4 | eksport i import XLSX | ✅ scalony do `main` |
 | 5 | rejony, konta rejonów, historia zmian | ✅ scalony do `main` |
 | 6 | RODO, dostępność, lista odbioru | ✅ scalony do `main` |
+| 7 | wdrożenie: obraz, compose, TLS, kopie zapasowe | ✅ scalony do `main` |
 
-**Wszystkie zaplanowane prace są skończone.** Co dalej — patrz „Otwarte pytania" na końcu.
+**Wszystkie zaplanowane prace są skończone.** Do postawienia produkcji brakuje już
+tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md`.
 
 ### Co działa
 
@@ -48,6 +50,9 @@ Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
   dla admina, retencja audytu i sesji jako `npm run retention`
 - klauzula informacyjna pod `/informacja-o-danych` — rusztowanie z jawnymi lukami
 - `DECISIONS.md` — odstępstwa od handoffu i wynik listy odbioru punkt po punkcie
+- obraz produkcyjny, `docker-compose.prod.yml` z Caddy i automatycznym TLS,
+  szyfrowane kopie zapasowe, runbook w `docs/DEPLOYMENT.md` — obraz zbudowany
+  i sprawdzony na żywej bazie
 
 ## Jak wznowić
 
@@ -132,5 +137,6 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 4. **Logowanie Google** — patrz wyżej.
 5. **Treść klauzuli informacyjnej** — strona stoi, luki są oznaczone: administrator
    danych, podstawa prawna, dostawca hostingu, okres przechowywania po odejściu.
-6. **Co dalej?** Zostało wdrożenie: produkcyjny Docker Compose, TLS, kopie zapasowe,
-   umowa powierzenia. To osobny plan i wymaga decyzji o hostingu.
+6. **Co dalej?** Cała infrastruktura wdrożeniowa leży w repozytorium i została
+   sprawdzona lokalnie. Brakuje wyłącznie dostawcy VPS (z umową powierzenia)
+   i domeny wskazującej na serwer.
