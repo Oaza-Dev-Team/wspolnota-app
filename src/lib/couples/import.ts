@@ -165,8 +165,39 @@ export async function analyzeWorkbook(u: User, buffer: Buffer): Promise<ImportPl
       continue;
     }
 
-    const prepared: PreparedRow = { rowNumber: n, coupleId, data: parsed.data };
-    if (coupleId === null) plan.toCreate.push(prepared);
+    // With no ID column the row still has to be recognised, or importing the
+    // same file twice would double every couple. Identity is both first names
+    // plus the surname, inside one region.
+    let matchedId = coupleId;
+    if (matchedId === null) {
+      const c = parsed.data.couple;
+      const matches = await prisma.couple.findMany({
+        where: {
+          deletedAt: null,
+          regionId: c.regionId,
+          surname: { equals: c.surname, mode: 'insensitive' },
+          wifeName: { equals: c.wifeName, mode: 'insensitive' },
+          husbandName: { equals: c.husbandName, mode: 'insensitive' },
+        },
+        select: { id: true },
+        take: 2,
+      });
+
+      // Two couples with the same names in one region is rare but possible.
+      // Guessing which one the row means would silently overwrite a family's
+      // record, so the row is refused and the user points with an ID instead.
+      if (matches.length > 1) {
+        issue(
+          'Więcej niż jedna para o tych imionach i nazwisku w tym rejonie — '
+          + 'wskaż konkretną kolumną ID',
+        );
+        continue;
+      }
+      if (matches.length === 1) matchedId = matches[0]!.id;
+    }
+
+    const prepared: PreparedRow = { rowNumber: n, coupleId: matchedId, data: parsed.data };
+    if (matchedId === null) plan.toCreate.push(prepared);
     else plan.toUpdate.push(prepared);
   }
 

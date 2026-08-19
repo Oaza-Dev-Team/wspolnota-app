@@ -152,6 +152,78 @@ describe('analyzeWorkbook', () => {
   });
 });
 
+describe('analyzeWorkbook — recognising couples without an ID', () => {
+  it('updates an existing couple instead of creating a second one', async () => {
+    // First pass creates it.
+    const first = await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Bis')]));
+    await applyImport(admin, first);
+
+    // Second pass of the very same file must recognise it.
+    const second = await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Bis')]));
+    expect(second.toCreate).toHaveLength(0);
+    expect(second.toUpdate).toHaveLength(1);
+
+    await applyImport(admin, second);
+    expect(await prisma.couple.count({ where: { surname: 'Importowani Bis' } })).toBe(1);
+  });
+
+  it('matches regardless of letter case', async () => {
+    await applyImport(admin, await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Case')])));
+
+    const lower = validRow('importowani case');
+    lower[2] = 'zofia';
+    const plan = await analyzeWorkbook(admin, await sheetWith([lower]));
+    expect(plan.toUpdate).toHaveLength(1);
+  });
+
+  it('treats a different region as a different couple', async () => {
+    await applyImport(admin, await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Rejon')])));
+
+    const elsewhere = validRow('Importowani Rejon', { 6: 'III' });
+    const plan = await analyzeWorkbook(admin, await sheetWith([elsewhere]));
+    expect(plan.toCreate).toHaveLength(1);
+    expect(plan.toUpdate).toHaveLength(0);
+  });
+
+  it('treats different first names as a different couple', async () => {
+    await applyImport(admin, await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Imiona')])));
+
+    const otherNames = validRow('Importowani Imiona', { 2: 'Barbara' });
+    const plan = await analyzeWorkbook(admin, await sheetWith([otherNames]));
+    expect(plan.toCreate).toHaveLength(1);
+  });
+
+  // Overwriting the wrong family's record is worse than refusing the row.
+  it('refuses the row when two couples share the names, rather than guessing', async () => {
+    const twice = [validRow('Importowani Blizniacy'), validRow('Importowani Blizniacy')];
+    // Applying two identical rows in one file would already collapse to one,
+    // so the pair is planted directly.
+    await prisma.couple.createMany({
+      data: [
+        { surname: 'Importowani Blizniacy', wifeName: 'Zofia', husbandName: 'Jan', regionId: 7 },
+        { surname: 'Importowani Blizniacy', wifeName: 'Zofia', husbandName: 'Jan', regionId: 7 },
+      ],
+    });
+
+    const plan = await analyzeWorkbook(admin, await sheetWith([twice[0]!]));
+    expect(plan.toCreate).toHaveLength(0);
+    expect(plan.toUpdate).toHaveLength(0);
+    expect(plan.issues[0]!.message).toContain('Więcej niż jedna para');
+  });
+
+  it('ignores a soft-deleted couple when matching', async () => {
+    await applyImport(admin, await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Kosz')])));
+    await prisma.couple.updateMany({
+      where: { surname: 'Importowani Kosz' },
+      data: { deletedAt: new Date() },
+    });
+
+    // The record is in the bin, so the row describes a couple that is not there.
+    const plan = await analyzeWorkbook(admin, await sheetWith([validRow('Importowani Kosz')]));
+    expect(plan.toCreate).toHaveLength(1);
+  });
+});
+
 describe('applyImport', () => {
   it('creates the planned couples and records the audit', async () => {
     const plan = await analyzeWorkbook(
