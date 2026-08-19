@@ -9,12 +9,13 @@ Kartoteka Domowego Kościoła — aplikacja webowa dla wspólnoty Ruchu Światł
 
 Budowane z handoffu projektowego w `docs/handoff/` (README = wygląd, IMPLEMENTATION =
 lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md`.
+Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
 
 ## Gałąź i commity
 
-**Aktualna gałąź: `main`** — drzewo czyste, plany 1–5 scalone.
+**Aktualna gałąź: `main`** — drzewo czyste, plany 1–6 scalone.
 
-`main` jest **31 commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
+`main` jest **wiele commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
 (`github.com/Oaza-Dev-Team/wspolnota-app`). To świadoma decyzja, czeka na Twoją zgodę.
 
 ## Postęp planów
@@ -27,7 +28,9 @@ lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka
 | 3 | karta pary i formacja | ✅ scalony do `main` |
 | 4 | eksport i import XLSX | ✅ scalony do `main` |
 | 5 | rejony, konta rejonów, historia zmian | ✅ scalony do `main` |
-| **6** | **RODO i lista odbioru** | **niezaplanowany ← TU WZNAWIAMY** |
+| 6 | RODO, dostępność, lista odbioru | ✅ scalony do `main` |
+
+**Wszystkie zaplanowane prace są skończone.** Co dalej — patrz „Otwarte pytania" na końcu.
 
 ### Co działa
 
@@ -41,6 +44,10 @@ lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka
 - kafelki rejonów ze statystykami, konta rejonów (włącz / wyłącz / zaproś),
   historia zmian z paginacją
 - strona ustawienia hasła z jednorazowego linku zaproszenia
+- trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
+  dla admina, retencja audytu i sesji jako `npm run retention`
+- klauzula informacyjna pod `/informacja-o-danych` — rusztowanie z jawnymi lukami
+- `DECISIONS.md` — odstępstwa od handoffu i wynik listy odbioru punkt po punkcie
 
 ## Jak wznowić
 
@@ -65,11 +72,12 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 ## Weryfikacja
 
 ```bash
-npm test          # 116 testów jednostkowych
-npm run test:int  # 130 integracyjnych (wymagają bazy)
+npm test          # 121 testów jednostkowych
+npm run test:int  # 141 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 54 testy Playwright, na buildzie produkcyjnym
+npm run e2e       # 61 testów Playwright, na buildzie produkcyjnym
+npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 
 ## Decyzje, do których nie wracamy
@@ -114,11 +122,15 @@ npm run e2e       # 54 testy Playwright, na buildzie produkcyjnym
 
 ## Otwarte pytania do Ciebie
 
-1. **Push na GitHuba** — 31 commitów czeka lokalnie. Repozytorium jest w organizacji,
+1. **Push na GitHuba** — cała praca czeka lokalnie. Repozytorium jest w organizacji,
    więc push je upublicznia jej członkom.
 2. **Próbka rzeczywistych danych** — układ arkusza jest ustalony (szablon do pobrania
    pod `/eksport/szablon`), ale warto go skonfrontować z Twoim prawdziwym plikiem,
    zanim zrobimy import produkcyjny.
-3. **Hosting** — ustalone „VPS w UE + Docker", ale bez konkretów. Do rozstrzygnięcia
-   przy Planie 6 (klauzula informacyjna musi wskazać administratora danych).
+3. **Hosting** — ustalone „VPS w UE + Docker", ale bez konkretów. Blokuje wdrożenie
+   i uzupełnienie klauzuli informacyjnej, która musi wskazać administratora danych.
 4. **Logowanie Google** — patrz wyżej.
+5. **Treść klauzuli informacyjnej** — strona stoi, luki są oznaczone: administrator
+   danych, podstawa prawna, dostawca hostingu, okres przechowywania po odejściu.
+6. **Co dalej?** Zostało wdrożenie: produkcyjny Docker Compose, TLS, kopie zapasowe,
+   umowa powierzenia. To osobny plan i wymaga decyzji o hostingu.
