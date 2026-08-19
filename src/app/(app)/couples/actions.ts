@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { purgeCouple } from '@/lib/couples/purge';
-import { MissingParish, NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
+import {
+  MissingParish, NotFound, createCouple, deleteCouple, restoreCouple, updateCouple,
+} from '@/lib/couples/save';
 import { parseParishCell } from '@/lib/couples/columns';
 import { saveSchema } from '@/lib/couples/schema';
 
@@ -21,6 +23,10 @@ function emptyToNull(v: FormDataEntryValue | null): string | null {
 }
 
 function numberOr(v: FormDataEntryValue | null, fallback: number): number {
+  // Absent must mean absent. Number(null) is 0, and 0 is finite, so the
+  // fallback below never fired for a field the form did not send — which is
+  // every disabled one, because a disabled control is not submitted.
+  if (typeof v !== 'string' || v.trim() === '') return fallback;
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 }
@@ -154,4 +160,29 @@ export async function purgeCoupleAction(
 
   revalidatePath('/couples');
   redirect('/couples?purged=1');
+}
+
+/**
+ * The undo that soft deletion always implied. Whoever could delete the couple
+ * can put it back — the write layer checks that, not this.
+ */
+export async function restoreCoupleAction(
+  _state: CardState,
+  formData: FormData,
+): Promise<CardState> {
+  const u = await requireUser();
+  const id = emptyToNull(formData.get('id'));
+  if (id === null) return { error: 'Brak identyfikatora pary' };
+
+  try {
+    await restoreCouple(u, BigInt(id));
+  } catch (e) {
+    if (e instanceof Forbidden) return { error: e.message };
+    if (e instanceof NotFound) return { error: 'Ta para nie jest usunięta' };
+    throw e;
+  }
+
+  revalidatePath('/couples');
+  revalidatePath('/regions');
+  redirect('/couples?restored=1');
 }

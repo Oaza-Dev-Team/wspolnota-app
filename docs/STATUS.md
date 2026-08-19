@@ -39,7 +39,8 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
 - logowanie hasłem, sesje w bazie, limit prób, trzy role
 - lista par z filtrami, wyszukiwaniem bez znaków diakrytycznych, paginacją i kartami
   poniżej 860 px
-- karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie, audyt
+- karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie
+  **z przywracaniem**, audyt
   w tej samej transakcji; **parafia to pole z podpowiedziami** (`<input list>`) —
   wpisanie nieznanej tworzy ją, znanej używa ponownie
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
@@ -82,11 +83,11 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 ## Weryfikacja
 
 ```bash
-npm test          # 133 testy jednostkowe
-npm run test:int  # 190 integracyjnych (wymagają bazy)
+npm test          # 141 testów jednostkowych
+npm run test:int  # 197 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 78 testów Playwright, na buildzie produkcyjnym
+npm run e2e       # 81 testów Playwright, na buildzie produkcyjnym
 npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 
@@ -101,6 +102,9 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
   liczba pomocników. Uprawnienia identyczne; różnica jest w kafelku rejonu i w tym,
   czyje konto da się przekazać. Jedną parę odpowiedzialną na rejon pilnuje częściowy
   indeks unikalny, nie tylko kod. Rachunek w `DECISIONS.md` §1.15.
+- **Usuniętą parę da się przywrócić** i robi to ten, kto mógł ją usunąć —
+  para rejonowa widzi przełącznik „Usunięte” zawężony do własnego rejonu.
+  Trwałe usunięcie (RODO) zostaje przy adminie. `DECISIONS.md` §1.16.
 - **Konta da się usuwać.** Wpisy historii zostają jako „konto usunięte” —
   `audit.account_id` ma `ON DELETE SET NULL` od pierwszej migracji. §1.14.
 - **Cztery role, nie trzy.** `superadmin` to konto techniczne opiekuna instalacji:
@@ -148,6 +152,10 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
   `getByText('admin@example.pl')` trafia też w `superadmin@example.pl`. Do selectów
   dawaj jawny `aria-label` (`exact: true` nie pomoże — nazwa z otaczającej etykiety
   obejmuje treść opcji), a do adresów `{ exact: true }`.
+- **Sprawdzaj ścieżki także kontem rejonowym, nie tylko adminem.** Przez cały
+  Plan 3 konto rejonowe nie mogło zapisać pary — wyłączony `<select>` rejonu nie
+  jest wysyłany, a `Number(null)` to `0`, więc wartość rezerwowa nie działała.
+  Nie miało to pokrycia, bo wszystkie testy karty logowały się jako admin. §1.17.
 - **Testy integracyjne muszą zawężać zapytania do własnych danych.** Dwa razy złapaliśmy
   test, który liczył wiersze cudzej roboty albo kasował je przy sprzątaniu.
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts` przez `prisma` → devDependency).

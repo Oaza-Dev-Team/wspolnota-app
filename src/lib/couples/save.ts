@@ -1,7 +1,5 @@
 import type { Prisma } from '@/generated/prisma/client';
-import {
-  Forbidden, type User, assertCanEdit, canChangeRegion, canDelete,
-} from '@/lib/auth/permissions';
+import { type User, assertCanEdit, canChangeRegion, canDelete, canRestore, Forbidden } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 import type { SaveInput } from './schema';
 
@@ -150,6 +148,37 @@ export async function updateCouple(u: User, id: bigint, data: SaveInput): Promis
       data: {
         kind: 'edit',
         description: `Zmieniono dane pary ${coupleLabel(data.couple)}`,
+        accountId: u.id,
+        coupleId: id,
+      },
+    });
+  });
+}
+
+/**
+ * Puts a soft-deleted couple back on the lists. The counterpart deleteCouple
+ * always implied — the record is kept precisely so a misclick can be undone —
+ * and the piece that was missing until somebody asked how to undo one.
+ *
+ * Nothing is rebuilt: soft deletion only ever set a timestamp, so clearing it
+ * restores the record whole, retreats and all.
+ */
+export async function restoreCouple(u: User, id: bigint): Promise<void> {
+  const couple = await prisma.couple.findFirst({
+    where: { id, deletedAt: { not: null } },
+    select: { regionId: true, surname: true, wifeName: true, husbandName: true },
+  });
+  if (!couple) throw new NotFound();
+  if (!canRestore(u, { regionId: couple.regionId })) throw new Forbidden();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.couple.update({ where: { id }, data: { deletedAt: null } });
+
+    await tx.audit.create({
+      data: {
+        kind: 'edit',
+        description:
+          `Przywrócono parę ${couple.wifeName} i ${couple.husbandName} ${couple.surname}`,
         accountId: u.id,
         coupleId: id,
       },

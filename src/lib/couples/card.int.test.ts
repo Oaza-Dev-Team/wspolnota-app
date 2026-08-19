@@ -56,7 +56,7 @@ describe('loadCard', () => {
   // On its own couple, never a seeded one: an assertion that throws between
   // the soft delete and the restore would strand a record the other suites
   // count on. That happened once; it does not get to happen twice.
-  it('hides a soft-deleted couple from anyone who cannot erase it', async () => {
+  it('hides a soft-deleted couple from a read-only account, not from its region', async () => {
     const couple = await prisma.couple.create({
       data: { surname: 'Ukryci', wifeName: 'Zofia', husbandName: 'Jan', regionId: 7 },
     });
@@ -66,7 +66,14 @@ describe('loadCard', () => {
         data: { deletedAt: new Date() },
       });
 
-      expect(await loadCard(regionVII, couple.id)).toBeNull();
+      // Changed 19.08.2026: the region account reaches its own deleted records
+      // now, because it is the one that has to undo a misclick. Readable but
+      // not correctable — a deleted record is put back before it is edited.
+      const forRegion = await loadCard(regionVII, couple.id);
+      expect(forRegion).not.toBeNull();
+      expect(forRegion!.deleted).toBe(true);
+      expect(forRegion!.editable).toBe(false);
+
       expect(await loadCard(viewer, couple.id)).toBeNull();
     } finally {
       await prisma.couple.delete({ where: { id: couple.id } });

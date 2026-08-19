@@ -2,7 +2,9 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Forbidden, type User } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 import type { SaveInput } from './schema';
-import { NotFound, createCouple, deleteCouple, updateCouple } from './save';
+import {
+  createCouple, deleteCouple, NotFound, restoreCouple, updateCouple,
+} from './save';
 
 // Audit rows carry a foreign key to account, so these must be real accounts
 // from the seed — a placeholder id violates audit_account_id_fkey.
@@ -144,5 +146,61 @@ describe('deleteCouple', () => {
   it('never lets the viewer delete', async () => {
     const id = await add(admin);
     await expect(deleteCouple(viewer, id)).rejects.toThrow(Forbidden);
+  });
+});
+
+describe('restoreCouple', () => {
+  it('puts a soft-deleted couple back on the lists', async () => {
+    const id = await add(admin);
+    await deleteCouple(admin, id);
+    await restoreCouple(admin, id);
+
+    expect((await prisma.couple.findUniqueOrThrow({ where: { id } })).deletedAt).toBeNull();
+  });
+
+  it('brings the formation back with it, because nothing was ever taken away', async () => {
+    const id = await add(admin);
+    await prisma.retreat.create({ data: { coupleId: id, kind: 'ONZ_I', year: 2019 } });
+    await deleteCouple(admin, id);
+    await restoreCouple(admin, id);
+
+    expect(await prisma.retreat.count({ where: { coupleId: id } })).toBe(1);
+  });
+
+  it('records the restoration, so the history holds both halves of the misclick', async () => {
+    const id = await add(admin);
+    await deleteCouple(admin, id);
+    await restoreCouple(admin, id);
+
+    const entries = await prisma.audit.findMany({
+      where: { coupleId: id }, orderBy: { at: 'asc' }, select: { description: true },
+    });
+    expect(entries.at(-1)!.description).toContain('Przywrócono parę');
+    expect(entries.some((e) => e.description.includes('Usunięto parę'))).toBe(true);
+  });
+
+  it('lets a region account undo its own misclick', async () => {
+    const id = await add(regionVII);
+    await deleteCouple(regionVII, id);
+    await restoreCouple(regionVII, id);
+
+    expect((await prisma.couple.findUniqueOrThrow({ where: { id } })).deletedAt).toBeNull();
+  });
+
+  it('stops a region account at the border of its own region', async () => {
+    const id = await add(admin, input({ regionId: 3 }));
+    await deleteCouple(admin, id);
+    await expect(restoreCouple(regionVII, id)).rejects.toThrow(Forbidden);
+  });
+
+  it('never lets the viewer restore', async () => {
+    const id = await add(admin);
+    await deleteCouple(admin, id);
+    await expect(restoreCouple(viewer, id)).rejects.toThrow(Forbidden);
+  });
+
+  it('has nothing to act on when the couple is not deleted', async () => {
+    const id = await add(admin);
+    await expect(restoreCouple(admin, id)).rejects.toThrow(NotFound);
   });
 });

@@ -181,6 +181,20 @@
 
 .remove:hover { background: var(--danger-bg); }
 
+/* Same shape as .remove and deliberately not its colour: this one undoes. */
+.restore {
+  margin-left: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-8);
+  padding: 11px 20px;
+  font-size: 14px;
+  min-height: 44px;
+  color: var(--navy-700);
+  cursor: pointer;
+}
+.restore:hover { background: var(--bg-row-alt); }
+
 .note {
   font-size: 12px;
   color: var(--text-faint);

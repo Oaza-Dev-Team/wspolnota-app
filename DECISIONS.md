@@ -52,9 +52,9 @@ Miękkie usunięcie chroni przed pomyłką; trwałe realizuje żądanie osoby. W
 przeżywają trwałe usunięcie z `coupleId = NULL` i podmienionym opisem — rejestr
 rozliczalności, który da się skasować razem z rekordem, nie jest rejestrem.
 
-**Dodatek poza handoffem:** admin ma na liście przełącznik „Usunięte". Bez niego
-miękko usunięty rekord byłby nieosiągalny, a **nie da się usunąć na żądanie czegoś,
-czego nie da się znaleźć**.
+**Dodatek poza handoffem:** lista ma przełącznik „Usunięte". Bez niego miękko usunięty
+rekord byłby nieosiągalny, a **nie da się usunąć na żądanie czegoś, czego nie da się
+znaleźć** — ani przywrócić. Kto go widzi, opisuje §1.16.
 
 ### 1.6 Potwierdzenie trwałego usunięcia przez przepisanie nazwiska
 
@@ -204,6 +204,45 @@ zdanie po polsku zamiast surowego błędu bazy.
 Formularz zakładania konta operuje więc pięcioma pozycjami, nie czterema rolami:
 konto techniczne, para odpowiedzialna za wspólnotę, para odpowiedzialna za rejon,
 pomocnik rejonu, moderator. Dwie środkowe to ta sama rola `region`.
+
+### 1.16 Przywracanie usuniętej pary
+
+Miękkie usuwanie od początku miało uzasadnienie „chroni przed pomyłką" (§1.5, a w
+kodzie komentarz przy `deleteCouple`: *a region account can misclick*). Cofnięcia
+jednak nie było — usunięta karta miała jedną drogę naprzód, trwałe skasowanie.
+Dołożone 19.08.2026, gdy zapytałeś, czy da się przywrócić wiersz.
+
+Przywrócenie nic nie odtwarza: miękkie usunięcie ustawiało wyłącznie znacznik czasu,
+więc jego wyzerowanie oddaje rekord w całości, razem z formacją. Trafia do historii
+jak każda inna zmiana, więc obie połowy pomyłki są widoczne obok siebie.
+
+**Kto przywraca — zmiana reguły widoczności.** `canRestore` jest symetryczne
+z `canDelete`: cofnięcie to ta sama władza, obrócona. Żeby para rejonowa mogła z niej
+skorzystać, musi zobaczyć własny usunięty rekord, więc przełącznik „Usunięte" przestał
+być wyłącznie admina — `listScope` wpuszcza teraz rolę `region`, **nadal zawężoną do
+własnego rejonu**. Moderator nie widzi nic: nie usuwa i nie przywraca.
+
+Bez tego osoba, która pomyliła się przy trzystu rekordach, musiałaby dzwonić do
+admina — a to ona jest tu główną wprowadzającą dane.
+
+Trwałe usunięcie zostaje wyłącznie przy adminie i bez zmian.
+
+### 1.17 Błąd znaleziony przy okazji: konto rejonowe nie mogło zapisać pary
+
+Test e2e do §1.16 odsłonił usterkę, która była w kodzie od Planu 3 i nie miała pokrycia:
+**żadne konto rejonowe nie mogło utworzyć ani zapisać pary z karty.**
+
+Wybór rejonu jest dla nich wyłączony (`canChangeRegion` = false), a wyłączona kontrolka
+nie jest wysyłana z formularzem. Wartość rezerwowa w akcji nigdy nie działała, bo
+`Number(null)` to `0`, a `0` przechodzi `Number.isFinite` — Zod dostawał więc rejon `0`
+i odrzucał zapis komunikatem „Too small: expected number to be >=1".
+
+Naprawione dwustronnie: brak wartości znaczy teraz brak (a nie zero), a karta niesie
+rejon w ukrytym polu, więc formularz podaje własną wartość, zamiast liczyć na rezerwę.
+Pokryte testem e2e, w którym konto rejonowe zakłada parę, usuwa ją i przywraca.
+
+Warto zapamiętać: **jedenaście z piętnastu kont to konta rejonowe** i to one wprowadzają
+dane. Każda ścieżka ma być sprawdzana także z ich uprawnieniami, nie tylko adminem.
 
 ## 2. Lista odbioru — wynik
 

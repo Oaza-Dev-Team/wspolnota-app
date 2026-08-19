@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   Forbidden, type User, assertCanEdit, canChangeRegion, canDelete, canEdit,
   canExport, canImport, canManageAccounts, canManageRole, canPurge, canReadAudit,
-  listScope,
+  canRestore, canSeeDeleted, listScope,
 } from './permissions';
 
 const admin: User = { id: 1n, role: 'admin', regionId: null };
@@ -100,12 +100,20 @@ describe('listScope with the deleted flag', () => {
     expect(listScope(admin, { deleted: true })).toEqual({ deletedAt: { not: null } });
   });
 
-  // A query string is not a permission: asking without the right to purge
+  // A query string is not a permission: asking without a reason to look
   // returns the ordinary list rather than an error, so nothing leaks and
   // nothing breaks.
-  it('ignores the flag for everyone else', () => {
+  it('ignores the flag for a read-only account', () => {
     expect(listScope(viewer, { deleted: true })).toEqual({ deletedAt: null });
-    expect(listScope(regionVII, { deleted: true })).toEqual({ deletedAt: null, regionId: 7 });
+  });
+
+  // Changed 19.08.2026: a region account used to be sent its ordinary list
+  // here. Soft deletion exists so a misclick can be undone, and the account
+  // that misclicks cannot undo what it cannot see. Its own region only.
+  it('gives a region account the deleted records of its own region', () => {
+    expect(listScope(regionVII, { deleted: true })).toEqual({
+      deletedAt: { not: null }, regionId: 7,
+    });
   });
 });
 
@@ -160,5 +168,50 @@ describe('canManageRole', () => {
       expect(canManageRole(regionVII, role)).toBe(false);
       expect(canManageRole(viewer, role)).toBe(false);
     }
+  });
+});
+
+describe('reaching the soft-deleted records', () => {
+  it('is open to whoever may put one back or erase it', () => {
+    expect(canSeeDeleted(caretaker)).toBe(true);
+    expect(canSeeDeleted(admin)).toBe(true);
+    // The reason a region account needs it: soft deletion exists so a misclick
+    // can be undone, and the misclick is usually theirs.
+    expect(canSeeDeleted(regionVII)).toBe(true);
+  });
+
+  it('is closed to a read-only account, which neither deletes nor restores', () => {
+    expect(canSeeDeleted(viewer)).toBe(false);
+  });
+
+  it('narrows a region account to its own region even when asking for deleted', () => {
+    expect(listScope(regionVII, { deleted: true })).toEqual({
+      deletedAt: { not: null }, regionId: 7,
+    });
+  });
+
+  it('gives a viewer its ordinary list rather than an error', () => {
+    // The flag is a query string, and a query string is not a permission.
+    expect(listScope(viewer, { deleted: true })).toEqual({ deletedAt: null });
+  });
+});
+
+describe('canRestore', () => {
+  it('mirrors canDelete exactly: undoing is the same authority, reversed', () => {
+    for (const [u, couple] of [
+      [admin, coupleIII], [caretaker, coupleVII],
+      [regionVII, coupleVII], [regionVII, coupleIII], [viewer, coupleVII],
+    ] as const) {
+      expect(canRestore(u, couple)).toBe(canDelete(u, couple));
+    }
+  });
+
+  it('keeps a region account inside its own region', () => {
+    expect(canRestore(regionVII, coupleVII)).toBe(true);
+    expect(canRestore(regionVII, coupleIII)).toBe(false);
+  });
+
+  it('gives the moderator nothing to restore', () => {
+    expect(canRestore(viewer, coupleVII)).toBe(false);
   });
 });

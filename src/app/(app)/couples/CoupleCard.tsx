@@ -7,7 +7,9 @@ import type { CardData, FormationEntry } from '@/lib/couples/card';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
 import { FormationSection } from './FormationSection';
 import { PurgeForm } from './PurgeForm';
-import { type CardState, deleteCoupleAction, saveCoupleAction } from './actions';
+import {
+  type CardState, deleteCoupleAction, restoreCoupleAction, saveCoupleAction,
+} from './actions';
 import style from './card.module.css';
 
 function SaveButton() {
@@ -26,6 +28,7 @@ export function CoupleCard({
   regionChangeable,
   deleted,
   purgeable,
+  restorable,
 }: {
   card: CardData;
   editable: boolean;
@@ -34,11 +37,14 @@ export function CoupleCard({
   /** Already soft-deleted: readable, not correctable. */
   deleted: boolean;
   purgeable: boolean;
+  /** Soft-deleted and this caller may put it back on the lists. */
+  restorable: boolean;
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
   const [state, saveAction] = useActionState<CardState, FormData>(saveCoupleAction, {});
   const [deleteState, deleteAction] = useActionState<CardState, FormData>(deleteCoupleAction, {});
+  const [restoreState, restoreAction] = useActionState<CardState, FormData>(restoreCoupleAction, {});
 
   // The drawer is edited on a copy — Cancel simply navigates away and the
   // list behind it was never touched.
@@ -61,7 +67,7 @@ export function CoupleCard({
   const isNew = card.id === '';
   const kicker = isNew ? 'Nowy wpis' : `Karta pary · rejon ${romanNumeral(card.regionId)}`;
   const title = isNew ? 'Dodaj parę' : `${card.wifeName} i ${card.husbandName} ${card.surname}`;
-  const error = state.error ?? deleteState.error;
+  const error = state.error ?? deleteState.error ?? restoreState.error;
 
   return (
     <dialog
@@ -130,6 +136,15 @@ export function CoupleCard({
 
           <label className={style.field}>
             <span className={style.label}>Rejon</span>
+            {/*
+              A disabled control is not submitted, so an account that may not
+              move a couple between regions has to state the region some other
+              way. The action falls back to the caller's own region as well;
+              this makes the form carry its own value rather than rely on it.
+            */}
+            {editable && !regionChangeable && (
+              <input type="hidden" name="regionId" value={card.regionId} />
+            )}
             <select className={style.control} name="regionId" defaultValue={card.regionId}
               disabled={!editable || !regionChangeable}>
               {Array.from({ length: REGION_COUNT }, (_, i) => i + 1).map((r) => (
@@ -242,11 +257,25 @@ export function CoupleCard({
           </form>
         )}
 
+        {/*
+          Restoring comes before erasing, and not only on the screen: a
+          record reaches this state by a misclick far more often than by a
+          request to be erased.
+        */}
+        {deleted && restorable && (
+          <form action={restoreAction}>
+            <input type="hidden" name="id" value={card.id} />
+            <button type="submit" className={style.restore}>Przywróć parę</button>
+          </form>
+        )}
+
         {purgeable && !isNew && <PurgeForm id={card.id} surname={card.surname} />}
 
         <p className={style.note}>
           {deleted
-            ? 'Ta para jest usunięta z kartoteki. Zostaje tu do trwałego usunięcia na żądanie.'
+            ? restorable
+              ? 'Ta para jest usunięta z kartoteki. „Przywróć parę” cofa to w całości, razem z formacją.'
+              : 'Ta para jest usunięta z kartoteki. Zostaje tu do trwałego usunięcia na żądanie.'
             : editable
               ? 'Każdy zapis trafia do historii zmian z Twoim kontem i datą.'
               : 'Podgląd bez możliwości edycji.'}

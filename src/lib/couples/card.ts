@@ -1,5 +1,5 @@
 import type { RetreatKind } from '@/generated/prisma/enums';
-import { type User, canEdit, canPurge } from '@/lib/auth/permissions';
+import { type User, canEdit, canSeeDeleted } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 
 export type FormationEntry = {
@@ -38,9 +38,10 @@ export async function loadCard(
   id: bigint,
 ): Promise<{ card: CardData; editable: boolean; deleted: boolean } | null> {
   const couple = await prisma.couple.findFirst({
-    // A soft-deleted record stays reachable for whoever may erase it for good;
-    // for everyone else it is gone, which is what soft deletion is for.
-    where: canPurge(u) ? { id } : { id, deletedAt: null },
+    // A soft-deleted record stays reachable for whoever may erase it for good
+    // or put it back; for everyone else it is gone, which is what soft
+    // deletion is for.
+    where: canSeeDeleted(u) ? { id } : { id, deletedAt: null },
     select: {
       id: true, wifeName: true, husbandName: true, surname: true,
       email: true, phone: true, regionId: true, circleId: true,

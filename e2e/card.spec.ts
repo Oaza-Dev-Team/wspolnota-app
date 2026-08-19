@@ -256,3 +256,76 @@ test('a parish typed without a city is refused with a message that says the shap
   await page.getByRole('button', { name: 'Zapisz' }).click();
   await expect(drawerAlert(page)).toContainText('nazwa, miasto');
 });
+
+/**
+ * The other half of soft deletion. Every test here leaves the registry exactly
+ * as it found it: what it deletes it either restores or removes for good, so
+ * list.spec's exact 300 still holds.
+ */
+test('a deleted couple can be found again and put back', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
+  const surname = `DoPrzywrocenia${Date.now() % 100000}`;
+  await page.getByLabel('Nazwisko').fill(surname);
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/saved=1/);
+
+  await page.goto(`/couples?q=${surname}`);
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Usuń parę' }).click();
+  await expect(page).toHaveURL(/deleted=1/);
+
+  // Off the ordinary list, on the one behind the "Usunięte" toggle.
+  await page.goto(`/couples?q=${surname}`);
+  await expect(page.getByText('Brak wyników dla podanych kryteriów.').first()).toBeVisible();
+  await page.goto(`/couples?q=${surname}&deleted=1`);
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Przywróć parę' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Para przywrócona' })).toBeVisible();
+
+  await page.goto(`/couples?q=${surname}`);
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+
+  // Put back for good measure, then taken away for good: this file cleans up.
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Usuń parę' }).click();
+  await expect(page).toHaveURL(/deleted=1/);
+});
+
+test('a region account undoes its own deletion without asking the admin', async ({ page }) => {
+  await signIn(page, 'rejon7@example.pl');
+  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
+  const surname = `RejonowaPomylka${Date.now() % 100000}`;
+  await page.getByLabel('Nazwisko').fill(surname);
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page).toHaveURL(/saved=1/);
+
+  await page.goto(`/couples?q=${surname}`);
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Usuń parę' }).click();
+  await expect(page).toHaveURL(/deleted=1/);
+
+  await page.goto(`/couples?q=${surname}&deleted=1`);
+  await openFirstCard(page);
+  // Readable, not correctable: a deleted record is put back before it is edited.
+  await expect(page.getByRole('dialog').getByLabel('Nazwisko')).toBeDisabled();
+  await page.getByRole('button', { name: 'Przywróć parę' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Para przywrócona' })).toBeVisible();
+
+  await page.goto(`/couples?q=${surname}`);
+  await expect(page.locator('tbody tr')).toHaveCount(1);
+
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Usuń parę' }).click();
+  await expect(page).toHaveURL(/deleted=1/);
+});
+
+test('the moderator is offered no deleted records at all', async ({ page }) => {
+  await signIn(page, 'moderator@example.pl');
+  await expect(page.getByLabel('Usunięte')).toHaveCount(0);
+  // A query string is not a permission: it gets its ordinary list, not an error.
+  await page.goto('/couples?deleted=1');
+  await expect(page.getByRole('status').filter({ hasText: '/ 300' })).toBeVisible();
+});
