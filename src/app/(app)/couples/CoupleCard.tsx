@@ -44,6 +44,12 @@ export function CoupleCard({
   // list behind it was never touched.
   const [retreats, setRetreats] = useState<FormationEntry[]>(card.retreats);
 
+  // "__new__" in either select swaps that field for the inputs that describe
+  // the entity to create. The save layer already knows how to make them; only
+  // the controls were missing.
+  const [parishMode, setParishMode] = useState(card.parishId ?? '');
+  const [circleMode, setCircleMode] = useState(card.circleId ?? '');
+
   // showModal is what gives the focus trap, Esc handling and the backdrop.
   // A <dialog open> attribute would render the element without any of them.
   useEffect(() => {
@@ -136,25 +142,90 @@ export function CoupleCard({
 
           <label className={style.field}>
             <span className={style.label}>Krąg</span>
-            <select className={style.control} name="circleId" defaultValue={card.circleId ?? ''}
-              disabled={!editable}>
+            <select
+              className={style.control}
+              name="circleId"
+              value={circleMode}
+              disabled={!editable}
+              onChange={(e) => setCircleMode(e.currentTarget.value)}
+            >
               <option value="">— bez kręgu —</option>
               {options.circles.map((c) => (
                 <option key={c.id} value={c.id}>{`Krąg ${c.label}`}</option>
               ))}
+              <option value="__new__">+ nowy krąg…</option>
             </select>
           </label>
 
+          {circleMode === '__new__' && (
+            <div className={`${style.newEntity} ${style.wide}`}>
+              <label className={style.field}>
+                <span className={style.label}>Numer kręgu</span>
+                <input
+                  className={style.control}
+                  name="newCircleNumber"
+                  inputMode="numeric"
+                  placeholder="np. 3"
+                  disabled={!editable}
+                />
+              </label>
+              <label className={style.field}>
+                <span className={style.label}>Patron (opcjonalnie)</span>
+                <input
+                  className={style.control}
+                  name="newCirclePatron"
+                  placeholder="np. św. Rity"
+                  disabled={!editable}
+                />
+              </label>
+              <p className={style.hint}>
+                Krąg powstanie w rejonie wybranym powyżej i przejmie parafię z pola „Parafia”.
+              </p>
+            </div>
+          )}
+
           <label className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Parafia</span>
-            <select className={style.control} name="parishId" defaultValue={card.parishId ?? ''}
-              disabled={!editable}>
+            <select
+              className={style.control}
+              name="parishId"
+              value={parishMode}
+              disabled={!editable}
+              onChange={(e) => setParishMode(e.currentTarget.value)}
+            >
               <option value="">— jak w kręgu —</option>
               {options.parishes.map((p) => (
                 <option key={p.id} value={p.id}>{p.label}</option>
               ))}
+              <option value="__new__">+ nowa parafia…</option>
             </select>
           </label>
+
+          {parishMode === '__new__' && (
+            <div className={`${style.newEntity} ${style.wide}`}>
+              <label className={style.field}>
+                <span className={style.label}>Nazwa parafii</span>
+                <input
+                  className={style.control}
+                  name="newParishName"
+                  placeholder="np. św. Brygidy"
+                  disabled={!editable}
+                />
+              </label>
+              <label className={style.field}>
+                <span className={style.label}>Miasto</span>
+                <input
+                  className={style.control}
+                  name="newParishCity"
+                  placeholder="np. Gdańsk"
+                  disabled={!editable}
+                />
+              </label>
+              <p className={style.hint}>
+                Jeśli taka parafia już istnieje, zostanie użyta zamiast utworzenia drugiej.
+              </p>
+            </div>
+          )}
 
           <label className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Dzieci — imiona i roczniki</span>

@@ -356,3 +356,27 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Revealed when a select is switched to "+ new"; groups the fields that
+   describe the entity to create. */
+.newEntity {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px;
+  background: var(--bg-row-alt);
+  border: 1px solid var(--bg-app);
+  border-radius: var(--r-9);
+  padding: 12px;
+}
+
+.hint {
+  grid-column: span 2;
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .newEntity { grid-template-columns: 1fr; }
+  .hint { grid-column: auto; }
+}

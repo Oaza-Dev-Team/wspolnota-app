@@ -163,3 +163,58 @@ test('deleting a couple removes it from the list', async ({ page }) => {
   await page.goto(`/couples?q=${surname}`);
   await expect(page.getByText('Brak wyników dla podanych kryteriów.').first()).toBeVisible();
 });
+
+test('creating a couple can introduce a parish and a circle that do not exist yet', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
+  await expect(page.getByRole('heading', { name: 'Dodaj parę' })).toBeVisible();
+
+  const stamp = Date.now() % 1000000;
+  const surname = `Zakladajacy${stamp}`;
+  const parish = `św. Testowa ${stamp}`;
+  const city = `Miasteczko ${stamp}`;
+
+  // Scoped to the dialog: the filter bar behind it has selects with the same
+  // labels, and Playwright strict mode would see both.
+  const drawer = page.getByRole('dialog');
+  await drawer.getByLabel('Nazwisko').fill(surname);
+
+  // The parish select grows a "+ new" option that swaps the field for inputs.
+  await drawer.getByLabel('Parafia').selectOption('__new__');
+  await drawer.getByLabel('Nazwa parafii').fill(parish);
+  await drawer.getByLabel('Miasto').fill(city);
+
+  await drawer.getByLabel('Krąg').selectOption('__new__');
+  await drawer.getByLabel('Numer kręgu').fill('42');
+  await drawer.getByLabel('Patron (opcjonalnie)').fill('św. Testowy');
+
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Zapisano zmiany' })).toBeVisible();
+
+  // The couple now carries the parish and circle the same save created.
+  await page.goto(`/couples?q=${surname}`);
+  await expect(page.getByRole('status')).toContainText('1 / ');
+  await expect(page.locator('tbody').getByText(parish, { exact: false })).toBeVisible();
+  await expect(page.locator('tbody').getByText('42 · św. Testowy')).toBeVisible();
+
+  // Playwright runs the spec files in name order and list.spec asserts an exact
+  // 300, so this couple has to go. The parish and circle stay: nothing counts
+  // them, and leaving them proves they outlive the couple that introduced them.
+  await openFirstCard(page);
+  await page.getByRole('button', { name: 'Usuń parę' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Para usunięta' })).toBeVisible();
+});
+
+test('a new circle without a parish is refused with a message, not a crash', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
+
+  const drawer = page.getByRole('dialog');
+  await drawer.getByLabel('Nazwisko').fill(`BezParafii${Date.now() % 1000000}`);
+  // Parish left as "— jak w kręgu —", so the new circle has nothing to inherit.
+  await drawer.getByLabel('Krąg').selectOption('__new__');
+  await drawer.getByLabel('Numer kręgu').fill('43');
+
+  await page.getByRole('button', { name: 'Zapisz' }).click();
+  await expect(drawerAlert(page)).toContainText('Nowy krąg musi mieć parafię');
+});

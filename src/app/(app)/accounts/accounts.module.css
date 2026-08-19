@@ -157,6 +157,16 @@
 
 .rename:hover { color: var(--navy-700); }
 
+/* The handoff requires 44px for anything tappable; on a wide screen the link
+   stays tight so it does not stretch the row. */
+@media (max-width: 860px) {
+  .rename {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
 .renameForm {
   display: flex;
   gap: 6px;

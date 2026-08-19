@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 import { purgeCouple } from '@/lib/couples/purge';
-import { NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
+import { MissingParish, NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
 import { saveSchema } from '@/lib/couples/schema';
 
 export type CardState = { error?: string };
@@ -41,6 +41,9 @@ export async function saveCoupleAction(
     kind: string; year: string; place: string; name: string;
   }[];
 
+  const newParishWanted = formData.get('parishId') === '__new__';
+  const newCircleWanted = formData.get('circleId') === '__new__';
+
   const parsed = saveSchema.safeParse({
     couple: {
       wifeName: textOr(formData.get('wifeName')),
@@ -49,10 +52,25 @@ export async function saveCoupleAction(
       email: textOr(formData.get('email')),
       phone: textOr(formData.get('phone')),
       regionId: numberOr(formData.get('regionId'), u.regionId ?? 1),
-      circleId: emptyToNull(formData.get('circleId')),
-      newCircle: null,
-      parishId: emptyToNull(formData.get('parishId')),
-      newParish: null,
+      circleId: newCircleWanted ? null : emptyToNull(formData.get('circleId')),
+      // A blank number would fail z.number().int() with a range message rather
+      // than something the user can act on, so it is caught before parsing.
+      newCircle: newCircleWanted
+        ? {
+            number: Number(textOr(formData.get('newCircleNumber'))),
+            patron: textOr(formData.get('newCirclePatron')),
+            // null: inherit whatever the parish field resolves to in this
+            // same save, existing or freshly created.
+            parishId: null,
+          }
+        : null,
+      parishId: newParishWanted ? null : emptyToNull(formData.get('parishId')),
+      newParish: newParishWanted
+        ? {
+            name: textOr(formData.get('newParishName')),
+            city: textOr(formData.get('newParishCity')),
+          }
+        : null,
       children: textOr(formData.get('children')),
       notes: textOr(formData.get('notes')),
     },
@@ -71,6 +89,10 @@ export async function saveCoupleAction(
   } catch (e) {
     if (e instanceof Forbidden) return { error: e.message };
     if (e instanceof NotFound) return { error: 'Ta para już nie istnieje' };
+    // A new circle needs a parish; without one the row would violate the FK.
+    if (e instanceof MissingParish) {
+      return { error: 'Nowy krąg musi mieć parafię — wybierz ją albo utwórz w polu „Parafia"' };
+    }
     throw e;
   }
 
