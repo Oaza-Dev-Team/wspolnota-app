@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import type { User } from '@/lib/auth/permissions';
 import { romanNumeral } from '@/lib/domain/regions';
@@ -32,7 +33,9 @@ export function Shell({
     <div className={style.app}>
       <aside className={style.sidebar}>
         <div className={style.brand}>
-          <span className={style.monogram} aria-hidden="true">ŚŻ</span>
+          <span className={style.monogram}>
+            <Image src="/phos-zoe.png" alt="" width={24} height={24} priority />
+          </span>
           <span>
             <span className={style.brandName}>Kartoteka DK</span>
             <br />

@@ -30,9 +30,6 @@
   flex: none;
   border-radius: var(--r-7);
   background: var(--surface);
-  color: var(--navy-700);
-  font-family: var(--font-heading), Georgia, serif;
-  font-size: 15px;
 }
 
 .brandName {

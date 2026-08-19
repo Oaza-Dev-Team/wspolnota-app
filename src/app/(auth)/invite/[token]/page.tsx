@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { redirect } from 'next/navigation';
 import { INVITE_DAYS } from '@/lib/accounts/policy';
 import { currentUser } from '@/lib/auth/requireUser';
@@ -23,7 +24,9 @@ export default async function InvitePage({
     <div className={style.screen}>
       <section className={style.left}>
         <div className={style.brand}>
-          <span className={style.monogram} aria-hidden="true">ŚŻ</span>
+          <span className={style.monogram}>
+            <Image src="/phos-zoe.png" alt="" width={32} height={32} priority />
+          </span>
           <span className={style.caption}>
             Ruch Światło-Życie
             <br />
