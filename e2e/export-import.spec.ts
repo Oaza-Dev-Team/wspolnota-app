@@ -109,3 +109,20 @@ test('a broken row is reported with its number and blocks the import', async ({ 
   await expect(page.getByText('wiersz 3')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Zatwierdź import' })).toHaveCount(0);
 });
+
+// The export register is a GDPR obligation, so it gets a test rather than a
+// line in a document claiming it works.
+test('an export leaves an entry in the change history', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/pary?region=3');
+
+  await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Eksport XLSX' }).click(),
+  ]);
+
+  await page.goto('/historia');
+  const newest = page.getByRole('listitem').first();
+  await expect(newest).toContainText('eksport');
+  await expect(newest).toContainText('Wyeksportowano');
+});

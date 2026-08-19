@@ -147,7 +147,7 @@ Legenda: ✅ spełnione i pokryte testem · ☑️ spełnione, sprawdzone ręczn
 | CSV: separator, BOM, CRLF, cudzysłowy | ⛔ | zakres zawężony, patrz §1.2 |
 | XLSX to prawdziwy plik XLSX | ✅ | `export.int.test.ts` — sygnatura `PK` |
 | Komplet kolumn: 8 + 7 stopni + Inne + Dzieci + Notatki | ✅ | `columns.test.ts` — 19 kolumn |
-| Eksport dopisuje wpis do historii | ✅ | `src/app/eksport/route.ts`, `historia` |
+| Eksport dopisuje wpis do historii | ✅ | `export-import.spec.ts` — pobranie, potem sprawdzenie wpisu |
 | Import z podglądem przed zapisem (**poza handoffem**) | ✅ | `import.int.test.ts`, `export-import.spec.ts` |
 
 ### Rejony, konta, audyt
@@ -197,7 +197,7 @@ Legenda: ✅ spełnione i pokryte testem · ☑️ spełnione, sprawdzone ręczn
 ```
 npm test          121 testów jednostkowych
 npm run test:int  141 integracyjnych (wymagają bazy)
-npm run e2e       60 testów Playwright, na buildzie produkcyjnym
+npm run e2e       61 testów Playwright, na buildzie produkcyjnym
 npm run lint
 npm run build
 ```
