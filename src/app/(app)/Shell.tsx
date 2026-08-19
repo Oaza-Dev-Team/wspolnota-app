@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { User } from '@/lib/auth/permissions';
 import { romanNumeral } from '@/lib/domain/regions';
 import { type ViewKey, navItems } from '@/lib/navigation';
@@ -29,7 +30,7 @@ export function Shell({
 }) {
   return (
     <div className={style.app}>
-      <nav className={style.sidebar} aria-label="Nawigacja główna">
+      <aside className={style.sidebar}>
         <div className={style.brand}>
           <span className={style.monogram} aria-hidden="true">ŚŻ</span>
           <span>
@@ -39,7 +40,9 @@ export function Shell({
           </span>
         </div>
 
-        <Nav items={navItems(user)} counts={counts} />
+        <nav aria-label="Nawigacja główna">
+          <Nav items={navItems(user)} counts={counts} />
+        </nav>
 
         <div className={style.footer}>
           <div className={style.account}>
@@ -53,8 +56,11 @@ export function Shell({
           <form action="/wyloguj" method="post">
             <button type="submit" className={style.signOut}>Wyloguj</button>
           </form>
+          <Link href="/informacja-o-danych" className={style.noticeLink}>
+            Informacja o danych
+          </Link>
         </div>
-      </nav>
+      </aside>
 
       <main className={style.main}>{children}</main>
     </div>

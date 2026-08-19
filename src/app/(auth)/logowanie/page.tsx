@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth/requireUser';
 import { LoginForm } from './LoginForm';
@@ -49,6 +50,10 @@ export default async function LoginPage({
         <LoginForm />
         <p className={style.formFooter}>
           Dostęp nadaje para odpowiedzialna za wspólnotę.
+          <br />
+          <Link href="/informacja-o-danych" className={style.noticeLink}>
+            Informacja o przetwarzaniu danych
+          </Link>
         </p>
       </section>
     </div>

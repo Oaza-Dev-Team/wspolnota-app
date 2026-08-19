@@ -53,11 +53,45 @@ describe('loadCard', () => {
     expect((await loadCard(viewer, await anyCoupleIn(7)))!.editable).toBe(false);
   });
 
-  it('returns null for a soft-deleted couple', async () => {
-    const id = await anyCoupleIn(7);
-    await prisma.couple.update({ where: { id }, data: { deletedAt: new Date() } });
-    expect(await loadCard(admin, id)).toBeNull();
-    await prisma.couple.update({ where: { id }, data: { deletedAt: null } });
+  // On its own couple, never a seeded one: an assertion that throws between
+  // the soft delete and the restore would strand a record the other suites
+  // count on. That happened once; it does not get to happen twice.
+  it('hides a soft-deleted couple from anyone who cannot erase it', async () => {
+    const couple = await prisma.couple.create({
+      data: { surname: 'Ukryci', wifeName: 'Zofia', husbandName: 'Jan', regionId: 7 },
+    });
+    try {
+      await prisma.couple.update({
+        where: { id: couple.id },
+        data: { deletedAt: new Date() },
+      });
+
+      expect(await loadCard(regionVII, couple.id)).toBeNull();
+      expect(await loadCard(viewer, couple.id)).toBeNull();
+    } finally {
+      await prisma.couple.delete({ where: { id: couple.id } });
+    }
+  });
+
+  // Erasure on request has to reach a record that already left the lists.
+  it('shows a soft-deleted couple to the admin, read-only', async () => {
+    const couple = await prisma.couple.create({
+      data: { surname: 'Odzyskani', wifeName: 'Zofia', husbandName: 'Jan', regionId: 7 },
+    });
+    try {
+      await prisma.couple.update({
+        where: { id: couple.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const result = await loadCard(admin, couple.id);
+      expect(result).not.toBeNull();
+      expect(result!.deleted).toBe(true);
+      // A deleted record is a museum piece: erasable, not correctable.
+      expect(result!.editable).toBe(false);
+    } finally {
+      await prisma.couple.delete({ where: { id: couple.id } });
+    }
   });
 
   it('returns null for an id that does not exist', async () => {

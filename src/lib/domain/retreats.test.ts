@@ -17,6 +17,7 @@ describe('RETREAT_KINDS', () => {
     expect(retreatInfo('ORAR_II')).toEqual({
       kind: 'ORAR_II',
       code: 'ORAR II',
+      genitive: 'ORAR II',
       name: 'Oaza Rekolekcyjna Animatorów Rodzin II stopnia',
     });
   });
@@ -47,5 +48,17 @@ describe('nextDegree', () => {
 
   it('falls back to INNE once every degree is present', () => {
     expect(nextDegree([...DEGREES])).toBe('INNE');
+  });
+});
+
+describe('genitive forms', () => {
+  // "Bez Pilotowanie" was shipping in the formation filter until this test.
+  it('inflects the one code that is a Polish word', () => {
+    expect(retreatInfo('PILOTOWANIE').genitive).toBe('pilotowania');
+  });
+
+  it('leaves abbreviations alone, because they do not inflect', () => {
+    expect(retreatInfo('ONZ_I').genitive).toBe('ONŻ I');
+    expect(retreatInfo('ORD').genitive).toBe('ORD');
   });
 });

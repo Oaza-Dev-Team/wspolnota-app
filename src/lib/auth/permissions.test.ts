@@ -91,3 +91,18 @@ describe('assertCanEdit', () => {
     expect(() => assertCanEdit(viewer, coupleVII)).toThrow(Forbidden);
   });
 });
+
+describe('listScope with the deleted flag', () => {
+  // Erasure on request has to reach a record that has already left the lists.
+  it('gives the admin the soft-deleted records', () => {
+    expect(listScope(admin, { deleted: true })).toEqual({ deletedAt: { not: null } });
+  });
+
+  // A query string is not a permission: asking without the right to purge
+  // returns the ordinary list rather than an error, so nothing leaks and
+  // nothing breaks.
+  it('ignores the flag for everyone else', () => {
+    expect(listScope(viewer, { deleted: true })).toEqual({ deletedAt: null });
+    expect(listScope(regionVII, { deleted: true })).toEqual({ deletedAt: null, regionId: 7 });
+  });
+});

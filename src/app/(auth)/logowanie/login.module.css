@@ -126,6 +126,13 @@
   outline: none;
 }
 
+/* The soft ring reads as "active" for the mouse; the keyboard needs an actual
+   outline, and this rule has to outrank the :focus above to get one. */
+.input:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
 .button {
   background: var(--navy-700);
   color: var(--surface);
@@ -175,4 +182,11 @@
   font-size: 14px;
   color: var(--success-fg);
   margin: 0 0 14px;
+}
+
+.noticeLink {
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--navy-700);
+  font-size: 13px;
 }

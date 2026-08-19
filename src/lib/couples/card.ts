@@ -1,5 +1,5 @@
 import type { RetreatKind } from '@/generated/prisma/enums';
-import { type User, canEdit } from '@/lib/auth/permissions';
+import { type User, canEdit, canPurge } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 
 export type FormationEntry = {
@@ -31,13 +31,15 @@ const asText = (v: string | null): string => v ?? '';
 export async function loadCard(
   u: User,
   id: bigint,
-): Promise<{ card: CardData; editable: boolean } | null> {
+): Promise<{ card: CardData; editable: boolean; deleted: boolean } | null> {
   const couple = await prisma.couple.findFirst({
-    where: { id, deletedAt: null },
+    // A soft-deleted record stays reachable for whoever may erase it for good;
+    // for everyone else it is gone, which is what soft deletion is for.
+    where: canPurge(u) ? { id } : { id, deletedAt: null },
     select: {
       id: true, wifeName: true, husbandName: true, surname: true,
       email: true, phone: true, regionId: true, circleId: true, parishId: true,
-      children: true, notes: true,
+      children: true, notes: true, deletedAt: true,
       retreats: {
         select: { kind: true, year: true, place: true, name: true },
         orderBy: { year: 'asc' },
@@ -47,7 +49,9 @@ export async function loadCard(
   if (!couple) return null;
 
   return {
-    editable: canEdit(u, { regionId: couple.regionId }),
+    // A deleted record is a museum piece: it can be erased, not corrected.
+    editable: couple.deletedAt === null && canEdit(u, { regionId: couple.regionId }),
+    deleted: couple.deletedAt !== null,
     card: {
       id: String(couple.id),
       wifeName: asText(couple.wifeName),

@@ -29,6 +29,9 @@ export type Filters = {
   sort: SortKey;
   dir: 'asc' | 'desc';
   page: number;
+  /** Show the soft-deleted records instead of the live ones. Admin only —
+      listScope decides, this is merely the request. */
+  deleted: boolean;
 };
 
 /**
@@ -51,7 +54,7 @@ export type ClientFilters = Omit<Filters, 'parish' | 'circle'> & {
 export const FORMATION_OPTIONS: readonly { value: string; label: string }[] = [
   { value: 'any', label: 'Formacja — dowolna' },
   ...DEGREES.map((d) => ({ value: d, label: `Ma ${retreatInfo(d).code}` })),
-  ...DEGREES.map((d) => ({ value: `without:${d}`, label: `Bez ${retreatInfo(d).code}` })),
+  ...DEGREES.map((d) => ({ value: `without:${d}`, label: `Bez ${retreatInfo(d).genitive}` })),
   { value: 'INNE', label: 'Ma inne rekolekcje' },
   { value: 'none', label: 'Bez żadnych rekolekcji' },
 ];
@@ -105,6 +108,7 @@ export function parseFilters(params: Record<string, string | string[] | undefine
     sort,
     dir: first(params['dir']) === 'desc' ? 'desc' : 'asc',
     page: integer(params['page'], 1, 10_000) ?? 1,
+    deleted: first(params['deleted']) === '1',
   };
 }
 
@@ -132,6 +136,7 @@ export function toSearchParams(f: FiltersForUrl): URLSearchParams {
   if (f.sort !== 'surname') p.set('sort', f.sort);
   if (f.dir !== 'asc') p.set('dir', f.dir);
   if (f.page !== 1) p.set('page', String(f.page));
+  if (f.deleted) p.set('deleted', '1');
   return p;
 }
 

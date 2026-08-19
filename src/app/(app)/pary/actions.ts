@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
+import { purgeCouple } from '@/lib/couples/purge';
 import { NotFound, createCouple, deleteCouple, updateCouple } from '@/lib/couples/save';
 import { saveSchema } from '@/lib/couples/schema';
 
@@ -95,4 +96,35 @@ export async function deleteCoupleAction(
 
   revalidatePath('/pary');
   redirect('/pary?deleted=1');
+}
+
+/**
+ * Permanent erasure on request. The typed surname is the confirmation: an
+ * "are you sure?" on an irreversible operation gets clicked through by reflex,
+ * and this one cannot be undone by anything short of a database restore.
+ */
+export async function purgeCoupleAction(
+  _state: CardState,
+  formData: FormData,
+): Promise<CardState> {
+  const u = await requireUser();
+  const id = emptyToNull(formData.get('id'));
+  if (id === null) return { error: 'Brak identyfikatora pary' };
+
+  const typed = textOr(formData.get('confirm')).trim();
+  const surname = textOr(formData.get('surname')).trim();
+  if (typed !== surname) {
+    return { error: `Przepisz nazwisko „${surname}", żeby potwierdzić` };
+  }
+
+  try {
+    await purgeCouple(u, BigInt(id));
+  } catch (e) {
+    if (e instanceof Forbidden) return { error: e.message };
+    if (e instanceof NotFound) return { error: 'Ta para już nie istnieje' };
+    throw e;
+  }
+
+  revalidatePath('/pary');
+  redirect('/pary?purged=1');
 }

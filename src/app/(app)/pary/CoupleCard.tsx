@@ -6,6 +6,7 @@ import { useFormStatus } from 'react-dom';
 import type { CardData, FormationEntry } from '@/lib/couples/card';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
 import { FormationSection } from './FormationSection';
+import { PurgeForm } from './PurgeForm';
 import { type CardState, deleteCoupleAction, saveCoupleAction } from './actions';
 import style from './card.module.css';
 
@@ -23,11 +24,16 @@ export function CoupleCard({
   editable,
   options,
   regionChangeable,
+  deleted,
+  purgeable,
 }: {
   card: CardData;
   editable: boolean;
   options: { circles: { id: string; label: string }[]; parishes: { id: string; label: string }[] };
   regionChangeable: boolean;
+  /** Already soft-deleted: readable, not correctable. */
+  deleted: boolean;
+  purgeable: boolean;
 }) {
   const router = useRouter();
   const dialog = useRef<HTMLDialogElement>(null);
@@ -181,10 +187,14 @@ export function CoupleCard({
           </form>
         )}
 
+        {purgeable && !isNew && <PurgeForm id={card.id} surname={card.surname} />}
+
         <p className={style.note}>
-          {editable
-            ? 'Każdy zapis trafia do historii zmian z Twoim kontem i datą.'
-            : 'Podgląd bez możliwości edycji.'}
+          {deleted
+            ? 'Ta para jest usunięta z kartoteki. Zostaje tu do trwałego usunięcia na żądanie.'
+            : editable
+              ? 'Każdy zapis trafia do historii zmian z Twoim kontem i datą.'
+              : 'Podgląd bez możliwości edycji.'}
         </p>
       </div>
     </dialog>
