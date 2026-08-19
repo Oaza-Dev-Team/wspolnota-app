@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createInvite, setAccountStatus } from '@/lib/accounts/manage';
+import { AccountNameError, createInvite, renameAccount, setAccountStatus } from '@/lib/accounts/manage';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 
@@ -53,4 +53,28 @@ export async function inviteAction(
     if (e instanceof Forbidden) return { error: e.message };
     throw e;
   }
+}
+
+export async function renameAccountAction(
+  _state: AccountsState,
+  formData: FormData,
+): Promise<AccountsState> {
+  const u = await requireUser();
+  const id = idFrom(formData);
+  if (id === null) return { error: 'Brak identyfikatora konta' };
+
+  const name = formData.get('name');
+  if (typeof name !== 'string') return { error: 'Podaj nazwę pary' };
+
+  try {
+    await renameAccount(u, id, name);
+  } catch (e) {
+    if (e instanceof Forbidden || e instanceof AccountNameError) return { error: e.message };
+    throw e;
+  }
+
+  revalidatePath('/accounts');
+  // The regions overview shows the same name on its tiles.
+  revalidatePath('/regions');
+  return {};
 }

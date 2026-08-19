@@ -4,9 +4,9 @@ import { hashPassword } from '@/lib/auth/password';
 import { Forbidden, type User, canManageAccounts } from '@/lib/auth/permissions';
 import { deleteAccountSessions } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { INVITE_DAYS, MIN_PASSWORD_LENGTH } from './policy';
+import { INVITE_DAYS, MAX_ACCOUNT_NAME, MIN_PASSWORD_LENGTH } from './policy';
 
-export { INVITE_DAYS, MIN_PASSWORD_LENGTH };
+export { INVITE_DAYS, MAX_ACCOUNT_NAME, MIN_PASSWORD_LENGTH };
 
 export class InviteError extends Error {
   constructor(message: string) {
@@ -58,6 +58,49 @@ export async function setAccountStatus(
   // Outside the transaction is fine: re-enabling creates no sessions, and
   // disabling must end them whether or not the audit row committed first.
   if (status === 'disabled') await deleteAccountSessions(id);
+}
+
+export class AccountNameError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'AccountNameError';
+  }
+}
+
+/**
+ * The account name is what the regions overview shows as the couple
+ * responsible for that region, so renaming happens here rather than on a
+ * separate "couple responsible" record — there is only one name to keep.
+ */
+export async function renameAccount(u: User, id: bigint, name: string): Promise<void> {
+  if (!canManageAccounts(u)) {
+    throw new Forbidden('Zarządzanie kontami wymaga uprawnień administratora');
+  }
+
+  const trimmed = name.trim();
+  if (trimmed === '') throw new AccountNameError('Podaj nazwę pary');
+  if (trimmed.length > MAX_ACCOUNT_NAME) {
+    throw new AccountNameError(`Nazwa może mieć najwyżej ${MAX_ACCOUNT_NAME} znaków`);
+  }
+
+  const account = await prisma.account.findUniqueOrThrow({
+    where: { id },
+    select: { name: true },
+  });
+  if (account.name === trimmed) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.account.update({ where: { id }, data: { name: trimmed } });
+
+    await tx.audit.create({
+      data: {
+        kind: 'account',
+        // Both names: the history has to say what actually changed.
+        description: `Zmieniono nazwę konta „${account.name}" na „${trimmed}"`,
+        accountId: u.id,
+      },
+    });
+  });
 }
 
 /**

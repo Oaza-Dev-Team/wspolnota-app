@@ -1,12 +1,12 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { AccountRow as Row } from '@/lib/accounts/list';
 import { INVITE_DAYS } from '@/lib/accounts/policy';
 import { regionColor } from '@/lib/domain/regions';
 import { COUPLES, plural } from '@/lib/pl';
-import { type AccountsState, inviteAction, toggleAccountAction } from './actions';
+import { type AccountsState, inviteAction, renameAccountAction, toggleAccountAction } from './actions';
 import style from './accounts.module.css';
 
 const STATUS_LABEL: Record<Row['status'], string> = {
@@ -27,6 +27,8 @@ function ActionButton({ label }: { label: string }) {
 export function AccountRow({ row }: { row: Row }) {
   const [toggleState, toggle] = useActionState<AccountsState, FormData>(toggleAccountAction, {});
   const [inviteState, invite] = useActionState<AccountsState, FormData>(inviteAction, {});
+  const [renameState, rename] = useActionState<AccountsState, FormData>(renameAccountAction, {});
+  const [editing, setEditing] = useState(false);
 
   const code = row.roman ?? 'MOD';
   const color = row.regionId === null ? 'var(--navy-700)' : regionColor(row.regionId);
@@ -35,7 +37,7 @@ export function AccountRow({ row }: { row: Row }) {
       ? 'Cała wspólnota · podgląd'
       : `Rejon ${row.roman} · ${plural(row.couples, COUPLES)}`;
 
-  const error = toggleState.error ?? inviteState.error;
+  const error = toggleState.error ?? inviteState.error ?? renameState.error;
 
   return (
     <li className={style.row}>
@@ -48,7 +50,40 @@ export function AccountRow({ row }: { row: Row }) {
       </span>
 
       <span className={style.identity}>
-        <span className={style.name}>{row.name}</span>
+        {editing ? (
+          <form
+            action={rename}
+            className={style.renameForm}
+            // The action redirects nothing; closing on submit keeps the row
+            // from staying in edit mode after a successful save.
+            onSubmit={() => setEditing(false)}
+          >
+            <input type="hidden" name="id" value={row.id} />
+            <input
+              className={style.renameInput}
+              name="name"
+              defaultValue={row.name}
+              aria-label={`Nazwa pary dla konta ${row.email}`}
+              autoFocus
+            />
+            <button type="submit" className={style.action}>Zapisz</button>
+            <button type="button" className={style.action} onClick={() => setEditing(false)}>
+              Anuluj
+            </button>
+          </form>
+        ) : (
+          <span className={style.nameRow}>
+            <span className={style.name}>{row.name}</span>
+            <button
+              type="button"
+              className={style.rename}
+              onClick={() => setEditing(true)}
+              aria-label={`Zmień nazwę pary dla konta ${row.email}`}
+            >
+              Zmień
+            </button>
+          </span>
+        )}
         <span className={style.email}>{row.email}</span>
       </span>
 

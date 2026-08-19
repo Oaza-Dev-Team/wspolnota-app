@@ -3,7 +3,7 @@ import { Forbidden, type User } from '@/lib/auth/permissions';
 import { verifyPassword } from '@/lib/auth/password';
 import { createSession, userFromToken } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
-import { createInvite, redeemInvite, setAccountStatus } from './manage';
+import { createInvite, redeemInvite, renameAccount, setAccountStatus } from './manage';
 
 const TARGET_NAME = 'Konto testowe zarządzania';
 
@@ -45,6 +45,9 @@ afterEach(async () => {
   await prisma.account.update({
     where: { id: targetId },
     data: {
+      // The name is reset too: the rename tests change it, and later ones
+      // assert against the original.
+      name: TARGET_NAME,
       status: 'active',
       passwordHash: null,
       inviteTokenHash: null,
@@ -155,5 +158,45 @@ describe('redeemInvite', () => {
   it('refuses a password that is too short', async () => {
     const token = await createInvite(admin, targetId);
     await expect(redeemInvite(token, 'krotkie')).rejects.toThrow();
+  });
+});
+
+describe('renameAccount', () => {
+  it('changes the name a region tile and the accounts list show', async () => {
+    await renameAccount(admin, targetId, 'Anna i Marek Sowa');
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.name).toBe('Anna i Marek Sowa');
+  });
+
+  it('records the rename in the audit trail with both names', async () => {
+    await renameAccount(admin, targetId, 'Ewa i Jan Cichy');
+    const entry = await prisma.audit.findFirstOrThrow({
+      where: { kind: 'account', description: { contains: 'Ewa i Jan Cichy' } },
+      orderBy: { id: 'desc' },
+    });
+    // Both names, so the history says what actually changed.
+    expect(entry.description).toContain(TARGET_NAME);
+    await prisma.audit.deleteMany({ where: { id: entry.id } });
+  });
+
+  it('trims surrounding whitespace', async () => {
+    await renameAccount(admin, targetId, '   Zofia i Jan Nowak   ');
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.name).toBe('Zofia i Jan Nowak');
+  });
+
+  it('refuses an empty name', async () => {
+    await expect(renameAccount(admin, targetId, '   ')).rejects.toThrow();
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.name).toBe(TARGET_NAME);
+  });
+
+  it('refuses a name longer than the column allows', async () => {
+    await expect(renameAccount(admin, targetId, 'x'.repeat(121))).rejects.toThrow();
+  });
+
+  // Same rule as every other account operation: administration is admin-only.
+  it('refuses a region account', async () => {
+    await expect(renameAccount(regionVII, targetId, 'Podszyci')).rejects.toThrow(Forbidden);
   });
 });
