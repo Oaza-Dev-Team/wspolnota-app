@@ -15,6 +15,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "retention": "tsx scripts/retention.mts",
+    "create-admin": "tsx scripts/create-admin.mts",
     "e2e": "tsx prisma/seed.ts && tsx e2e/prepare.ts && playwright test"
   },
   "dependencies": {

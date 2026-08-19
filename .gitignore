@@ -40,8 +40,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# the template must stay tracked; .env* above would swallow it
+# the templates must stay tracked; .env* above would swallow them
 !.env.example
+!.env.production.example
 
 # Prisma client is generated on postinstall
 /src/generated
