@@ -1,0 +1,29 @@
+# Kartoteka DK — reverse proxy.
+#
+# Caddy obtains and renews the Let's Encrypt certificate on its own; the only
+# thing it needs is the domain in APP_DOMAIN and ports 80 and 443 reachable
+# from the internet.
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# The app is served over HTTPS only. Two years, subdomains included.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "same-origin"
+		# The registry holds article 9 data; no reason for a browser to hand
+		# any of these capabilities to the page.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+		-Server
+	}
+
+	reverse_proxy app:3000
+
+	log {
+		# Request paths can carry search terms, which here are people's names.
+		# Errors only, so ordinary traffic leaves no trail of who was looked up.
+		level ERROR
+	}
+}
