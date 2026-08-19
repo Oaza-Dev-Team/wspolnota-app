@@ -41,8 +41,9 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   poniżej 860 px
 - karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie
   **z przywracaniem**, audyt
-  w tej samej transakcji; parafia to **select z wyszukiwarką** — „— jak w kręgu —",
-  lista zawężana bez znaków diakrytycznych, „+ nowa parafia…"; `DECISIONS.md` §1.18
+  w tej samej transakcji; parafia to **combobox** (`ParishCombobox.tsx`, wariant 1A
+  z `docs/handoff/PARISH_COMBOBOX.md`) nad ukrytym `parishId` — kontrakt zapisu
+  niezmieniony; `DECISIONS.md` §1.18
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
 - kafelki rejonów ze statystykami, konta (utwórz / usuń / włącz / wyłącz / zaproś /
@@ -87,7 +88,7 @@ npm test          # 141 testów jednostkowych
 npm run test:int  # 197 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 81 testów Playwright, na buildzie produkcyjnym
+npm run e2e       # 84 testy Playwright, na buildzie produkcyjnym
 npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 

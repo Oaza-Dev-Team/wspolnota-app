@@ -126,3 +126,20 @@ test.describe('console', () => {
     expect(errors, errors.join('\n')).toEqual([]);
   });
 });
+
+test('the parish combobox tells assistive technology what it is doing', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/couples');
+  await page.getByRole('link', { name: /^(Edytuj|Podgląd) →$/ }).first().click();
+
+  const field = page.getByRole('dialog').getByLabel('Parafia');
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+
+  await field.click();
+  await expect(field).toHaveAttribute('aria-expanded', 'true');
+  // Which row the arrow keys are on has to be readable, not only visible.
+  await field.press('ArrowDown');
+  const active = await field.getAttribute('aria-activedescendant');
+  expect(active).toBeTruthy();
+  await expect(page.locator(`#${active}`)).toHaveAttribute('aria-selected', 'true');
+});

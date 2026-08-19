@@ -1,12 +1,12 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import type { CardData, FormationEntry } from '@/lib/couples/card';
+import type { CardData, CircleOption, FormationEntry, ParishOption } from '@/lib/couples/card';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
-import { PARISHES, plural } from '@/lib/pl';
 import { FormationSection } from './FormationSection';
+import { ParishCombobox } from './ParishCombobox';
 import { PurgeForm } from './PurgeForm';
 import {
   type CardState, deleteCoupleAction, restoreCoupleAction, saveCoupleAction,
@@ -22,14 +22,6 @@ function SaveButton() {
   );
 }
 
-/**
- * Diacritics stripped both sides, so "brygidy" finds "św. Brygidy" and
- * "gdansk" finds "Gdańsk" — the same courtesy the list search already does
- * in Postgres through immutable_unaccent.
- */
-const fold = (s: string): string =>
-  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
 export function CoupleCard({
   card,
   editable,
@@ -41,7 +33,7 @@ export function CoupleCard({
 }: {
   card: CardData;
   editable: boolean;
-  options: { circles: { id: string; label: string }[]; parishes: { id: string; label: string }[] };
+  options: { circles: CircleOption[]; parishes: ParishOption[] };
   regionChangeable: boolean;
   /** Already soft-deleted: readable, not correctable. */
   deleted: boolean;
@@ -62,23 +54,21 @@ export function CoupleCard({
   // "__new__" in either select swaps that field for the inputs that describe
   // the entity to create. The save layer already knows how to make them.
   const [parishMode, setParishMode] = useState(card.parishId ?? '');
-  const [parishQuery, setParishQuery] = useState('');
+  const [newParishText, setNewParishText] = useState('');
+  const newParishCityRef = useRef<HTMLInputElement>(null);
 
-  const parishMatches = useMemo(() => {
-    const q = fold(parishQuery.trim());
-    return q === '' ? options.parishes : options.parishes.filter((p) => fold(p.label).includes(q));
-  }, [options.parishes, parishQuery]);
-
-  // Whatever the search says, the parish already chosen stays on the list.
-  // Dropping it would leave the select showing the first option instead, and
-  // saving would then move the couple to a parish nobody picked.
-  const parishChoices = useMemo(() => {
-    const chosen = options.parishes.find((p) => p.id === parishMode);
-    return chosen && !parishMatches.some((p) => p.id === chosen.id)
-      ? [chosen, ...parishMatches]
-      : parishMatches;
-  }, [options.parishes, parishMatches, parishMode]);
   const [circleMode, setCircleMode] = useState(card.circleId ?? '');
+
+  // Which parish the couple would inherit if it kept no parish of its own.
+  // Read from the circle selected at this moment, not from the saved one, so
+  // the sentence under the field stays true after changing circle.
+  const inheritedParish =
+    options.circles.find((c) => c.id === circleMode)?.parishLabel ?? null;
+
+  // The name came from the combobox, so the only thing left to type is the city.
+  useEffect(() => {
+    if (parishMode === '__new__') newParishCityRef.current?.focus();
+  }, [parishMode]);
 
   // showModal is what gives the focus trap, Esc handling and the backdrop.
   // A <dialog open> attribute would render the element without any of them.
@@ -223,45 +213,15 @@ export function CoupleCard({
             </div>
           )}
 
-          {/*
-            A div rather than a label: this field holds two controls, and a
-            wrapping label binds to the first one only, which would leave the
-            select nameless. Each carries its own aria-label instead.
-
-            A select, because it is the only control that states what is chosen
-            without being opened — and for most couples what is chosen is
-            "inherited from the circle", which an empty text field cannot say.
-            The search box exists because an archdiocese has more parishes than
-            anybody wants to scroll.
-          */}
           <div className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Parafia</span>
-            {editable && (
-              <input
-                className={style.search}
-                type="search"
-                value={parishQuery}
-                onChange={(e) => setParishQuery(e.currentTarget.value)}
-                placeholder="Szukaj parafii — nazwa lub miasto"
-                aria-label="Szukaj parafii"
-              />
-            )}
-            <select className={style.control} name="parishId" value={parishMode}
-              aria-label="Parafia"
-              disabled={!editable} onChange={(e) => setParishMode(e.currentTarget.value)}>
-              <option value="">— jak w kręgu —</option>
-              {parishChoices.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-              <option value="__new__">+ nowa parafia…</option>
-            </select>
-            {editable && parishQuery !== '' && (
-              <span className={style.fieldHint}>
-                {parishMatches.length === 0
-                  ? 'Nic nie pasuje — wyczyść wyszukiwanie albo dodaj nową parafię.'
-                  : `Lista zawężona do ${plural(parishMatches.length, PARISHES)}.`}
-              </span>
-            )}
+            <ParishCombobox
+              parishes={options.parishes}
+              valueId={parishMode}
+              inheritedLabel={inheritedParish}
+              editable={editable}
+              onChange={(choice) => { setParishMode(choice.id); setNewParishText(choice.text); }}
+            />
           </div>
 
           {parishMode === '__new__' && (
@@ -271,6 +231,10 @@ export function CoupleCard({
                 <input
                   className={style.control}
                   name="newParishName"
+                  // Whatever was typed into the combobox: the name is known,
+                  // which is why the focus below goes to the city instead.
+                  defaultValue={newParishText}
+                  key={newParishText}
                   placeholder="np. św. Brygidy"
                   disabled={!editable}
                 />
@@ -280,6 +244,7 @@ export function CoupleCard({
                 <input
                   className={style.control}
                   name="newParishCity"
+                  ref={newParishCityRef}
                   placeholder="np. Gdańsk"
                   disabled={!editable}
                 />

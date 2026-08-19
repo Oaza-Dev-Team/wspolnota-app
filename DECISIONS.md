@@ -244,7 +244,7 @@ Pokryte testem e2e, w którym konto rejonowe zakłada parę, usuwa ją i przywra
 Warto zapamiętać: **jedenaście z piętnastu kont to konta rejonowe** i to one wprowadzają
 dane. Każda ścieżka ma być sprawdzana także z ich uprawnieniami, nie tylko adminem.
 
-### 1.18 Parafia: select z wyszukiwaniem, nie pole tekstowe
+### 1.18 Parafia: droga od selecta przez pole tekstowe do comboboxa
 
 19.08.2026 zamieniłem select parafii na pole tekstowe z `<datalist>`, licząc na to,
 że przeglądarka da filtrowanie za darmo. **Cofnięte następnego dnia**, bo pole tekstowe
@@ -266,6 +266,23 @@ a zapis przeniósłby parę do parafii, której nikt nie wskazał.
 
 Pole to `<div>`, nie `<label>` — etykieta wiąże się z pierwszą kontrolką w środku,
 a te są dwie, więc select zostałby bez nazwy. Każda kontrolka ma własny `aria-label`.
+
+**20.08.2026 i to zostało zastąpione.** Select z szukajką nad nim to były wciąż dwie
+kontrolki na jedną decyzję. Wariant 1A z `docs/handoff/PARISH_COMBOBOX.md` — ten
+dokument jest nadrzędny dla zachowania pola — daje jedno pole: `ParishCombobox.tsx`,
+combobox ARIA nad ukrytym `<input name="parishId">`. **Kontrakt zapisu bez zmian**,
+`actions.ts` nietknięty: nadal `''` / `<id>` / `__new__`.
+
+Zysk selecta został zachowany i o to głównie chodziło: zwinięte pole mówi, co jest
+wybrane, a przy dziedziczeniu pokazuje `— jak w kręgu — (św. Brygidy, Gdańsk)` i zdanie
+`Dziedziczy z kręgu: …`, które **idzie za zmianą kręgu w tej samej sesji** (etykieta
+parafii kręgu wędruje w `options.circles[].parishLabel`).
+
+Rzeczy, które łatwo zepsuć, i dlatego mają testy: `Esc`, klik poza listą i samo pisanie
+**nie zmieniają** ukrytego pola; wybór działa samą klawiaturą; wiersz „+ nowa parafia"
+pojawia się dopiero przy trzech znakach i tylko wtedy, gdy żadna parafia tak się nie
+nazywa. Diakrytyki składane 1:1, nie przez `normalize('NFD')` — inaczej indeksy
+pogrubienia trafienia rozjechałyby się z oryginalnym napisem.
 
 Wniosek na przyszłość: zanim uznam kontrolkę za zbędną, sprawdzam, **jaki stan pokazuje
 w danych, które faktycznie są w bazie** — nie w tych, które mam w głowie.

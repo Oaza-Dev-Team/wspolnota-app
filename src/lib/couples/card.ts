@@ -92,14 +92,23 @@ export function blankCard(u: User): CardData {
   };
 }
 
+export type ParishOption = { id: string; name: string; city: string; label: string };
+/** `parishLabel` is the parish a couple inherits by belonging to this circle. */
+export type CircleOption = { id: string; label: string; parishLabel: string | null };
+
 export async function cardOptions(regionId: number): Promise<{
-  circles: { id: string; label: string }[];
-  parishes: { id: string; label: string }[];
+  circles: CircleOption[];
+  parishes: ParishOption[];
 }> {
   const [circles, parishes] = await Promise.all([
     prisma.circle.findMany({
       where: { regionId },
-      select: { id: true, number: true, patron: true },
+      select: {
+        id: true, number: true, patron: true,
+        // The card says which parish a couple inherits from its circle, and
+        // that sentence has to follow a change of circle within one session.
+        parish: { select: { name: true, city: true } },
+      },
       orderBy: { number: 'asc' },
     }),
     prisma.parish.findMany({
@@ -112,7 +121,12 @@ export async function cardOptions(regionId: number): Promise<{
     circles: circles.map((c) => ({
       id: String(c.id),
       label: c.patron ? `${c.number} · ${c.patron}` : String(c.number),
+      parishLabel: c.parish ? parishLabel(c.parish) : null,
     })),
-    parishes: parishes.map((p) => ({ id: String(p.id), label: parishLabel(p) })),
+    // Name and city stay apart: a combobox row shows the city on the right.
+    // `label` is what FilterBar and the table still want, in one piece.
+    parishes: parishes.map((p) => ({
+      id: String(p.id), name: p.name, city: p.city, label: parishLabel(p),
+    })),
   };
 }

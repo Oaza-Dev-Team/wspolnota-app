@@ -179,9 +179,11 @@ test('creating a couple can introduce a parish and a circle that do not exist ye
   const drawer = page.getByRole('dialog');
   await drawer.getByLabel('Nazwisko').fill(surname);
 
-  // The parish select grows a "+ new" option that swaps the field for inputs.
-  await drawer.getByLabel('Parafia').selectOption('__new__');
-  await drawer.getByLabel('Nazwa parafii').fill(parish);
+  // The combobox offers to create what nobody answers to yet, and the row
+  // appears only once the name is long enough to be one.
+  await drawer.getByLabel('Parafia').fill(parish);
+  await drawer.getByRole('option', { name: new RegExp(`nowa parafia`) }).click();
+  await expect(drawer.getByLabel('Nazwa parafii')).toHaveValue(parish);
   await drawer.getByLabel('Miasto').fill(city);
 
   await drawer.getByLabel('Krąg').selectOption('__new__');
@@ -211,7 +213,7 @@ test('a new circle without a parish is refused with a message, not a crash', asy
 
   const drawer = page.getByRole('dialog');
   await drawer.getByLabel('Nazwisko').fill(`BezParafii${Date.now() % 1000000}`);
-  // Parish left at "— jak w kręgu —", so the new circle has nothing to inherit.
+  // Parish left inherited, so the new circle has no parish to take.
   await drawer.getByLabel('Krąg').selectOption('__new__');
   await drawer.getByLabel('Numer kręgu').fill('43');
 
@@ -219,31 +221,29 @@ test('a new circle without a parish is refused with a message, not a crash', asy
   await expect(drawerAlert(page)).toContainText('Nowy krąg musi mieć parafię');
 });
 
+/** The hidden input is the contract with the server; the visible field is not. */
+function parishValue(page: Page) {
+  return page.getByRole('dialog').locator('input[name="parishId"]');
+}
+
 test('searching narrows the parish list without losing what is already chosen', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
   await page.goto('/couples');
   await openFirstCard(page);
 
   const drawer = page.getByRole('dialog');
-  const parish = drawer.getByLabel('Parafia');
-  const chosenBefore = await parish.inputValue();
+  const field = drawer.getByLabel('Parafia');
+  const before = await parishValue(page).inputValue();
 
-  // Every parish is on offer until something is typed.
-  const all = await parish.locator('option').count();
-  await drawer.getByLabel('Szukaj parafii').fill('gdansk');
+  await field.click();
+  const all = await drawer.getByRole('option').count();
+  // Folded both ways: "gdansk" has to reach "Gdańsk".
+  await field.fill('gdansk');
+  await expect(drawer.getByRole('option')).not.toHaveCount(all);
+  await expect(drawer.getByText(/ z \d+ parafii/)).toBeVisible();
 
-  // Folded both sides: "gdansk" has to find "Gdańsk".
-  const narrowed = await parish.locator('option').count();
-  expect(narrowed).toBeLessThan(all);
-  await expect(drawer.getByText(/Lista zawężona do/)).toBeVisible();
-
-  // The selection survives the filter. Were the chosen option filtered away,
-  // the select would fall back to its first entry and a save would move the
-  // couple to a parish nobody picked.
-  expect(await parish.inputValue()).toBe(chosenBefore);
-
-  await drawer.getByLabel('Szukaj parafii').fill('');
-  await expect(parish.locator('option')).toHaveCount(all);
+  // Typing is not choosing: nothing is decided until a row is picked.
+  expect(await parishValue(page).inputValue()).toBe(before);
 });
 
 test('a couple that takes its parish from the circle says so rather than looking empty', async ({ page }) => {
@@ -251,11 +251,49 @@ test('a couple that takes its parish from the circle says so rather than looking
   await page.goto('/couples');
   await openFirstCard(page);
 
-  // Most couples carry no parish of their own; the field has to name that
-  // state instead of showing a blank that reads as "nothing here yet".
-  const parish = page.getByRole('dialog').getByLabel('Parafia');
-  const label = await parish.locator('option:checked').textContent();
-  expect(label).toBeTruthy();
+  // Most couples carry no parish of their own. The field has to name that
+  // state, and name the parish behind it, instead of showing a blank.
+  const drawer = page.getByRole('dialog');
+  if ((await parishValue(page).inputValue()) === '') {
+    await expect(drawer.getByLabel('Parafia')).toHaveAttribute(
+      'placeholder', /jak w kręgu/,
+    );
+    await expect(drawer.getByText(/Dziedziczy z kręgu:/)).toBeVisible();
+  }
+});
+
+test('keyboard alone can pick a parish', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/couples');
+  await openFirstCard(page);
+
+  const field = page.getByRole('dialog').getByLabel('Parafia');
+  await field.focus();
+  await field.press('ArrowDown');
+  await field.press('ArrowDown');
+  await field.press('Enter');
+
+  // The second row is the first real parish; the first is "— jak w kręgu —".
+  await expect(parishValue(page)).not.toHaveValue('');
+  await expect(parishValue(page)).not.toHaveValue('__new__');
+});
+
+test('Escape closes the list without changing the choice', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/couples');
+  await openFirstCard(page);
+
+  const drawer = page.getByRole('dialog');
+  const field = drawer.getByLabel('Parafia');
+  const before = await parishValue(page).inputValue();
+
+  await field.click();
+  await field.fill('bryg');
+  await field.press('ArrowDown');
+  await field.press('Escape');
+
+  await expect(drawer.getByRole('listbox')).toHaveCount(0);
+  expect(await parishValue(page).inputValue()).toBe(before);
 });
 
 test('a deleted couple can be found again and put back', async ({ page }) => {

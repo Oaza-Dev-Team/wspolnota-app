@@ -383,26 +383,51 @@
   padding: 12px;
 }
 
-/* Narrows the select underneath it; lighter than the control it filters. */
-.search {
-  border: 1px solid var(--border-input);
-  border-radius: var(--r-8);
-  padding: 8px 11px;
-  font-size: 13px;
-  background: var(--bg-row-alt);
-  color: var(--text);
+/* The field and its list share a corner, so the list can hang off it. */
+.combo {
+  position: relative;
+}
+
+.comboList {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  /* Taller than this and the list leaves the drawer; shorter and it flickers. */
+  max-height: 266px;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-9);
+  box-shadow: var(--shadow-toast);
+  /* Only has to beat .newEntity, which opens directly underneath it. */
+  z-index: 2;
+}
+
+.comboRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-height: 44px;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-body);
+  cursor: pointer;
 }
-/* Same two-step as .control: a soft ring for the mouse, a real outline for
-   the keyboard. */
-.search:focus {
-  border-color: var(--blue-500);
-  box-shadow: var(--focus-ring);
-  outline: none;
+
+.comboRowActive {
+  background: var(--bg-row);
 }
-.search:focus-visible {
-  outline: 2px solid var(--blue-500);
-  outline-offset: 2px;
+
+.comboMeta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.comboMark {
+  color: var(--navy-700);
 }
 
 .hint {
