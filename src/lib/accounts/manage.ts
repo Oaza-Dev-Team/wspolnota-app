@@ -30,13 +30,16 @@ function hashToken(token: string): string {
  * this particular account is not above them. Loading the row first is the
  * point — the answer depends on the role being acted on, not only the caller.
  */
-async function assertMayManage(u: User, id: bigint): Promise<{ role: Role; name: string; email: string; status: AccountStatus }> {
+async function assertMayManage(
+  u: User,
+  id: bigint,
+): Promise<{ role: Role; name: string; email: string; status: AccountStatus; regionLead: boolean }> {
   if (!canManageAccounts(u)) {
     throw new Forbidden('Zarządzanie kontami wymaga uprawnień administratora');
   }
   const account = await prisma.account.findUniqueOrThrow({
     where: { id },
-    select: { role: true, name: true, email: true, status: true },
+    select: { role: true, name: true, email: true, status: true, regionLead: true },
   });
   if (!canManageRole(u, account.role)) {
     throw new Forbidden('Konta technicznego nie zmienia się z poziomu administratora');
@@ -223,8 +226,10 @@ export async function handOverRegion(
   rawEmail: string,
 ): Promise<string> {
   const account = await assertMayManage(u, id);
-  if (account.role !== 'region') {
-    throw new Forbidden('Przekazać można wyłącznie konto rejonowe');
+  // A helper is not the region: replacing one is a deletion and a fresh
+  // invitation, with nothing to revoke beyond that one account.
+  if (!account.regionLead) {
+    throw new Forbidden('Przekazać można wyłącznie konto pary odpowiedzialnej za rejon');
   }
 
   const name = rawName.trim();
@@ -275,6 +280,8 @@ export type NewAccount = {
   role: Role;
   /** Required for a region account, refused for every other role. */
   regionId: number | null;
+  /** Only meaningful for a region account: the responsible couple, or a helper. */
+  regionLead: boolean;
 };
 
 /**
@@ -303,6 +310,7 @@ export async function createAccount(u: User, input: NewAccount): Promise<string>
   await assertEmailFree(email);
 
   const regionId = await resolveNewAccountRegion(input);
+  const regionLead = input.role === 'region' && input.regionLead;
   const token = randomBytes(32).toString('base64url');
 
   await prisma.$transaction(async (tx) => {
@@ -312,6 +320,7 @@ export async function createAccount(u: User, input: NewAccount): Promise<string>
         email,
         role: input.role,
         regionId,
+        regionLead,
         status: 'pending',
         inviteTokenHash: hashToken(token),
         inviteExpiresAt: new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000),
@@ -321,7 +330,8 @@ export async function createAccount(u: User, input: NewAccount): Promise<string>
     await tx.audit.create({
       data: {
         kind: 'account',
-        description: `Utworzono konto ${name} (${email}), rola: ${ROLE_LABEL[input.role]}`,
+        description:
+          `Utworzono konto ${name} (${email}), rola: ${describeRole(input.role, regionLead)}`,
         accountId: u.id,
       },
     });
@@ -334,9 +344,14 @@ export async function createAccount(u: User, input: NewAccount): Promise<string>
 const ROLE_LABEL: Record<Role, string> = {
   superadmin: 'konto techniczne',
   admin: 'para odpowiedzialna za wspólnotę',
-  region: 'para rejonowa',
+  region: 'para odpowiedzialna za rejon',
   viewer: 'moderator',
 };
+
+function describeRole(role: Role, regionLead: boolean): string {
+  if (role === 'region' && !regionLead) return 'pomocnik rejonu';
+  return ROLE_LABEL[role];
+}
 
 export class AccountRegionError extends Error {
   constructor(message: string) {
@@ -358,17 +373,65 @@ async function resolveNewAccountRegion(input: NewAccount): Promise<number | null
     throw new AccountRegionError(`Wybierz rejon z zakresu I–${romanNumeral(REGION_COUNT)}`);
   }
 
+  // Helpers are neither counted nor limited: a region may ask as many couples
+  // as it likes to keep the registry up to date.
+  if (!input.regionLead) return regionId;
+
+  // The responsible couple is one per region. A partial unique index says the
+  // same thing to the database; this is the message a person can act on.
+  // Status deliberately ignored: the partial unique index counts every lead,
+  // disabled ones included, and a couple switched off for a while still holds
+  // the office. Filtering by status here would let this pass and the database
+  // refuse, turning a clear message into a raw constraint violation.
   const taken = await prisma.account.findFirst({
-    where: { role: 'region', regionId, status: { not: 'disabled' } },
+    where: { role: 'region', regionId, regionLead: true },
     select: { name: true },
   });
   if (taken) {
     throw new AccountRegionError(
-      `Rejon ${romanNumeral(regionId)} ma już konto (${taken.name}) — użyj „Przekaż rejon”`,
+      `Rejon ${romanNumeral(regionId)} ma już parę odpowiedzialną (${taken.name}) `
+      + '— użyj „Przekaż rejon” albo załóż konto pomocnika',
     );
   }
 
   return regionId;
+}
+
+/**
+ * Removes an account outright. Its sessions go with it through the foreign
+ * key, and its audit entries stay: `audit.account_id` is ON DELETE SET NULL
+ * and the history renders a headless entry as "konto usunięte". A register of
+ * accountability that disappears with the account it accounts for is not a
+ * register — but the name and the address, which are what identify a person,
+ * do go.
+ *
+ * Disabling remains the reversible option. This one is for an account that
+ * should never have existed, or for somebody who has left for good.
+ */
+export async function deleteAccount(u: User, id: bigint): Promise<void> {
+  const account = await assertMayManage(u, id);
+
+  // The two ways an installation loses its last way back in.
+  if (id === u.id) throw new Forbidden('Nie można usunąć własnego konta');
+  await assertNotLastCaretaker(account.role, id);
+
+  await prisma.$transaction(async (tx) => {
+    await tx.audit.create({
+      data: {
+        kind: 'account',
+        // The name outlives the account here on purpose: the entry has to say
+        // whose access was taken away. Retention prunes it in time.
+        description: `Usunięto konto ${account.name} (${describeRole(account.role, account.regionLead)})`,
+        accountId: u.id,
+      },
+    });
+
+    await tx.account.delete({ where: { id } });
+  });
+
+  // Belt and braces: the cascade removes them, and this makes the intent
+  // legible next to every other operation that ends somebody's access.
+  await deleteAccountSessions(id);
 }
 
 export async function redeemInvite(token: string, password: string): Promise<void> {

@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { Forbidden, type User } from '@/lib/auth/permissions';
+import { Forbidden, type User, canEdit, listScope } from '@/lib/auth/permissions';
 import { verifyPassword } from '@/lib/auth/password';
 import { createSession, userFromToken } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
+import { regionStats } from '@/lib/regions/stats';
 import {
   AccountRegionError, EmailError, changeEmail, createAccount, createInvite,
-  handOverRegion, redeemInvite, renameAccount, setAccountStatus,
+  deleteAccount, handOverRegion, redeemInvite, renameAccount, setAccountStatus,
 } from './manage';
 
 const TARGET_NAME = 'Konto testowe zarządzania';
@@ -15,6 +16,7 @@ let admin: User;
 let caretaker: User;
 let regionVII: User;
 let targetId: bigint;
+let seededLeadId: bigint;
 
 beforeAll(async () => {
   const byEmail = async (email: string): Promise<User> => {
@@ -27,12 +29,23 @@ beforeAll(async () => {
   // A throwaway account rather than a seeded one: redeeming an invite rewrites
   // the password, and a run interrupted halfway would leave a seeded account
   // unable to sign in for every later test.
+  // handOverRegion only accepts the couple responsible for a region, and a
+  // partial unique index allows one per region — so region V lends its slot
+  // for the length of this file and gets it back in afterAll. Integration
+  // tests run one file at a time (fileParallelism: false), so nothing else
+  // reads region V while it is on loan.
+  seededLeadId = (await prisma.account.findUniqueOrThrow({
+    where: { email: 'rejon5@example.pl' },
+  })).id;
+  await prisma.account.update({ where: { id: seededLeadId }, data: { regionLead: false } });
+
   const target = await prisma.account.create({
     data: {
       email: TARGET_EMAIL,
       name: TARGET_NAME,
       role: 'region',
       regionId: 5,
+      regionLead: true,
       status: 'active',
       passwordHash: null,
     },
@@ -44,6 +57,9 @@ afterAll(async () => {
   await prisma.session.deleteMany({ where: { accountId: targetId } });
   await prisma.audit.deleteMany({ where: { accountId: targetId } });
   await prisma.account.delete({ where: { id: targetId } });
+  // Region V gets its responsible couple back; the slot is free again now
+  // that the throwaway holding it is gone.
+  await prisma.account.update({ where: { id: seededLeadId }, data: { regionLead: true } });
   await prisma.$disconnect();
 });
 
@@ -334,7 +350,7 @@ describe('creating accounts', () => {
 
   it('starts an account with no password, pending, holding an invite', async () => {
     const { token, account } = await create(admin, {
-      name: 'Nowa i Para', email: 'nowe.konto@example.pl', role: 'viewer', regionId: null,
+      name: 'Nowa i Para', email: 'nowe.konto@example.pl', role: 'viewer', regionId: null, regionLead: false,
     });
 
     expect(account.passwordHash).toBeNull();
@@ -351,7 +367,7 @@ describe('creating accounts', () => {
 
   it('records the creation in the audit, in the same transaction', async () => {
     const { account } = await create(admin, {
-      name: 'Audytowana Para', email: 'nowe.konto.audyt@example.pl', role: 'viewer', regionId: null,
+      name: 'Audytowana Para', email: 'nowe.konto.audyt@example.pl', role: 'viewer', regionId: null, regionLead: false,
     });
 
     const entry = await prisma.audit.findFirst({
@@ -365,17 +381,17 @@ describe('creating accounts', () => {
   it('refuses an address that already signs somebody in', async () => {
     await expect(
       createAccount(admin, {
-        name: 'Duplikat', email: 'admin@example.pl', role: 'viewer', regionId: null,
+        name: 'Duplikat', email: 'admin@example.pl', role: 'viewer', regionId: null, regionLead: false,
       }),
     ).rejects.toThrow(EmailError);
   });
 
-  it('refuses a second account for a region that already has one', async () => {
+  it('refuses a second responsible couple for a region that has one', async () => {
     // regionStats reads the responsible couple through a map keyed by region:
-    // a second active account would silently displace the first.
+    // a second one would silently displace the first.
     await expect(
       createAccount(admin, {
-        name: 'Druga Para', email: 'nowe.konto.rejon@example.pl', role: 'region', regionId: 7,
+        name: 'Druga Para', email: 'nowe.konto.rejon@example.pl', role: 'region', regionId: 7, regionLead: true,
       }),
     ).rejects.toThrow(AccountRegionError);
   });
@@ -383,7 +399,7 @@ describe('creating accounts', () => {
   it('refuses a region account with no region at all', async () => {
     await expect(
       createAccount(admin, {
-        name: 'Bez Rejonu', email: 'nowe.konto.bezrejonu@example.pl', role: 'region', regionId: null,
+        name: 'Bez Rejonu', email: 'nowe.konto.bezrejonu@example.pl', role: 'region', regionId: null, regionLead: true,
       }),
     ).rejects.toThrow(AccountRegionError);
   });
@@ -391,7 +407,7 @@ describe('creating accounts', () => {
   it('stops an admin from creating a technical account', async () => {
     await expect(
       createAccount(admin, {
-        name: 'Podszywacz', email: 'nowe.konto.sys@example.pl', role: 'superadmin', regionId: null,
+        name: 'Podszywacz', email: 'nowe.konto.sys@example.pl', role: 'superadmin', regionId: null, regionLead: false,
       }),
     ).rejects.toThrow(Forbidden);
   });
@@ -399,7 +415,7 @@ describe('creating accounts', () => {
   it('stops a region account from creating anything', async () => {
     await expect(
       createAccount(regionVII, {
-        name: 'Nie Wolno', email: 'nowe.konto.rejon7@example.pl', role: 'viewer', regionId: null,
+        name: 'Nie Wolno', email: 'nowe.konto.rejon7@example.pl', role: 'viewer', regionId: null, regionLead: false,
       }),
     ).rejects.toThrow(Forbidden);
   });
@@ -407,7 +423,7 @@ describe('creating accounts', () => {
   it('lets the technical account create the couple responsible for the community', async () => {
     const { account } = await create(caretaker, {
       name: 'Nowa Para Odpowiedzialna', email: 'nowe.konto.admin@example.pl',
-      role: 'admin', regionId: null,
+      role: 'admin', regionId: null, regionLead: false,
     });
     expect(account.role).toBe('admin');
   });
@@ -433,5 +449,148 @@ describe('the technical account is out of the admin reach', () => {
 
   it('will not let anybody switch off their own account', async () => {
     await expect(setAccountStatus(admin, admin.id, 'disabled')).rejects.toThrow(Forbidden);
+  });
+});
+
+describe('helpers inside a region', () => {
+  const made: bigint[] = [];
+
+  afterEach(async () => {
+    for (const id of made) {
+      await prisma.audit.deleteMany({ where: { accountId: id } });
+      await prisma.account.delete({ where: { id } }).catch(() => undefined);
+    }
+    made.length = 0;
+    await prisma.audit.deleteMany({ where: { description: { contains: 'pomoc.test' } } });
+  });
+
+  const addHelper = async (regionId: number, email: string) => {
+    await createAccount(admin, {
+      name: 'Pomocna Para', email, role: 'region', regionId, regionLead: false,
+    });
+    const a = await prisma.account.findFirstOrThrow({ where: { email } });
+    made.push(a.id);
+    return a;
+  };
+
+  it('joins a region that already has a responsible couple', async () => {
+    const helper = await addHelper(7, 'pomoc.test.a@example.pl');
+    expect(helper.regionLead).toBe(false);
+    expect(helper.regionId).toBe(7);
+  });
+
+  it('accepts more than one, because helpers are not limited', async () => {
+    await addHelper(7, 'pomoc.test.b@example.pl');
+    await addHelper(7, 'pomoc.test.c@example.pl');
+    const inRegion = await prisma.account.count({ where: { role: 'region', regionId: 7 } });
+    expect(inRegion).toBe(3);
+  });
+
+  it('leaves the regions overview naming the responsible couple', async () => {
+    const lead = await prisma.account.findUniqueOrThrow({ where: { email: 'rejon7@example.pl' } });
+    await addHelper(7, 'pomoc.test.d@example.pl');
+
+    const stats = await regionStats(admin);
+    expect(stats.find((s) => s.id === 7)!.leadName).toBe(lead.name);
+  });
+
+  it('refuses to hand over a region through a helper account', async () => {
+    // "Przekaż rejon" revokes the outgoing couple's access; a helper is not
+    // the region, so replacing one is a deletion and a fresh invitation.
+    const helper = await addHelper(7, 'pomoc.test.e@example.pl');
+    await expect(
+      handOverRegion(admin, helper.id, 'Ktoś Inny', 'ktos.pomoc.test@example.pl'),
+    ).rejects.toThrow(Forbidden);
+  });
+
+  it('lets a helper edit the couples of its own region and no others', async () => {
+    const helper = await addHelper(7, 'pomoc.test.f@example.pl');
+    const asUser: User = { id: helper.id, role: helper.role, regionId: helper.regionId };
+    expect(canEdit(asUser, { regionId: 7 })).toBe(true);
+    expect(canEdit(asUser, { regionId: 3 })).toBe(false);
+    expect(listScope(asUser)).toEqual({ deletedAt: null, regionId: 7 });
+  });
+});
+
+describe('deleting accounts', () => {
+  const made: bigint[] = [];
+
+  afterEach(async () => {
+    for (const id of made) {
+      await prisma.audit.deleteMany({ where: { accountId: id } });
+      await prisma.account.delete({ where: { id } }).catch(() => undefined);
+    }
+    made.length = 0;
+    await prisma.audit.deleteMany({ where: { description: { contains: 'kasowana' } } });
+  });
+
+  const throwaway = async (email: string) => {
+    await createAccount(admin, {
+      name: 'Para Kasowana', email, role: 'viewer', regionId: null, regionLead: false,
+    });
+    const a = await prisma.account.findFirstOrThrow({ where: { email } });
+    made.push(a.id);
+    return a;
+  };
+
+  it('removes the account and the sessions that let it back in', async () => {
+    const account = await throwaway('kasowana.a@example.pl');
+    await prisma.account.update({
+      where: { id: account.id },
+      data: { passwordHash: 'x', status: 'active' },
+    });
+    const token = await createSession(account.id);
+    expect(await userFromToken(token)).not.toBeNull();
+
+    await deleteAccount(admin, account.id);
+
+    expect(await prisma.account.findUnique({ where: { id: account.id } })).toBeNull();
+    expect(await userFromToken(token)).toBeNull();
+  });
+
+  it('leaves the history standing, headless rather than gone', async () => {
+    const account = await throwaway('kasowana.b@example.pl');
+    const entry = await prisma.audit.create({
+      data: { kind: 'edit', description: 'Coś zrobione przez kasowaną parę', accountId: account.id },
+    });
+
+    await deleteAccount(admin, account.id);
+
+    // ON DELETE SET NULL: a register that vanishes with the account it
+    // accounts for is not a register. The history renders it "konto usunięte".
+    const after = await prisma.audit.findUniqueOrThrow({ where: { id: entry.id } });
+    expect(after.accountId).toBeNull();
+    expect(after.description).toBe('Coś zrobione przez kasowaną parę');
+    await prisma.audit.delete({ where: { id: entry.id } });
+  });
+
+  it('records the removal, naming whose access went', async () => {
+    const account = await throwaway('kasowana.c@example.pl');
+    await deleteAccount(admin, account.id);
+
+    const entry = await prisma.audit.findFirst({
+      where: { kind: 'account', description: { contains: 'Usunięto konto Para Kasowana' } },
+      orderBy: { at: 'desc' },
+    });
+    expect(entry?.accountId).toBe(admin.id);
+    await prisma.audit.deleteMany({ where: { description: { contains: 'Para Kasowana' } } });
+  });
+
+  it('refuses to delete the caller\'s own account', async () => {
+    await expect(deleteAccount(admin, admin.id)).rejects.toThrow(Forbidden);
+  });
+
+  it('refuses to delete the only active technical account', async () => {
+    await expect(deleteAccount(caretaker, caretaker.id)).rejects.toThrow(Forbidden);
+  });
+
+  it('keeps the technical account out of the admin reach', async () => {
+    await expect(deleteAccount(admin, caretaker.id)).rejects.toThrow(Forbidden);
+    expect(await prisma.account.findUnique({ where: { id: caretaker.id } })).not.toBeNull();
+  });
+
+  it('refuses a region account trying to delete anything', async () => {
+    const account = await throwaway('kasowana.d@example.pl');
+    await expect(deleteAccount(regionVII, account.id)).rejects.toThrow(Forbidden);
   });
 });

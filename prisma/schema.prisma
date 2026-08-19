@@ -138,6 +138,10 @@ model Account {
   role             Role
   regionId         Int?          @map("region_id") @db.SmallInt
   status           AccountStatus @default(pending)
+  /// True for the couple responsible for the region, false for the helpers it
+  /// may have. A partial unique index allows one per region; permissions do
+  /// not read it, only the regions overview and the handover do.
+  regionLead       Boolean       @default(false) @map("region_lead")
   lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz(6)
   inviteTokenHash  String?       @map("invite_token_hash")
   inviteExpiresAt  DateTime?     @map("invite_expires_at") @db.Timestamptz(6)

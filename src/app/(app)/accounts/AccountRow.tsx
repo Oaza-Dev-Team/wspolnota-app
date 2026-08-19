@@ -7,8 +7,8 @@ import { INVITE_DAYS } from '@/lib/accounts/policy';
 import { regionColor } from '@/lib/domain/regions';
 import { COUPLES, plural } from '@/lib/pl';
 import {
-  type AccountsState, changeEmailAction, handOverAction, inviteAction,
-  renameAccountAction, toggleAccountAction,
+  type AccountsState, changeEmailAction, deleteAccountAction, handOverAction,
+  inviteAction, renameAccountAction, toggleAccountAction,
 } from './actions';
 import style from './accounts.module.css';
 
@@ -27,7 +27,7 @@ const STATUS_LABEL: Record<Row['status'], string> = {
 };
 
 /** Which inline form the row has open; only one at a time. */
-type Mode = null | 'name' | 'email' | 'handover';
+type Mode = null | 'name' | 'email' | 'handover' | 'delete';
 
 function ActionButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
@@ -44,6 +44,7 @@ export function AccountRow({ row }: { row: Row }) {
   const [renameState, rename] = useActionState<AccountsState, FormData>(renameAccountAction, {});
   const [emailState, editEmail] = useActionState<AccountsState, FormData>(changeEmailAction, {});
   const [handOverState, handOver] = useActionState<AccountsState, FormData>(handOverAction, {});
+  const [deleteState, remove] = useActionState<AccountsState, FormData>(deleteAccountAction, {});
   const [mode, setMode] = useState<Mode>(null);
 
   const code = row.roman ?? CODE[row.role];
@@ -55,17 +56,20 @@ export function AccountRow({ row }: { row: Row }) {
         ? 'Cała wspólnota · zarządzanie'
         : row.regionId === null
           ? 'Cała wspólnota · podgląd'
-          : `Rejon ${row.roman} · ${plural(row.couples, COUPLES)}`;
+          : row.regionLead
+            ? `Rejon ${row.roman} · ${plural(row.couples, COUPLES)}`
+            : `Rejon ${row.roman} · pomoc w kartotece`;
 
   const error =
     toggleState.error ?? inviteState.error ?? renameState.error
-    ?? emailState.error ?? handOverState.error;
+    ?? emailState.error ?? handOverState.error ?? deleteState.error;
   const inviteLink = inviteState.inviteLink ?? handOverState.inviteLink;
 
   // Who may do what was decided in list.ts, where the permission rules live.
-  // Two separate answers: an account can be editable but not switchable off —
-  // the last technical account, or the caller's own.
-  const { manageable, disableable } = row;
+  // An account can be editable and still not removable: the caller's own, or
+  // the last active technical one, are what somebody signs back in through.
+  const { manageable, loadBearing } = row;
+  const removable = manageable && !loadBearing;
 
   return (
     <li className={style.row}>
@@ -147,14 +151,14 @@ export function AccountRow({ row }: { row: Row }) {
 
       <span className={`${style.status} ${style[row.status]}`}>{STATUS_LABEL[row.status]}</span>
 
-      {(disableable || (manageable && row.status === 'pending')) && (
+      {manageable && (
         <span className={style.buttons}>
           {row.status === 'pending' ? (
             <form action={invite}>
               <input type="hidden" name="id" value={row.id} />
               <ActionButton label="Zaproś" />
             </form>
-          ) : disableable && (
+          ) : removable && (
             <form action={toggle}>
               <input type="hidden" name="id" value={row.id} />
               <input
@@ -166,7 +170,8 @@ export function AccountRow({ row }: { row: Row }) {
             </form>
           )}
 
-          {row.role === 'region' && manageable && (
+          {/* A helper is not the region: it is replaced by deleting it. */}
+          {row.regionLead && manageable && (
             <button
               type="button"
               className={style.action}
@@ -174,6 +179,17 @@ export function AccountRow({ row }: { row: Row }) {
               aria-label={`Przekaż rejon ${row.roman} innej parze`}
             >
               Przekaż rejon…
+            </button>
+          )}
+
+          {removable && (
+            <button
+              type="button"
+              className={style.action}
+              onClick={() => setMode('delete')}
+              aria-label={`Usuń konto ${row.name}`}
+            >
+              Usuń…
             </button>
           )}
         </span>
@@ -210,6 +226,23 @@ export function AccountRow({ row }: { row: Row }) {
           </label>
           <span className={style.handoverButtons}>
             <ActionButton label="Potwierdź przekazanie" />
+            <button type="button" className={style.action} onClick={() => setMode(null)}>
+              Anuluj
+            </button>
+          </span>
+        </form>
+      )}
+
+      {mode === 'delete' && (
+        <form action={remove} className={style.handover} onSubmit={() => setMode(null)}>
+          <input type="hidden" name="id" value={row.id} />
+          <p className={style.handoverNote}>
+            {`Konto ${row.name} zniknie razem ze swoimi sesjami. Wpisy w historii zmian `}
+            {'zostaną — bez nazwy, jako „konto usunięte”. Tego się nie cofa; żeby tylko '}
+            {'odebrać dostęp na jakiś czas, użyj „Wyłącz”.'}
+          </p>
+          <span className={style.handoverButtons}>
+            <ActionButton label="Potwierdź usunięcie" />
             <button type="button" className={style.action} onClick={() => setMode(null)}>
               Anuluj
             </button>

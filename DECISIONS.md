@@ -161,8 +161,49 @@ odpowiedzialną przez mapę kluczowaną numerem rejonu, więc drugie aktywne kon
 przesłoniłoby pierwsze. Zmiana pary rejonowej to „Przekaż rejon…", które przy okazji
 odbiera dostęp ustępującej parze — i formularz tam odsyła.
 
-Usuwania kont nie ma i nie planujemy: wpisy audytu wskazują na konto, a wyłączenie
-kończy sesje natychmiast i załatwia to samo bez dziury w historii.
+**Usuwanie kont dołożone 19.08.2026 — poprzednie zdanie w tym miejscu było błędne.**
+Napisałem, że usuwania nie planujemy, bo wpisy audytu wskazują na konto. Sprawdzenie
+kodu pokazało coś innego: `audit.account_id` ma od początku `ON DELETE SET NULL`,
+a `src/lib/audit/list.ts` renderuje wpis bez konta jako „konto usunięte" i ma na to
+test. Projekt przewidywał usuwanie kont od pierwszej migracji; brakowało tylko
+przycisku. Patrz §1.14.
+
+### 1.14 Usuwanie kont
+
+Wyłączenie zostaje jako opcja odwracalna. Usunięcie jest dla konta, które nie powinno
+było powstać, i dla kogoś, kto odszedł na dobre.
+
+Znika konto i jego sesje (klucz obcy `session` ma `ON DELETE CASCADE`). **Wpisy
+w historii zostają**, bez nazwy — rejestr odpowiedzialności, który da się skasować
+razem z tym, za co odpowiada, nie jest rejestrem. Odchodzi natomiast to, co
+identyfikuje osobę: nazwa i adres. Sam fakt usunięcia trafia do historii z nazwą
+usuniętego konta, żeby dało się odtworzyć, komu odebrano dostęp; retencja przycina
+ten wpis razem z resztą.
+
+Dwie blokady, te same co przy wyłączaniu: nie usuniesz własnego konta ani ostatniego
+**aktywnego** konta technicznego. Potwierdzenie jest dwustopniowe — panel mówi, co
+zniknie, a co zostanie, zanim cokolwiek się stanie.
+
+### 1.15 Kilka kont na rejon: para odpowiedzialna i pomocnicy
+
+Handoff zakłada jedno konto na rejon. Na Twoją prośbę z 19.08.2026 rejon może mieć
+ich kilka: parę odpowiedzialną i dowolną liczbę pomocników do utrzymywania kartoteki.
+
+**Uprawnienia ich nie rozróżniają** — pomocnik edytuje dokładnie te pary co para
+odpowiedzialna, bo `listScope` i `canEdit` patrzą na rolę i rejon, a te są takie same.
+Różnica jest w dwóch miejscach: kafelek rejonu nazywa parę odpowiedzialną, i tylko jej
+konto da się „Przekazać". Pomocnika się nie przekazuje — usuwa się go i zakłada nowego.
+
+Rozróżnia je kolumna `account.region_lead`. **Jedna para odpowiedzialna na rejon**
+pilnuje częściowy indeks unikalny (`WHERE region_lead`), a nie tylko kod: `regionStats`
+sięga po nią przez mapę kluczowaną numerem rejonu, więc druga po cichu przesłoniłaby
+pierwszą. Indeks liczy również konta **wyłączone** — para na chwilę odsunięta wciąż
+zajmuje urząd — i tak samo liczy je sprawdzenie w aplikacji, żeby użytkownik dostał
+zdanie po polsku zamiast surowego błędu bazy.
+
+Formularz zakładania konta operuje więc pięcioma pozycjami, nie czterema rolami:
+konto techniczne, para odpowiedzialna za wspólnotę, para odpowiedzialna za rejon,
+pomocnik rejonu, moderator. Dwie środkowe to ta sama rola `region`.
 
 ## 2. Lista odbioru — wynik
 

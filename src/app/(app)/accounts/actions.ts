@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import {
   AccountNameError, AccountRegionError, EmailError, changeEmail, createAccount,
-  createInvite, handOverRegion, renameAccount, setAccountStatus,
+  createInvite, deleteAccount, handOverRegion, renameAccount, setAccountStatus,
 } from '@/lib/accounts/manage';
 import type { Role } from '@/generated/prisma/enums';
 import { Forbidden } from '@/lib/auth/permissions';
@@ -142,14 +142,26 @@ export async function handOverAction(
   return { inviteLink: inviteUrl(token) };
 }
 
-/** Only these four exist; anything else in the POST body is somebody probing. */
-const ROLES: readonly Role[] = ['superadmin', 'admin', 'region', 'viewer'];
+/**
+ * What the form offers, which is not quite the role: a region account is
+ * either the couple responsible for the region or one of its helpers, and
+ * those two read as separate choices to whoever fills the form in even though
+ * no permission tells them apart.
+ */
+const KINDS = {
+  superadmin: { role: 'superadmin', regionLead: false },
+  admin: { role: 'admin', regionLead: false },
+  'region-lead': { role: 'region', regionLead: true },
+  'region-helper': { role: 'region', regionLead: false },
+  viewer: { role: 'viewer', regionLead: false },
+} as const satisfies Record<string, { role: Role; regionLead: boolean }>;
 
-function roleFrom(formData: FormData): Role | null {
+export type AccountKind = keyof typeof KINDS;
+
+function kindFrom(formData: FormData): (typeof KINDS)[AccountKind] | null {
   const raw = formData.get('role');
-  return typeof raw === 'string' && (ROLES as readonly string[]).includes(raw)
-    ? (raw as Role)
-    : null;
+  // Anything else in the POST body is somebody probing.
+  return typeof raw === 'string' && raw in KINDS ? KINDS[raw as AccountKind] : null;
 }
 
 export async function createAccountAction(
@@ -158,8 +170,8 @@ export async function createAccountAction(
 ): Promise<AccountsState> {
   const u = await requireUser();
 
-  const role = roleFrom(formData);
-  if (role === null) return { error: 'Wybierz rolę konta' };
+  const kind = kindFrom(formData);
+  if (kind === null) return { error: 'Wybierz rolę konta' };
 
   const name = formData.get('name');
   const email = formData.get('email');
@@ -176,7 +188,7 @@ export async function createAccountAction(
 
   let token: string;
   try {
-    token = await createAccount(u, { name, email, role, regionId });
+    token = await createAccount(u, { name, email, regionId, ...kind });
   } catch (e) {
     if (
       e instanceof Forbidden || e instanceof EmailError
@@ -191,4 +203,27 @@ export async function createAccountAction(
   revalidatePath('/regions');
   // The account has no password: without this link nobody can ever use it.
   return { inviteLink: inviteUrl(token) };
+}
+
+export async function deleteAccountAction(
+  _state: AccountsState,
+  formData: FormData,
+): Promise<AccountsState> {
+  const u = await requireUser();
+  const id = idFrom(formData);
+  if (id === null) return { error: 'Brak identyfikatora konta' };
+
+  try {
+    await deleteAccount(u, id);
+  } catch (e) {
+    if (e instanceof Forbidden) return { error: e.message };
+    throw e;
+  }
+
+  revalidatePath('/accounts');
+  // The regions overview names the responsible couple, which may be the one
+  // that just went, and the history renders the entries it left behind.
+  revalidatePath('/regions');
+  revalidatePath('/history');
+  return {};
 }

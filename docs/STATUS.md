@@ -44,8 +44,10 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   wpisanie nieznanej tworzy ją, znanej używa ponownie
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
-- kafelki rejonów ze statystykami, konta (utwórz / włącz / wyłącz / zaproś /
+- kafelki rejonów ze statystykami, konta (utwórz / usuń / włącz / wyłącz / zaproś /
   zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
+- rejon może mieć **parę odpowiedzialną i pomocników** — uprawnienia takie same,
+  różnią się tylko kafelkiem rejonu i tym, czyje konto da się przekazać
 - strona ustawienia hasła z jednorazowego linku zaproszenia
 - trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
   dla admina, retencja audytu i sesji jako `npm run retention`
@@ -63,7 +65,7 @@ docker compose up -d          # Postgres na porcie 5433
 npm run dev                   # http://localhost:3000
 ```
 
-Baza jest zaseedowana (300 par, 11 rejonów, 14 kont). Jeśli po restarcie okaże się
+Baza jest zaseedowana (300 par, 11 rejonów, 15 kont). Jeśli po restarcie okaże się
 pusta albo rozjechana: `npm run db:seed`.
 
 Konta testowe, wszystkie z hasłem `kartoteka123`:
@@ -75,15 +77,16 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 | `rejon1@example.pl` … `rejon10@example.pl` | pary rejonowe |
 | `rejon11@example.pl` | status `pending`, **nie zaloguje się** (to jest testowane) |
 | `superadmin@example.pl` | konto techniczne — jedyne, którego admin nie tknie |
+| `rejon1.pomoc@example.pl` | pomocnik rejonu I — kilka kont na jeden rejon |
 
 ## Weryfikacja
 
 ```bash
 npm test          # 133 testy jednostkowe
-npm run test:int  # 177 integracyjnych (wymagają bazy)
+npm run test:int  # 190 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 75 testów Playwright, na buildzie produkcyjnym
+npm run e2e       # 78 testów Playwright, na buildzie produkcyjnym
 npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 
@@ -94,6 +97,12 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 - **Sesje w bazie, nie JWT.** Lista odbioru wymaga, żeby wyłączenie konta działało
   natychmiast; JWT dawałby dostęp do wygaśnięcia tokena.
 - **Bez Auth.js** — v5 od lat w becie, a przy danych art. 9 RODO to zła podstawa.
+- **Rejon może mieć kilka kont.** Para odpowiedzialna (`region_lead`) plus dowolna
+  liczba pomocników. Uprawnienia identyczne; różnica jest w kafelku rejonu i w tym,
+  czyje konto da się przekazać. Jedną parę odpowiedzialną na rejon pilnuje częściowy
+  indeks unikalny, nie tylko kod. Rachunek w `DECISIONS.md` §1.15.
+- **Konta da się usuwać.** Wpisy historii zostają jako „konto usunięte” —
+  `audit.account_id` ma `ON DELETE SET NULL` od pierwszej migracji. §1.14.
 - **Cztery role, nie trzy.** `superadmin` to konto techniczne opiekuna instalacji:
   ma wszystko, co `admin`, a dodatkowo zarządza kontami technicznymi. Jedyna granica:
   admin nie tknie konta technicznego, bo zmiana adresu albo zaproszenie to w praktyce

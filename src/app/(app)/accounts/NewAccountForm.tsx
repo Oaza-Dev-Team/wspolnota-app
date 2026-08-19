@@ -2,16 +2,16 @@
 
 import { useActionState, useState } from 'react';
 import { useFormStatus } from 'react-dom';
-import type { Role } from '@/generated/prisma/enums';
 import { INVITE_DAYS } from '@/lib/accounts/policy';
 import { romanNumeral } from '@/lib/domain/regions';
-import { type AccountsState, createAccountAction } from './actions';
+import { type AccountKind, type AccountsState, createAccountAction } from './actions';
 import style from './accounts.module.css';
 
-const ROLE_LABEL: Record<Role, string> = {
+const KIND_LABEL: Record<AccountKind, string> = {
   superadmin: 'Konto techniczne',
   admin: 'Para odpowiedzialna za wspólnotę',
-  region: 'Para rejonowa',
+  'region-lead': 'Para odpowiedzialna za rejon',
+  'region-helper': 'Pomocnik rejonu',
   viewer: 'Moderator — tylko podgląd',
 };
 
@@ -31,17 +31,20 @@ function SubmitButton() {
  * there is no SMTP in this project.
  */
 export function NewAccountForm({
-  roles,
+  kinds,
   freeRegions,
+  allRegions,
 }: {
   /** What this caller may create. An admin never sees the technical account here. */
-  roles: Role[];
-  /** Regions with no account yet; a region shows exactly one responsible couple. */
+  kinds: AccountKind[];
+  /** Regions with no responsible couple yet — only that role is limited to one. */
   freeRegions: number[];
+  /** Every region: a helper may join one that already has a responsible couple. */
+  allRegions: number[];
 }) {
   const [state, create] = useActionState<AccountsState, FormData>(createAccountAction, {});
   const [open, setOpen] = useState(false);
-  const [role, setRole] = useState<Role>(roles[0] ?? 'viewer');
+  const [kind, setKind] = useState<AccountKind>(kinds[0] ?? 'viewer');
 
   // Collapse once the account exists, stay open when it did not — the message
   // is about what the caller just typed and closing would hide the field it
@@ -84,7 +87,9 @@ export function NewAccountForm({
     );
   }
 
-  const regionsExhausted = role === 'region' && freeRegions.length === 0;
+  const regions = kind === 'region-lead' ? freeRegions : allRegions;
+  const needsRegion = kind === 'region-lead' || kind === 'region-helper';
+  const regionsExhausted = needsRegion && regions.length === 0;
 
   return (
     <div className={style.newAccountBar} role="group" aria-label="Dodawanie konta">
@@ -133,16 +138,16 @@ export function NewAccountForm({
             className={style.editInput}
             name="role"
             aria-label="Rola konta"
-            value={role}
-            onChange={(e) => setRole(e.currentTarget.value as Role)}
+            value={kind}
+            onChange={(e) => setKind(e.currentTarget.value as AccountKind)}
           >
-            {roles.map((r) => (
-              <option key={r} value={r}>{ROLE_LABEL[r]}</option>
+            {kinds.map((k) => (
+              <option key={k} value={k}>{KIND_LABEL[k]}</option>
             ))}
           </select>
         </label>
 
-        {role === 'region' && !regionsExhausted && (
+        {needsRegion && !regionsExhausted && (
           <label className={style.editField}>
             <span className={style.editLabel}>Rejon</span>
             <select
@@ -151,7 +156,7 @@ export function NewAccountForm({
               aria-label="Rejon konta"
               required
             >
-              {freeRegions.map((id) => (
+              {regions.map((id) => (
                 <option key={id} value={id}>{`Rejon ${romanNumeral(id)}`}</option>
               ))}
             </select>
@@ -160,8 +165,9 @@ export function NewAccountForm({
 
         {regionsExhausted && (
           <p className={style.handoverNote}>
-            Każdy rejon ma już konto. Żeby zmienić parę odpowiedzialną, użyj
+            Każdy rejon ma już parę odpowiedzialną. Żeby ją zmienić, użyj
             „Przekaż rejon…” w jej wierszu — to odbiera dostęp ustępującej parze.
+            Kogoś do pomocy dołożysz przez „Pomocnik rejonu”.
           </p>
         )}
 

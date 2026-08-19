@@ -14,10 +14,15 @@ export type AccountRow = {
   roman: string | null;
   couples: number;
   lastLoginAt: string | null;
+  /** The couple responsible for the region, as against one of its helpers. */
+  regionLead: boolean;
   /** Whether the signed-in caller may rename, re-address, invite or switch it. */
   manageable: boolean;
-  /** manageable, and switching it off would leave somebody able to get back in. */
-  disableable: boolean;
+  /**
+   * Switching this off or deleting it could leave nobody able to sign back
+   * in: the caller's own account, or the last active technical one.
+   */
+  loadBearing: boolean;
 };
 
 export async function accountRows(u: User): Promise<AccountRow[]> {
@@ -30,7 +35,7 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
       // What stays out of reach is disabling it — see AccountRow.
       select: {
         id: true, email: true, name: true, role: true, status: true,
-        regionId: true, lastLoginAt: true,
+        regionId: true, lastLoginAt: true, regionLead: true,
       },
     }),
     prisma.couple.groupBy({
@@ -59,11 +64,11 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
     roman: a.regionId === null ? null : romanNumeral(a.regionId),
     couples: a.regionId === null ? 0 : (couplesByRegion.get(a.regionId) ?? 0),
     lastLoginAt: a.lastLoginAt === null ? null : formatDate(a.lastLoginAt),
+    regionLead: a.regionLead,
     manageable: canManageRole(u, a.role),
-    disableable:
-      canManageRole(u, a.role)
-      && a.id !== u.id
-      && !(a.role === 'superadmin' && a.status === 'active' && activeCaretakers <= 1),
+    loadBearing:
+      a.id === u.id
+      || (a.role === 'superadmin' && a.status === 'active' && activeCaretakers <= 1),
   }));
 
   // Technical account, then the couple responsible for the community, then the
@@ -73,6 +78,9 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
   const rank = (r: AccountRow) => ORDER[r.role];
   return rows.sort((a, b) => {
     if (rank(a) !== rank(b)) return rank(a) - rank(b);
-    return (a.regionId ?? 0) - (b.regionId ?? 0);
+    if (a.regionId !== b.regionId) return (a.regionId ?? 0) - (b.regionId ?? 0);
+    // Inside a region: the responsible couple, then its helpers by name.
+    if (a.regionLead !== b.regionLead) return a.regionLead ? -1 : 1;
+    return a.name.localeCompare(b.name, 'pl');
   });
 }

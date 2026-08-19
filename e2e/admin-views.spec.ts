@@ -81,8 +81,9 @@ test.describe('accounts', () => {
     await page.goto('/accounts');
 
     await expect(page.getByRole('heading', { name: 'Konta', exact: true })).toBeVisible();
-    // Eleven regions, the moderator, the admin itself, and the technical account.
-    await expect(page.getByRole('listitem')).toHaveCount(14);
+    // Eleven regions, the moderator, the admin itself, the technical account,
+    // and the helper the seed gives region I.
+    await expect(page.getByRole('listitem')).toHaveCount(15);
     // Exact: 'admin@example.pl' is a substring of 'superadmin@example.pl'.
     await expect(page.getByText('admin@example.pl', { exact: true })).toBeVisible();
   });
@@ -121,7 +122,9 @@ test.describe('accounts', () => {
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
     const role = newAccountForm(page).getByLabel('Rola konta');
     await expect(role.getByRole('option', { name: 'Konto techniczne' })).toHaveCount(0);
-    await expect(role.getByRole('option', { name: /Para odpowiedzialna/ })).toHaveCount(1);
+    // Two of them: for the community and for a region.
+    await expect(role.getByRole('option', { name: /^Para odpowiedzialna/ })).toHaveCount(2);
+    await expect(role.getByRole('option', { name: 'Pomocnik rejonu' })).toHaveCount(1);
   });
 
   test('the technical account signs in and reaches every view', async ({ page }) => {
@@ -135,6 +138,7 @@ test.describe('accounts', () => {
     const row = page.getByRole('listitem').filter({ hasText: 'superadmin@example.pl' });
     await expect(row.getByRole('button', { name: /^Zmień nazwę pary/ })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Wyłącz' })).toHaveCount(0);
+    await expect(row.getByRole('button', { name: /^Usuń konto/ })).toHaveCount(0);
   });
 
   test('correcting an address keeps the couple signed in', async ({ page }) => {
@@ -314,15 +318,82 @@ test.describe('accounts — creating', () => {
     ).toContainText('już przypisany');
   });
 
-  test('sends a region with an account back to the handover instead of doubling it', async ({ page }) => {
+  test('offers no second responsible couple for a region, but any number of helpers', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+    const form = newAccountForm(page);
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    await form.getByLabel('Rola konta').selectOption({ label: 'Para odpowiedzialna za rejon' });
+    // The seed staffs every region, so there is no slot left to offer.
+    await expect(form.getByRole('combobox', { name: 'Rejon konta' })).toHaveCount(0);
+    await expect(page.getByText(/Każdy rejon ma już parę odpowiedzialną/)).toBeVisible();
+
+    // A helper carries no such limit: every region is on offer.
+    await form.getByLabel('Rola konta').selectOption({ label: 'Pomocnik rejonu' });
+    await expect(form.getByRole('combobox', { name: 'Rejon konta' })).toBeVisible();
+    await expect(form.getByRole('combobox', { name: 'Rejon konta' }).getByRole('option'))
+      .toHaveCount(11);
+  });
+
+  test('a helper joins a region without displacing its responsible couple', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/regions');
+    // Whatever the tile says now, it has to keep saying after the helper joins.
+    const tile = page.getByRole('link', { name: /^Rejon IV/ });
+    const before = await tile.textContent();
+
+    await page.goto('/accounts');
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    const form = newAccountForm(page);
+    await form.getByLabel('Nazwa pary', { exact: true }).fill('Halina i Jerzy Pomocni');
+    await form.getByLabel('Adres e-mail', { exact: true }).fill('pomocni.rejon4@example.pl');
+    await form.getByLabel('Rola konta').selectOption({ label: 'Pomocnik rejonu' });
+    await form.getByRole('combobox', { name: 'Rejon konta' }).selectOption({ label: 'Rejon IV' });
+    await page.getByRole('button', { name: 'Utwórz konto' }).click();
+
+    const row = page.getByRole('listitem').filter({ hasText: 'pomocni.rejon4@example.pl' });
+    await expect(row.getByText('Rejon IV · pomoc w kartotece')).toBeVisible();
+    // A helper is not the region, so there is nothing to hand over.
+    await expect(row.getByRole('button', { name: /^Przekaż rejon/ })).toHaveCount(0);
+
+    await page.goto('/regions');
+    await expect(page.getByRole('link', { name: /^Rejon IV/ })).toHaveText(before!);
+  });
+
+  test('an account can be created and then removed for good', async ({ page }) => {
     await signIn(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
-    await newAccountForm(page).getByLabel('Rola konta').selectOption({ label: 'Para rejonowa' });
-    // Every region is staffed by the seed, so there is nothing left to offer.
-    await expect(newAccountForm(page).getByRole('combobox', { name: 'Rejon konta' })).toHaveCount(0);
-    await expect(page.getByText(/Każdy rejon ma już konto/)).toBeVisible();
+    const form = newAccountForm(page);
+    await form.getByLabel('Nazwa pary', { exact: true }).fill('Pomyłka Do Usunięcia');
+    await form.getByLabel('Adres e-mail', { exact: true }).fill('pomylka@example.pl');
+    await form.getByLabel('Rola konta').selectOption({ label: 'Moderator — tylko podgląd' });
+    await page.getByRole('button', { name: 'Utwórz konto' }).click();
+
+    const row = page.getByRole('listitem').filter({ hasText: 'pomylka@example.pl' });
+    await expect(row).toBeVisible();
+
+    // Two steps: the panel says what deleting costs before it happens.
+    await row.getByRole('button', { name: /^Usuń konto/ }).click();
+    await expect(row.getByText(/Tego się nie cofa/)).toBeVisible();
+    await row.getByRole('button', { name: 'Potwierdź usunięcie' }).click();
+
+    await expect(page.getByRole('listitem').filter({ hasText: 'pomylka@example.pl' }))
+      .toHaveCount(0);
+
+    // The removal is an event the register has to carry.
+    await page.goto('/history');
+    await expect(page.getByText(/Usunięto konto Pomyłka Do Usunięcia/)).toBeVisible();
+  });
+
+  test('offers the admin no way to delete the account it signs in through', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    const row = page.getByRole('listitem').filter({ hasText: 'Cała wspólnota · zarządzanie' });
+    await expect(row.getByRole('button', { name: /^Usuń konto/ })).toHaveCount(0);
   });
 
   test('the technical account appoints a second one and may then step down', async ({ page }) => {

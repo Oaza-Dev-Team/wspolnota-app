@@ -28,7 +28,9 @@ export async function regionStats(u: User): Promise<RegionStats[]> {
       },
     }),
     prisma.account.findMany({
-      where: { role: 'region', status: 'active' },
+      // The responsible couple only: a region may also hold helper accounts,
+      // and the tile names the couple the region answers for.
+      where: { role: 'region', regionLead: true, status: 'active' },
       select: { regionId: true, name: true },
     }),
   ]);

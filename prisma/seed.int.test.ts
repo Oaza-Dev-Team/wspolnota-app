@@ -15,8 +15,10 @@ describe('seed data', () => {
     expect(await prisma.couple.count({ where: { deletedAt: null } })).toBe(300);
   });
 
-  it('creates an account per region plus admin, moderator and the technical one', async () => {
-    expect(await prisma.account.count()).toBe(REGION_COUNT + 3);
+  it('creates an account per region plus admin, moderator, caretaker and a helper', async () => {
+    expect(await prisma.account.count()).toBe(REGION_COUNT + 4);
+    // Exactly one responsible couple per region; the extra one is a helper.
+    expect(await prisma.account.count({ where: { regionLead: true } })).toBe(REGION_COUNT);
     expect(await prisma.account.count({ where: { status: 'pending' } })).toBe(1);
   });
 

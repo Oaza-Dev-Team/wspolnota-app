@@ -129,7 +129,7 @@ async function main() {
         name: pending
           ? 'Do obsadzenia'
           : `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
-        role: 'region', regionId,
+        role: 'region', regionId, regionLead: true,
         passwordHash: pending ? null : hash,
         status: pending ? 'pending' : 'active',
         lastLoginAt: pending
@@ -138,6 +138,17 @@ async function main() {
       },
     });
   }
+
+  // One helper, so the "several accounts in one region" shape has data behind
+  // it: the regions overview must keep naming the responsible couple.
+  await prisma.account.create({
+    data: {
+      email: 'rejon1.pomoc@example.pl',
+      name: `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
+      role: 'region', regionId: 1, regionLead: false,
+      passwordHash: hash, status: 'active',
+    },
+  });
 
   console.log(`Couples (${COUPLE_COUNT})...`);
   for (let i = 0; i < COUPLE_COUNT; i++) {
