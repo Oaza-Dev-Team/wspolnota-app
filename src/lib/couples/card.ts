@@ -18,8 +18,8 @@ export type CardData = {
   phone: string;
   regionId: number;
   circleId: string | null;
-  /** Label as typed in the field, "" when the parish is inherited from the circle. */
-  parish: string;
+  /** null means the couple has none of its own and inherits its circle's. */
+  parishId: string | null;
   children: string;
   notes: string;
   retreats: FormationEntry[];
@@ -44,9 +44,8 @@ export async function loadCard(
     where: canSeeDeleted(u) ? { id } : { id, deletedAt: null },
     select: {
       id: true, wifeName: true, husbandName: true, surname: true,
-      email: true, phone: true, regionId: true, circleId: true,
+      email: true, phone: true, regionId: true, circleId: true, parishId: true,
       children: true, notes: true, deletedAt: true,
-      parish: { select: { name: true, city: true } },
       retreats: {
         select: { kind: true, year: true, place: true, name: true },
         orderBy: { year: 'asc' },
@@ -68,7 +67,7 @@ export async function loadCard(
       phone: asText(couple.phone),
       regionId: couple.regionId,
       circleId: couple.circleId === null ? null : String(couple.circleId),
-      parish: couple.parish ? parishLabel(couple.parish) : '',
+      parishId: couple.parishId === null ? null : String(couple.parishId),
       children: asText(couple.children),
       notes: asText(couple.notes),
       retreats: couple.retreats.map((r) => ({
@@ -88,7 +87,7 @@ export function blankCard(u: User): CardData {
     // A region account may only ever create inside its own region, so the
     // field starts there and stays disabled.
     regionId: u.regionId ?? 1,
-    circleId: null, parish: '', children: '', notes: '',
+    circleId: null, parishId: null, children: '', notes: '',
     retreats: [],
   };
 }

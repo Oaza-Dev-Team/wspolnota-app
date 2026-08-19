@@ -1,10 +1,11 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { CardData, FormationEntry } from '@/lib/couples/card';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
+import { PARISHES, plural } from '@/lib/pl';
 import { FormationSection } from './FormationSection';
 import { PurgeForm } from './PurgeForm';
 import {
@@ -20,6 +21,14 @@ function SaveButton() {
     </button>
   );
 }
+
+/**
+ * Diacritics stripped both sides, so "brygidy" finds "św. Brygidy" and
+ * "gdansk" finds "Gdańsk" — the same courtesy the list search already does
+ * in Postgres through immutable_unaccent.
+ */
+const fold = (s: string): string =>
+  s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export function CoupleCard({
   card,
@@ -50,8 +59,25 @@ export function CoupleCard({
   // list behind it was never touched.
   const [retreats, setRetreats] = useState<FormationEntry[]>(card.retreats);
 
-  // "__new__" in the circle select swaps it for the inputs describing the one
-  // to create. The parish needs no mode: its field is free text throughout.
+  // "__new__" in either select swaps that field for the inputs that describe
+  // the entity to create. The save layer already knows how to make them.
+  const [parishMode, setParishMode] = useState(card.parishId ?? '');
+  const [parishQuery, setParishQuery] = useState('');
+
+  const parishMatches = useMemo(() => {
+    const q = fold(parishQuery.trim());
+    return q === '' ? options.parishes : options.parishes.filter((p) => fold(p.label).includes(q));
+  }, [options.parishes, parishQuery]);
+
+  // Whatever the search says, the parish already chosen stays on the list.
+  // Dropping it would leave the select showing the first option instead, and
+  // saving would then move the couple to a parish nobody picked.
+  const parishChoices = useMemo(() => {
+    const chosen = options.parishes.find((p) => p.id === parishMode);
+    return chosen && !parishMatches.some((p) => p.id === chosen.id)
+      ? [chosen, ...parishMatches]
+      : parishMatches;
+  }, [options.parishes, parishMatches, parishMode]);
   const [circleMode, setCircleMode] = useState(card.circleId ?? '');
 
   // showModal is what gives the focus trap, Esc handling and the backdrop.
@@ -197,34 +223,72 @@ export function CoupleCard({
             </div>
           )}
 
-          <label className={`${style.field} ${style.wide}`}>
+          {/*
+            A div rather than a label: this field holds two controls, and a
+            wrapping label binds to the first one only, which would leave the
+            select nameless. Each carries its own aria-label instead.
+
+            A select, because it is the only control that states what is chosen
+            without being opened — and for most couples what is chosen is
+            "inherited from the circle", which an empty text field cannot say.
+            The search box exists because an archdiocese has more parishes than
+            anybody wants to scroll.
+          */}
+          <div className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Parafia</span>
-            {/*
-              A text field with a datalist rather than a select: an archdiocese
-              has far more parishes than fit a dropdown, and the browser gives
-              filtering, keyboard handling and screen-reader support for free.
-              It doubles as the way to add one — save.ts upserts on (name, city),
-              so typing an existing parish finds it and a new one creates it.
-            */}
-            <input
-              className={style.control}
-              name="parish"
-              list="parish-options"
-              defaultValue={card.parish}
-              placeholder="np. św. Brygidy, Gdańsk"
-              autoComplete="off"
-              disabled={!editable}
-            />
-            <datalist id="parish-options">
-              {options.parishes.map((p) => (
-                <option key={p.id} value={p.label} />
+            {editable && (
+              <input
+                className={style.search}
+                type="search"
+                value={parishQuery}
+                onChange={(e) => setParishQuery(e.currentTarget.value)}
+                placeholder="Szukaj parafii — nazwa lub miasto"
+                aria-label="Szukaj parafii"
+              />
+            )}
+            <select className={style.control} name="parishId" value={parishMode}
+              aria-label="Parafia"
+              disabled={!editable} onChange={(e) => setParishMode(e.currentTarget.value)}>
+              <option value="">— jak w kręgu —</option>
+              {parishChoices.map((p) => (
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
-            </datalist>
-            <span className={style.fieldHint}>
-              Zacznij pisać, żeby wybrać z listy. Parafia spoza listy zostanie utworzona.
-              Puste pole znaczy „jak w kręgu”.
-            </span>
-          </label>
+              <option value="__new__">+ nowa parafia…</option>
+            </select>
+            {editable && parishQuery !== '' && (
+              <span className={style.fieldHint}>
+                {parishMatches.length === 0
+                  ? 'Nic nie pasuje — wyczyść wyszukiwanie albo dodaj nową parafię.'
+                  : `Lista zawężona do ${plural(parishMatches.length, PARISHES)}.`}
+              </span>
+            )}
+          </div>
+
+          {parishMode === '__new__' && (
+            <div className={`${style.newEntity} ${style.wide}`}>
+              <label className={style.field}>
+                <span className={style.label}>Nazwa parafii</span>
+                <input
+                  className={style.control}
+                  name="newParishName"
+                  placeholder="np. św. Brygidy"
+                  disabled={!editable}
+                />
+              </label>
+              <label className={style.field}>
+                <span className={style.label}>Miasto</span>
+                <input
+                  className={style.control}
+                  name="newParishCity"
+                  placeholder="np. Gdańsk"
+                  disabled={!editable}
+                />
+              </label>
+              <p className={style.hint}>
+                Jeśli taka parafia już istnieje, zostanie użyta zamiast utworzenia drugiej.
+              </p>
+            </div>
+          )}
 
           <label className={`${style.field} ${style.wide}`}>
             <span className={style.label}>Dzieci — imiona i roczniki</span>

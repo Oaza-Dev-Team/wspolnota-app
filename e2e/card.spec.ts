@@ -179,9 +179,10 @@ test('creating a couple can introduce a parish and a circle that do not exist ye
   const drawer = page.getByRole('dialog');
   await drawer.getByLabel('Nazwisko').fill(surname);
 
-  // The parish is one free-text field: a name nobody has typed before creates
-  // the parish, no separate "+ new" mode to switch into.
-  await drawer.getByLabel('Parafia').fill(`${parish}, ${city}`);
+  // The parish select grows a "+ new" option that swaps the field for inputs.
+  await drawer.getByLabel('Parafia').selectOption('__new__');
+  await drawer.getByLabel('Nazwa parafii').fill(parish);
+  await drawer.getByLabel('Miasto').fill(city);
 
   await drawer.getByLabel('Krąg').selectOption('__new__');
   await drawer.getByLabel('Numer kręgu').fill('42');
@@ -210,7 +211,7 @@ test('a new circle without a parish is refused with a message, not a crash', asy
 
   const drawer = page.getByRole('dialog');
   await drawer.getByLabel('Nazwisko').fill(`BezParafii${Date.now() % 1000000}`);
-  // Parish left blank, so the new circle has no parish to inherit.
+  // Parish left at "— jak w kręgu —", so the new circle has nothing to inherit.
   await drawer.getByLabel('Krąg').selectOption('__new__');
   await drawer.getByLabel('Numer kręgu').fill('43');
 
@@ -218,50 +219,45 @@ test('a new circle without a parish is refused with a message, not a crash', asy
   await expect(drawerAlert(page)).toContainText('Nowy krąg musi mieć parafię');
 });
 
-test('typing a parish that already exists reuses it instead of creating a second', async ({ page }) => {
+test('searching narrows the parish list without losing what is already chosen', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-
-  // The filter enumerates the parishes the visible couples sit in and says how
-  // many, so that sentence is the assertion: a duplicate would push it up.
-  const filter = page.getByLabel('Parafia');
-  const before = await filter.locator('option').first().textContent();
-  const existing = (await filter.locator('option').nth(1).textContent())!.trim();
-
-  const surname = `Powtorka${Date.now() % 1000000}`;
-  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
-  const drawer = page.getByRole('dialog');
-  await drawer.getByLabel('Nazwisko').fill(surname);
-  await drawer.getByLabel('Parafia').fill(existing);
-  await page.getByRole('button', { name: 'Zapisz' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Zapisano zmiany' })).toBeVisible();
-
-  await page.goto(`/couples?q=${surname}`);
-  await expect(page.locator('tbody').getByText(existing, { exact: false })).toBeVisible();
-  await expect(page.getByLabel('Parafia').locator('option').first()).toHaveText(before!);
-
-  // list.spec asserts an exact 300, so the couple goes back out.
+  await page.goto('/couples');
   await openFirstCard(page);
-  await page.getByRole('button', { name: 'Usuń parę' }).click();
-  await expect(page.getByRole('status').filter({ hasText: 'Para usunięta' })).toBeVisible();
-});
-
-test('a parish typed without a city is refused with a message that says the shape', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
-  await page.getByRole('link', { name: '+ Dodaj parę' }).click();
 
   const drawer = page.getByRole('dialog');
-  await drawer.getByLabel('Nazwisko').fill(`BezMiasta${Date.now() % 1000000}`);
-  await drawer.getByLabel('Parafia').fill('św. Bez Przecinka');
+  const parish = drawer.getByLabel('Parafia');
+  const chosenBefore = await parish.inputValue();
 
-  await page.getByRole('button', { name: 'Zapisz' }).click();
-  await expect(drawerAlert(page)).toContainText('nazwa, miasto');
+  // Every parish is on offer until something is typed.
+  const all = await parish.locator('option').count();
+  await drawer.getByLabel('Szukaj parafii').fill('gdansk');
+
+  // Folded both sides: "gdansk" has to find "Gdańsk".
+  const narrowed = await parish.locator('option').count();
+  expect(narrowed).toBeLessThan(all);
+  await expect(drawer.getByText(/Lista zawężona do/)).toBeVisible();
+
+  // The selection survives the filter. Were the chosen option filtered away,
+  // the select would fall back to its first entry and a save would move the
+  // couple to a parish nobody picked.
+  expect(await parish.inputValue()).toBe(chosenBefore);
+
+  await drawer.getByLabel('Szukaj parafii').fill('');
+  await expect(parish.locator('option')).toHaveCount(all);
 });
 
-/**
- * The other half of soft deletion. Every test here leaves the registry exactly
- * as it found it: what it deletes it either restores or removes for good, so
- * list.spec's exact 300 still holds.
- */
+test('a couple that takes its parish from the circle says so rather than looking empty', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/couples');
+  await openFirstCard(page);
+
+  // Most couples carry no parish of their own; the field has to name that
+  // state instead of showing a blank that reads as "nothing here yet".
+  const parish = page.getByRole('dialog').getByLabel('Parafia');
+  const label = await parish.locator('option:checked').textContent();
+  expect(label).toBeTruthy();
+});
+
 test('a deleted couple can be found again and put back', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();

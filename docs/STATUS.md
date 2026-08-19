@@ -41,8 +41,8 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   poniżej 860 px
 - karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie
   **z przywracaniem**, audyt
-  w tej samej transakcji; **parafia to pole z podpowiedziami** (`<input list>`) —
-  wpisanie nieznanej tworzy ją, znanej używa ponownie
+  w tej samej transakcji; parafia to **select z wyszukiwarką** — „— jak w kręgu —",
+  lista zawężana bez znaków diakrytycznych, „+ nowa parafia…"; `DECISIONS.md` §1.18
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
 - kafelki rejonów ze statystykami, konta (utwórz / usuń / włącz / wyłącz / zaproś /

@@ -244,6 +244,32 @@ Pokryte testem e2e, w którym konto rejonowe zakłada parę, usuwa ją i przywra
 Warto zapamiętać: **jedenaście z piętnastu kont to konta rejonowe** i to one wprowadzają
 dane. Każda ścieżka ma być sprawdzana także z ich uprawnieniami, nie tylko adminem.
 
+### 1.18 Parafia: select z wyszukiwaniem, nie pole tekstowe
+
+19.08.2026 zamieniłem select parafii na pole tekstowe z `<datalist>`, licząc na to,
+że przeglądarka da filtrowanie za darmo. **Cofnięte następnego dnia**, bo pole tekstowe
+nie umie powiedzieć jednej rzeczy, którą select mówi bez otwierania: **co jest wybrane**.
+
+**262 z 300 par nie ma własnej parafii** — dziedziczą ją z kręgu, czyli `couple.parish_id`
+jest `NULL`. Dla nich pole tekstowe rysowało się puste, z podpowiedzią „np. św. Brygidy,
+Gdańsk", co czyta się jak „wpisz coś tutaj", a nie „bierze parafię z kręgu". Select miał
+na to jawną pozycję „— jak w kręgu —" i dlatego był lepszy.
+
+Zostaje więc select z pozycjami „— jak w kręgu —" i „+ nowa parafia…", a nad nim
+**pole wyszukiwania**, które zawęża listę. Znaki diakrytyczne składane po obu stronach,
+tak jak robi to wyszukiwarka listy przez `immutable_unaccent`, więc „gdansk" znajduje
+„Gdańsk".
+
+Jedna rzecz jest tu nieoczywista i ma własny test: **wybrana parafia zostaje na liście
+niezależnie od wyszukiwania**. Gdyby filtr ją usunął, select pokazałby pierwszą pozycję,
+a zapis przeniósłby parę do parafii, której nikt nie wskazał.
+
+Pole to `<div>`, nie `<label>` — etykieta wiąże się z pierwszą kontrolką w środku,
+a te są dwie, więc select zostałby bez nazwy. Każda kontrolka ma własny `aria-label`.
+
+Wniosek na przyszłość: zanim uznam kontrolkę za zbędną, sprawdzam, **jaki stan pokazuje
+w danych, które faktycznie są w bazie** — nie w tych, które mam w głowie.
+
 ## 2. Lista odbioru — wynik
 
 Legenda: ✅ spełnione i pokryte testem · ☑️ spełnione, sprawdzone ręcznie ·

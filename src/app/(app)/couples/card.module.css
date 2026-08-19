@@ -383,6 +383,28 @@
   padding: 12px;
 }
 
+/* Narrows the select underneath it; lighter than the control it filters. */
+.search {
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  padding: 8px 11px;
+  font-size: 13px;
+  background: var(--bg-row-alt);
+  color: var(--text);
+  min-height: 44px;
+}
+/* Same two-step as .control: a soft ring for the mouse, a real outline for
+   the keyboard. */
+.search:focus {
+  border-color: var(--blue-500);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+.search:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
 .hint {
   grid-column: span 2;
   font-size: 12px;
