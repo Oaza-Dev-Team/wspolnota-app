@@ -5,7 +5,7 @@ Dokument do wznowienia pracy po przerwie. Aktualizuj przy każdym zatrzymaniu.
 ## Gdzie jesteśmy
 
 Kartoteka Domowego Kościoła — aplikacja webowa dla wspólnoty Ruchu Światło-Życie
-(archidiecezja gdańska). **11 rejonów**, ~300 par, ~15 kont edytujących, 3 role.
+(archidiecezja gdańska). **11 rejonów**, ~300 par, ~15 kont edytujących, 4 role.
 
 Budowane z handoffu projektowego w `docs/handoff/` (README = wygląd, IMPLEMENTATION =
 lista odbioru). Projekt techniczny: `docs/superpowers/specs/2026-08-18-kartoteka-dk-design.md`.
@@ -44,8 +44,8 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   wpisanie nieznanej tworzy ją, znanej używa ponownie
 - eksport XLSX aktualnie przefiltrowanej listy + wpis do rejestru wydań
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
-- kafelki rejonów ze statystykami, konta rejonów (włącz / wyłącz / zaproś),
-  historia zmian z paginacją
+- kafelki rejonów ze statystykami, konta (utwórz / włącz / wyłącz / zaproś /
+  zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
 - strona ustawienia hasła z jednorazowego linku zaproszenia
 - trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
   dla admina, retencja audytu i sesji jako `npm run retention`
@@ -63,7 +63,7 @@ docker compose up -d          # Postgres na porcie 5433
 npm run dev                   # http://localhost:3000
 ```
 
-Baza jest zaseedowana (300 par, 11 rejonów, 13 kont). Jeśli po restarcie okaże się
+Baza jest zaseedowana (300 par, 11 rejonów, 14 kont). Jeśli po restarcie okaże się
 pusta albo rozjechana: `npm run db:seed`.
 
 Konta testowe, wszystkie z hasłem `kartoteka123`:
@@ -74,15 +74,16 @@ Konta testowe, wszystkie z hasłem `kartoteka123`:
 | `moderator@example.pl` | moderator, tylko podgląd |
 | `rejon1@example.pl` … `rejon10@example.pl` | pary rejonowe |
 | `rejon11@example.pl` | status `pending`, **nie zaloguje się** (to jest testowane) |
+| `superadmin@example.pl` | konto techniczne — jedyne, którego admin nie tknie |
 
 ## Weryfikacja
 
 ```bash
-npm test          # 121 testów jednostkowych
-npm run test:int  # 165 integracyjnych (wymagają bazy)
+npm test          # 133 testy jednostkowe
+npm run test:int  # 177 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 68 testów Playwright, na buildzie produkcyjnym
+npm run e2e       # 75 testów Playwright, na buildzie produkcyjnym
 npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ```
 
@@ -93,6 +94,10 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 - **Sesje w bazie, nie JWT.** Lista odbioru wymaga, żeby wyłączenie konta działało
   natychmiast; JWT dawałby dostęp do wygaśnięcia tokena.
 - **Bez Auth.js** — v5 od lat w becie, a przy danych art. 9 RODO to zła podstawa.
+- **Cztery role, nie trzy.** `superadmin` to konto techniczne opiekuna instalacji:
+  ma wszystko, co `admin`, a dodatkowo zarządza kontami technicznymi. Jedyna granica:
+  admin nie tknie konta technicznego, bo zmiana adresu albo zaproszenie to w praktyce
+  przejęcie konta. Rachunek w `DECISIONS.md` §1.12.
 - **11 rejonów, nie 12.** Handoff mówił 12; teksty poprawione, zrzuty ekranu i prototyp
   nadal pokazują 12 i zostają jako materiał historyczny.
 - **Nazewnictwo:** po polsku wyłącznie to, co czyta człowiek — interfejs, formy odmiany,
@@ -129,6 +134,11 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
   zaczyna od seeda, ale **kończy z bazą zmienioną** — przekazanie rejonu zostawia konto
   w stanie `pending`, testy karty zostawiają parafię i krąg. Testy integracyjne zakładają
   stan seeda i wtedy padają na czymś, co nie jest regresją.
+- **`getByLabel` w Playwrighcie dopasowuje podciąg bez uwzględniania wielkości liter,**
+  także w `<option>`. `getByLabel('Rejon')` trafiał w opcję „Para rejonowa”, a
+  `getByText('admin@example.pl')` trafia też w `superadmin@example.pl`. Do selectów
+  dawaj jawny `aria-label` (`exact: true` nie pomoże — nazwa z otaczającej etykiety
+  obejmuje treść opcji), a do adresów `{ exact: true }`.
 - **Testy integracyjne muszą zawężać zapytania do własnych danych.** Dwa razy złapaliśmy
   test, który liczył wiersze cudzej roboty albo kasował je przy sprzątaniu.
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts` przez `prisma` → devDependency).

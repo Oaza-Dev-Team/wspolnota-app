@@ -15,8 +15,8 @@ describe('seed data', () => {
     expect(await prisma.couple.count({ where: { deletedAt: null } })).toBe(300);
   });
 
-  it('creates an account per region plus admin and moderator', async () => {
-    expect(await prisma.account.count()).toBe(REGION_COUNT + 2);
+  it('creates an account per region plus admin, moderator and the technical one', async () => {
+    expect(await prisma.account.count()).toBe(REGION_COUNT + 3);
     expect(await prisma.account.count({ where: { status: 'pending' } })).toBe(1);
   });
 

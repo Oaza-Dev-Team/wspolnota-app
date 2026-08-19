@@ -102,6 +102,13 @@ async function main() {
   const hash = await hashPassword(TEST_PASSWORD);
   await prisma.account.create({
     data: {
+      email: 'superadmin@example.pl', name: 'Konto techniczne',
+      role: 'superadmin', passwordHash: hash, status: 'active',
+    },
+  });
+
+  await prisma.account.create({
+    data: {
       email: 'admin@example.pl', name: 'Maria i Piotr Lewandowscy',
       role: 'admin', passwordHash: hash, status: 'active',
     },

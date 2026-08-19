@@ -12,6 +12,14 @@ import {
 } from './actions';
 import style from './accounts.module.css';
 
+/** Shown in the badge; a region account uses its Roman numeral instead. */
+const CODE: Record<Row['role'], string> = {
+  superadmin: 'SYS',
+  admin: 'ADM',
+  region: '',
+  viewer: 'MOD',
+};
+
 const STATUS_LABEL: Record<Row['status'], string> = {
   active: 'aktywne',
   disabled: 'wyłączone',
@@ -38,23 +46,26 @@ export function AccountRow({ row }: { row: Row }) {
   const [handOverState, handOver] = useActionState<AccountsState, FormData>(handOverAction, {});
   const [mode, setMode] = useState<Mode>(null);
 
-  const code = row.roman ?? (row.role === 'admin' ? 'ADM' : 'MOD');
+  const code = row.roman ?? CODE[row.role];
   const color = row.regionId === null ? 'var(--navy-700)' : regionColor(row.regionId);
   const scope =
-    row.role === 'admin'
-      ? 'Cała wspólnota · zarządzanie'
-      : row.regionId === null
-        ? 'Cała wspólnota · podgląd'
-        : `Rejon ${row.roman} · ${plural(row.couples, COUPLES)}`;
+    row.role === 'superadmin'
+      ? 'Cała wspólnota · konto techniczne'
+      : row.role === 'admin'
+        ? 'Cała wspólnota · zarządzanie'
+        : row.regionId === null
+          ? 'Cała wspólnota · podgląd'
+          : `Rejon ${row.roman} · ${plural(row.couples, COUPLES)}`;
 
   const error =
     toggleState.error ?? inviteState.error ?? renameState.error
     ?? emailState.error ?? handOverState.error;
   const inviteLink = inviteState.inviteLink ?? handOverState.inviteLink;
 
-  // Locking oneself out of account management would need database access to
-  // undo, so the admin row keeps its identity editable but nothing else.
-  const isAdmin = row.role === 'admin';
+  // Who may do what was decided in list.ts, where the permission rules live.
+  // Two separate answers: an account can be editable but not switchable off —
+  // the last technical account, or the caller's own.
+  const { manageable, disableable } = row;
 
   return (
     <li className={style.row}>
@@ -85,14 +96,16 @@ export function AccountRow({ row }: { row: Row }) {
         ) : (
           <span className={style.nameRow}>
             <span className={style.name}>{row.name}</span>
-            <button
-              type="button"
-              className={style.rename}
-              onClick={() => setMode('name')}
-              aria-label={`Zmień nazwę pary dla konta ${row.email}`}
-            >
-              Zmień
-            </button>
+            {manageable && (
+              <button
+                type="button"
+                className={style.rename}
+                onClick={() => setMode('name')}
+                aria-label={`Zmień nazwę pary dla konta ${row.email}`}
+              >
+                Zmień
+              </button>
+            )}
           </span>
         )}
 
@@ -115,14 +128,16 @@ export function AccountRow({ row }: { row: Row }) {
         ) : (
           <span className={style.nameRow}>
             <span className={style.email}>{row.email}</span>
-            <button
-              type="button"
-              className={style.rename}
-              onClick={() => setMode('email')}
-              aria-label={`Popraw adres e-mail konta ${row.name}`}
-            >
-              Popraw
-            </button>
+            {manageable && (
+              <button
+                type="button"
+                className={style.rename}
+                onClick={() => setMode('email')}
+                aria-label={`Popraw adres e-mail konta ${row.name}`}
+              >
+                Popraw
+              </button>
+            )}
           </span>
         )}
       </span>
@@ -132,14 +147,14 @@ export function AccountRow({ row }: { row: Row }) {
 
       <span className={`${style.status} ${style[row.status]}`}>{STATUS_LABEL[row.status]}</span>
 
-      {!isAdmin && (
+      {(disableable || (manageable && row.status === 'pending')) && (
         <span className={style.buttons}>
           {row.status === 'pending' ? (
             <form action={invite}>
               <input type="hidden" name="id" value={row.id} />
               <ActionButton label="Zaproś" />
             </form>
-          ) : (
+          ) : disableable && (
             <form action={toggle}>
               <input type="hidden" name="id" value={row.id} />
               <input
@@ -151,7 +166,7 @@ export function AccountRow({ row }: { row: Row }) {
             </form>
           )}
 
-          {row.role === 'region' && (
+          {row.role === 'region' && manageable && (
             <button
               type="button"
               className={style.action}

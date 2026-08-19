@@ -25,16 +25,30 @@ describe('accountRows', () => {
   // like any other, so its name and address have to be reachable from here.
   it('lists every account, admin included', async () => {
     const rows = await accountRows(admin);
-    expect(rows).toHaveLength(REGION_COUNT + 2);
+    // One per region, plus admin, moderator and the technical account.
+    expect(rows).toHaveLength(REGION_COUNT + 3);
+    expect(rows.filter((r) => r.role === 'superadmin')).toHaveLength(1);
     expect(rows.filter((r) => r.role === 'admin')).toHaveLength(1);
     expect(rows.filter((r) => r.role === 'viewer')).toHaveLength(1);
   });
 
-  it('orders admin first, then regions, moderator last', async () => {
+  it('orders the technical account first, then admin, regions, moderator last', async () => {
     const rows = await accountRows(admin);
-    expect(rows[0]!.role).toBe('admin');
-    expect(rows[1]!.regionId).toBe(1);
+    expect(rows[0]!.role).toBe('superadmin');
+    expect(rows[1]!.role).toBe('admin');
+    expect(rows[2]!.regionId).toBe(1);
     expect(rows.at(-1)!.role).toBe('viewer');
+  });
+
+  it('marks the technical account beyond the admin reach', async () => {
+    const rows = await accountRows(admin);
+    const caretaker = rows.find((r) => r.role === 'superadmin')!;
+    expect(caretaker.manageable).toBe(false);
+    expect(caretaker.disableable).toBe(false);
+    // The admin's own row stays editable but cannot be switched off.
+    const self = rows.find((r) => r.role === 'admin')!;
+    expect(self.manageable).toBe(true);
+    expect(self.disableable).toBe(false);
   });
 
   it('carries the couple count for each region', async () => {

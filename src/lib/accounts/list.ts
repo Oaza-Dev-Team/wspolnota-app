@@ -1,5 +1,5 @@
 import type { AccountStatus, Role } from '@/generated/prisma/enums';
-import { Forbidden, type User, canManageAccounts } from '@/lib/auth/permissions';
+import { Forbidden, type User, canManageAccounts, canManageRole } from '@/lib/auth/permissions';
 import { prisma } from '@/lib/db';
 import { romanNumeral } from '@/lib/domain/regions';
 import { formatDate } from '@/lib/pl';
@@ -14,6 +14,10 @@ export type AccountRow = {
   roman: string | null;
   couples: number;
   lastLoginAt: string | null;
+  /** Whether the signed-in caller may rename, re-address, invite or switch it. */
+  manageable: boolean;
+  /** manageable, and switching it off would leave somebody able to get back in. */
+  disableable: boolean;
 };
 
 export async function accountRows(u: User): Promise<AccountRow[]> {
@@ -38,6 +42,13 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
 
   const couplesByRegion = new Map(counts.map((c) => [c.regionId, c._count._all]));
 
+  // The two ways an installation loses its last way in: the caller switches
+  // off their own account, or the final technical account goes dark. Both are
+  // decided here so the row component only renders what it is handed.
+  const activeCaretakers = accounts.filter(
+    (a) => a.role === 'superadmin' && a.status === 'active',
+  ).length;
+
   const rows = accounts.map((a) => ({
     id: String(a.id),
     email: a.email,
@@ -48,13 +59,18 @@ export async function accountRows(u: User): Promise<AccountRow[]> {
     roman: a.regionId === null ? null : romanNumeral(a.regionId),
     couples: a.regionId === null ? 0 : (couplesByRegion.get(a.regionId) ?? 0),
     lastLoginAt: a.lastLoginAt === null ? null : formatDate(a.lastLoginAt),
+    manageable: canManageRole(u, a.role),
+    disableable:
+      canManageRole(u, a.role)
+      && a.id !== u.id
+      && !(a.role === 'superadmin' && a.status === 'active' && activeCaretakers <= 1),
   }));
 
-  // Regions in numerical order, the moderator at the bottom — the handoff
-  // shows it as the last row.
-  // Admin first, then regions in numerical order, moderator last — the handoff
-  // shows the moderator as the closing row.
-  const rank = (r: AccountRow) => (r.role === 'admin' ? 0 : r.role === 'region' ? 1 : 2);
+  // Technical account, then the couple responsible for the community, then the
+  // regions in numerical order, moderator last — the handoff shows the
+  // moderator as the closing row.
+  const ORDER: Record<Role, number> = { superadmin: 0, admin: 1, region: 2, viewer: 3 };
+  const rank = (r: AccountRow) => ORDER[r.role];
   return rows.sort((a, b) => {
     if (rank(a) !== rank(b)) return rank(a) - rank(b);
     return (a.regionId ?? 0) - (b.regionId ?? 0);

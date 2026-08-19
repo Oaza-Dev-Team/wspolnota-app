@@ -22,6 +22,10 @@ enum Role {
   admin
   region
   viewer
+  // The technical account that keeps the installation running. Everything an
+  // admin may do, plus the accounts an admin may not touch. Last because
+  // ALTER TYPE ADD VALUE appends; the order carries no meaning.
+  superadmin
 }
 
 enum AccountStatus {

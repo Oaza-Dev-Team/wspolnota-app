@@ -13,7 +13,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 # Kartoteka DK
 
 Kartoteka małżeństw wspólnoty Domowego Kościoła (Ruch Światło-Życie, archidiecezja
-gdańska): ~300 par w **11 rejonach**, ~15 kont edytujących, 3 role.
+gdańska): ~300 par w **11 rejonach**, ~15 kont edytujących, 4 role.
 
 **Uwaga:** handoff w `docs/handoff/` opisuje 12 rejonów i tyle pokazują zrzuty —
 to stan sprzed weryfikacji u zamawiającego. Rejonów jest **11** (I–XI). Handoffu nie
@@ -44,6 +44,9 @@ PostgreSQL 16 · Prisma 7 · Zod 4 · CSS Modules · Vitest 4 · Playwright
 `requireUser()`. Layout nie chroni server actions — to publiczne endpointy POST.
 Każde zapytanie listy, eksportu i statystyk wstrzykuje `listScope(user)`.
 Reguły uprawnień żyją wyłącznie w `src/lib/auth/permissions.ts`.
+Rola `superadmin` to konto techniczne: ma wszystko, co `admin`, plus konta, których
+`admin` tknąć nie może. Nowa reguła porównująca role idzie przez `hasAdminPowers`
+albo `canManageRole` — nie przez `role === 'admin'`.
 
 **Style.** Bez MUI i bez Tailwinda. Wyłącznie CSS Modules + custom properties
 z `src/styles/tokens.css`. **Literalna wartość koloru, odstępu, promienia lub cienia
@@ -118,5 +121,11 @@ npm run db:reset
   migracje.
 - **Kolumny `search_text` są `GENERATED ALWAYS`** — Postgres je wylicza, aplikacja nigdy
   nie zapisuje. Pomijaj je w `data` przy tworzeniu i edycji pary, inaczej baza odrzuci zapis.
+- **`prisma migrate dev` chce zepsuć kolumny `GENERATED ALWAYS`.** Prisma ich nie
+  modeluje i czyta jako dryf, więc do migracji dokłada `DROP DEFAULT` na `search_text`
+  i `DROP INDEX couple_search_text_idx` — a potem sama się na tym wywraca, zostawiając
+  **skasowany indeks wyszukiwania**. Migracje dotykające tylko enumów albo kolumn pisz
+  ręcznie i sprawdzaj na jednorazowej bazie (`CREATE DATABASE …` + `migrate deploy`),
+  zamiast kasować bazę deweloperską.
 - Konfiguracje Vitest mają rozszerzenie `.mts` i używają natywnego
   `resolve.tsconfigPaths` zamiast wtyczki.

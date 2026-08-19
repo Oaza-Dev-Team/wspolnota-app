@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   Forbidden, type User, assertCanEdit, canChangeRegion, canDelete, canEdit,
-  canExport, canImport, canManageAccounts, canPurge, canReadAudit, listScope,
+  canExport, canImport, canManageAccounts, canManageRole, canPurge, canReadAudit,
+  listScope,
 } from './permissions';
 
 const admin: User = { id: 1n, role: 'admin', regionId: null };
+const caretaker: User = { id: 4n, role: 'superadmin', regionId: null };
 const regionVII: User = { id: 2n, role: 'region', regionId: 7 };
 const viewer: User = { id: 3n, role: 'viewer', regionId: null };
 
@@ -104,5 +106,59 @@ describe('listScope with the deleted flag', () => {
   it('ignores the flag for everyone else', () => {
     expect(listScope(viewer, { deleted: true })).toEqual({ deletedAt: null });
     expect(listScope(regionVII, { deleted: true })).toEqual({ deletedAt: null, regionId: 7 });
+  });
+});
+
+describe('the technical account', () => {
+  // Whatever the admin may do, the caretaker may do — a rule that forgot it
+  // would lock the person maintaining the installation out of it.
+  it.each([
+    ['canPurge', canPurge],
+    ['canManageAccounts', canManageAccounts],
+    ['canReadAudit', canReadAudit],
+    ['canImport', canImport],
+    ['canChangeRegion', canChangeRegion],
+    ['canExport', canExport],
+  ])('holds every power the admin holds: %s', (_name, can) => {
+    expect(can(caretaker)).toBe(can(admin));
+    expect(can(caretaker)).toBe(true);
+  });
+
+  it('edits couples in every region, like the admin', () => {
+    expect(canEdit(caretaker, coupleVII)).toBe(true);
+    expect(canEdit(caretaker, coupleIII)).toBe(true);
+    expect(canDelete(caretaker, coupleIII)).toBe(true);
+  });
+
+  it('is not narrowed by region', () => {
+    expect(listScope(caretaker)).toEqual({ deletedAt: null });
+  });
+});
+
+describe('canManageRole', () => {
+  it('lets the technical account reach every role, itself included', () => {
+    for (const role of ['superadmin', 'admin', 'region', 'viewer'] as const) {
+      expect(canManageRole(caretaker, role)).toBe(true);
+    }
+  });
+
+  it('stops the admin at the technical account', () => {
+    // The whole boundary. Renaming it or moving its address would be a
+    // takeover: the next invitation link would arrive at the new address.
+    expect(canManageRole(admin, 'superadmin')).toBe(false);
+  });
+
+  it('lets the admin manage the community, admins included', () => {
+    // Not a boundary worth drawing: both already hold every couple on file.
+    for (const role of ['admin', 'region', 'viewer'] as const) {
+      expect(canManageRole(admin, role)).toBe(true);
+    }
+  });
+
+  it('gives a region account and a viewer no say over any account', () => {
+    for (const role of ['superadmin', 'admin', 'region', 'viewer'] as const) {
+      expect(canManageRole(regionVII, role)).toBe(false);
+      expect(canManageRole(viewer, role)).toBe(false);
+    }
   });
 });

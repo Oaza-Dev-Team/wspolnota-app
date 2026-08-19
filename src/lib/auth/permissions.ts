@@ -9,6 +9,16 @@ export type User = {
 /** The minimum a caller must know about a couple to decide access. */
 export type CoupleScope = { regionId: number };
 
+/**
+ * The technical account is the admin plus the accounts the admin may not
+ * touch, so every rule written for the admin holds for it too. Roles are
+ * compared through this rather than one by one: a rule that forgets the
+ * superadmin would lock the caretaker out of the app they maintain.
+ */
+function hasAdminPowers(u: User): boolean {
+  return u.role === 'admin' || u.role === 'superadmin';
+}
+
 export class Forbidden extends Error {
   constructor(message = 'Brak uprawnień do tej operacji') {
     super(message);
@@ -48,7 +58,7 @@ export function listScope(u: User, options: { deleted?: boolean } = {}): ListSco
 }
 
 export function canEdit(u: User, couple: CoupleScope): boolean {
-  if (u.role === 'admin') return true;
+  if (hasAdminPowers(u)) return true;
   if (u.role === 'region') return u.regionId !== null && couple.regionId === u.regionId;
   return false;
 }
@@ -58,24 +68,38 @@ export function canDelete(u: User, couple: CoupleScope): boolean {
 }
 
 export function canPurge(u: User): boolean {
-  return u.role === 'admin';
+  return hasAdminPowers(u);
 }
 
 export function canManageAccounts(u: User): boolean {
-  return u.role === 'admin';
+  return hasAdminPowers(u);
+}
+
+/**
+ * Whether the caller may act on — or bring into being — an account holding
+ * this role. One boundary carries the whole design: an admin must not reach
+ * the technical account. Renaming it or moving its address would be a
+ * takeover, because the next invitation link would arrive at the new address.
+ * Admin-on-admin is deliberately allowed: both already hold every couple in
+ * the registry, so there is nothing between them left to protect.
+ */
+export function canManageRole(u: User, role: Role): boolean {
+  if (u.role === 'superadmin') return true;
+  if (u.role === 'admin') return role !== 'superadmin';
+  return false;
 }
 
 export function canReadAudit(u: User): boolean {
-  return u.role === 'admin';
+  return hasAdminPowers(u);
 }
 
 export function canImport(u: User): boolean {
-  return u.role === 'admin';
+  return hasAdminPowers(u);
 }
 
 /** A region account may never move a couple out of its own region. */
 export function canChangeRegion(u: User): boolean {
-  return u.role === 'admin';
+  return hasAdminPowers(u);
 }
 
 /** Every role may export; listScope decides how much they get. */

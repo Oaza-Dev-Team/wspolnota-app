@@ -60,15 +60,31 @@ test.describe('regions', () => {
   });
 });
 
+/**
+ * Fields inside the creation panel, addressed through it. Bare label lookups
+ * cannot work on this page: every row carries buttons whose aria-label reads
+ * "Popraw adres e-mail konta ..." or "Przekaż rejon ... innej parze", and
+ * getByLabel matches those too.
+ */
+function newAccountForm(page: Page) {
+  return page.getByRole('form', { name: 'Nowe konto' });
+}
+
+/** The panel around the form, which also carries its errors and its invite link. */
+function newAccountPanel(page: Page) {
+  return page.getByRole('group', { name: 'Dodawanie konta' });
+}
+
 test.describe('accounts', () => {
   test('lists every account, admin included, and only for the admin', async ({ page }) => {
     await signIn(page, 'admin@example.pl');
     await page.goto('/accounts');
 
-    await expect(page.getByRole('heading', { name: 'Konta rejonów' })).toBeVisible();
-    // Eleven regions, the moderator, and the admin itself.
-    await expect(page.getByRole('listitem')).toHaveCount(13);
-    await expect(page.getByText('admin@example.pl')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Konta', exact: true })).toBeVisible();
+    // Eleven regions, the moderator, the admin itself, and the technical account.
+    await expect(page.getByRole('listitem')).toHaveCount(14);
+    // Exact: 'admin@example.pl' is a substring of 'superadmin@example.pl'.
+    await expect(page.getByText('admin@example.pl', { exact: true })).toBeVisible();
   });
 
   // Disabling it would need database access to undo, so the row keeps its
@@ -84,6 +100,41 @@ test.describe('accounts', () => {
     // aria-label naming the account, so thirteen of them stay distinguishable.
     await expect(adminRow.getByRole('button', { name: /^Zmień nazwę pary/ })).toBeVisible();
     await expect(adminRow.getByRole('button', { name: /^Popraw adres/ })).toBeVisible();
+  });
+
+  // The one boundary the roles draw: renaming the technical account or moving
+  // its address would be a takeover, since the next invite goes to the new one.
+  test('shows the admin the technical account but hands it no control over it', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    const row = page.getByRole('listitem').filter({ hasText: 'superadmin@example.pl' });
+    await expect(row).toBeVisible();
+    await expect(row.getByText('Cała wspólnota · konto techniczne')).toBeVisible();
+    await expect(row.getByRole('button')).toHaveCount(0);
+  });
+
+  test('offers the admin no technical account to create', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    const role = newAccountForm(page).getByLabel('Rola konta');
+    await expect(role.getByRole('option', { name: 'Konto techniczne' })).toHaveCount(0);
+    await expect(role.getByRole('option', { name: /Para odpowiedzialna/ })).toHaveCount(1);
+  });
+
+  test('the technical account signs in and reaches every view', async ({ page }) => {
+    await signIn(page, 'superadmin@example.pl');
+    await expect(
+      page.getByRole('navigation', { name: 'Nawigacja główna' }).getByRole('link'),
+    ).toHaveCount(5);
+    await page.goto('/accounts');
+    // It is the only account that may act on itself, and the only one it may
+    // not switch off — the installation would lose its last way back in.
+    const row = page.getByRole('listitem').filter({ hasText: 'superadmin@example.pl' });
+    await expect(row.getByRole('button', { name: /^Zmień nazwę pary/ })).toBeVisible();
+    await expect(row.getByRole('button', { name: 'Wyłącz' })).toHaveCount(0);
   });
 
   test('correcting an address keeps the couple signed in', async ({ page }) => {
@@ -221,5 +272,79 @@ test.describe('accounts — handover', () => {
     // No password yet, so the account waits for the invite to be redeemed.
     await expect(handed.getByText('oczekuje')).toBeVisible();
     await expect(handed.getByText('/invite/')).toBeVisible();
+  });
+});
+
+/**
+ * Last in the file for the same reason as the handover block above: a created
+ * account is `pending`, and the invite test picks its row by that very word.
+ * Nothing here cleans up, because the application has no account deletion —
+ * `npm run e2e` reseeds at the start, which is what keeps the counts honest.
+ */
+test.describe('accounts — creating', () => {
+  test('the admin creates a moderator and gets the only copy of its invite', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    await newAccountForm(page).getByLabel('Nazwa pary', { exact: true }).fill('Zofia i Adam Nowi');
+    await newAccountForm(page).getByLabel('Adres e-mail', { exact: true }).fill('zofia.adam@example.pl');
+    await newAccountForm(page).getByLabel('Rola konta').selectOption({ label: 'Moderator — tylko podgląd' });
+    await page.getByRole('button', { name: 'Utwórz konto' }).click();
+
+    await expect(newAccountPanel(page).getByText(/Link zaproszenia/)).toBeVisible();
+    await expect(newAccountPanel(page).getByText(/\/invite\//)).toBeVisible();
+
+    const row = page.getByRole('listitem').filter({ hasText: 'zofia.adam@example.pl' });
+    await expect(row.getByText('Zofia i Adam Nowi')).toBeVisible();
+    await expect(row.getByText('oczekuje')).toBeVisible();
+  });
+
+  test('refuses an address that already signs somebody in', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    await newAccountForm(page).getByLabel('Nazwa pary', { exact: true }).fill('Kolizja');
+    await newAccountForm(page).getByLabel('Adres e-mail', { exact: true }).fill('admin@example.pl');
+    await page.getByRole('button', { name: 'Utwórz konto' }).click();
+
+    await expect(
+      page.getByRole('group', { name: 'Dodawanie konta' }).getByRole('alert'),
+    ).toContainText('już przypisany');
+  });
+
+  test('sends a region with an account back to the handover instead of doubling it', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    await newAccountForm(page).getByLabel('Rola konta').selectOption({ label: 'Para rejonowa' });
+    // Every region is staffed by the seed, so there is nothing left to offer.
+    await expect(newAccountForm(page).getByRole('combobox', { name: 'Rejon konta' })).toHaveCount(0);
+    await expect(page.getByText(/Każdy rejon ma już konto/)).toBeVisible();
+  });
+
+  test('the technical account appoints a second one and may then step down', async ({ page }) => {
+    await signIn(page, 'superadmin@example.pl');
+    await page.goto('/accounts');
+
+    // Until a second one exists the only caretaker cannot be switched off.
+    const self = page.getByRole('listitem').filter({ hasText: 'superadmin@example.pl' });
+    await expect(self.getByRole('button', { name: 'Wyłącz' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: '+ Dodaj konto' }).click();
+    await newAccountForm(page).getByLabel('Nazwa pary', { exact: true }).fill('Zapasowe konto techniczne');
+    await newAccountForm(page).getByLabel('Adres e-mail', { exact: true }).fill('sys2@example.pl');
+    await newAccountForm(page).getByLabel('Rola konta').selectOption({ label: 'Konto techniczne' });
+    await page.getByRole('button', { name: 'Utwórz konto' }).click();
+
+    await expect(newAccountPanel(page).getByText(/Link zaproszenia/)).toBeVisible();
+    const second = page.getByRole('listitem').filter({ hasText: 'sys2@example.pl' });
+    await expect(second.getByText('oczekuje')).toBeVisible();
+
+    // Still the only *active* caretaker, so the guard has to hold: a pending
+    // account is nobody's way back in until somebody redeems its invitation.
+    await expect(self.getByRole('button', { name: 'Wyłącz' })).toHaveCount(0);
   });
 });

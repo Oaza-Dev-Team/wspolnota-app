@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 import {
-  AccountNameError, EmailError, changeEmail, createInvite, handOverRegion,
-  renameAccount, setAccountStatus,
+  AccountNameError, AccountRegionError, EmailError, changeEmail, createAccount,
+  createInvite, handOverRegion, renameAccount, setAccountStatus,
 } from '@/lib/accounts/manage';
+import type { Role } from '@/generated/prisma/enums';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 
@@ -138,5 +139,56 @@ export async function handOverAction(
   revalidatePath('/regions');
   // The incoming couple has no password yet, so the invite is the whole point
   // of the operation and has to come back to the screen.
+  return { inviteLink: inviteUrl(token) };
+}
+
+/** Only these four exist; anything else in the POST body is somebody probing. */
+const ROLES: readonly Role[] = ['superadmin', 'admin', 'region', 'viewer'];
+
+function roleFrom(formData: FormData): Role | null {
+  const raw = formData.get('role');
+  return typeof raw === 'string' && (ROLES as readonly string[]).includes(raw)
+    ? (raw as Role)
+    : null;
+}
+
+export async function createAccountAction(
+  _state: AccountsState,
+  formData: FormData,
+): Promise<AccountsState> {
+  const u = await requireUser();
+
+  const role = roleFrom(formData);
+  if (role === null) return { error: 'Wybierz rolę konta' };
+
+  const name = formData.get('name');
+  const email = formData.get('email');
+  if (typeof name !== 'string' || typeof email !== 'string') {
+    return { error: 'Podaj nazwę pary i adres e-mail' };
+  }
+
+  // Only a region account carries one, and the select that offers it is hidden
+  // for every other role — so an absent value here is the normal case.
+  const rawRegion = formData.get('regionId');
+  const regionId = typeof rawRegion === 'string' && /^\d+$/.test(rawRegion)
+    ? Number(rawRegion)
+    : null;
+
+  let token: string;
+  try {
+    token = await createAccount(u, { name, email, role, regionId });
+  } catch (e) {
+    if (
+      e instanceof Forbidden || e instanceof EmailError
+      || e instanceof AccountNameError || e instanceof AccountRegionError
+    ) {
+      return { error: e.message };
+    }
+    throw e;
+  }
+
+  revalidatePath('/accounts');
+  revalidatePath('/regions');
+  // The account has no password: without this link nobody can ever use it.
   return { inviteLink: inviteUrl(token) };
 }

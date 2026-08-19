@@ -237,3 +237,22 @@
   gap: 6px;
   flex-wrap: wrap;
 }
+
+.newAccountBar {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-bottom: 12px;
+}
+
+/* Same panel language as the handover form inside a row. */
+.newAccount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 9px;
+  background: var(--bg-row-alt);
+  border: 1px solid var(--bg-app);
+  border-radius: var(--r-9);
+  padding: 12px;
+}

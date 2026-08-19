@@ -22,7 +22,7 @@ Wszystko poniżej jest od tych dwóch rzeczy niezależne i leży już w repozyto
 | `docker-compose.prod.yml` | baza, migracje, aplikacja, proxy |
 | `Caddyfile` | reverse proxy, automatyczny TLS, nagłówki bezpieczeństwa |
 | `.env.production.example` | szablon konfiguracji — skopiuj do `.env` na serwerze |
-| `scripts/create-admin.mts` | pierwsze konto administratora na pustej bazie |
+| `scripts/create-superadmin.mts` | pierwsze konto — techniczne — na pustej bazie |
 | `scripts/backup.sh` | szyfrowany `pg_dump` z retencją 30 dni |
 | `scripts/retention.mts` | czyszczenie audytu (24 mies.) i wygasłych sesji |
 
@@ -54,22 +54,31 @@ curl -sf https://TWOJA-DOMENA/health      # {"status":"ok"}
 ### Pierwsze konto
 
 Baza produkcyjna startuje pusta — `npm run db:seed` jest **wyłącznie** do dewelopmentu
-i wygenerowałby 300 fikcyjnych par. Pierwsze konto administratora zakłada osobny skrypt:
+i wygenerowałby 300 fikcyjnych par. Pierwsze konto to **konto techniczne** (rola
+`superadmin`) i zakłada je osobny skrypt:
 
 ```bash
 docker compose -f docker-compose.prod.yml run --rm \
   -e ADMIN_EMAIL="imie.nazwisko@example.pl" \
-  -e ADMIN_NAME="Maria i Piotr Nowakowie" \
+  -e ADMIN_NAME="Obsługa techniczna" \
   -e ADMIN_PASSWORD="…" \
-  migrate npm run create-admin
+  migrate npm run create-superadmin
 ```
 
-Skrypt odmawia, jeśli konto administratora już istnieje — jest do postawienia pustej
-instalacji, a przypadkowy drugi admin to problem bezpieczeństwa. Hasło zmień po
-pierwszym zalogowaniu.
+Skrypt odmawia, jeśli konto techniczne już istnieje — jest do postawienia pustej
+instalacji, a przypadkowe drugie to problem bezpieczeństwa. Hasło zmień po pierwszym
+zalogowaniu.
 
-Wszystkie pozostałe konta zakłada się już z interfejsu, przez jednorazowe linki
-zaproszeń.
+To konto **nie jest parą odpowiedzialną za wspólnotę**. Para odpowiedzialna ma rolę
+`admin` i jest urzędem, który zmienia się co kilka lat; konto techniczne trwa ponad
+tymi zmianami i istnieje po to, żeby ją powołać i żeby dało się wrócić do aplikacji,
+gdy coś pójdzie źle. Zaloguj się na nie i z widoku **Konta** utwórz parę
+odpowiedzialną, a potem konta rejonowe — każde dostaje jednorazowy link zaproszenia,
+który przekazujesz sam.
+
+**Załóż drugie konto techniczne.** Ostatniego aktywnego aplikacja nie pozwoli wyłączyć
+(bo nikt nie miałby jak wrócić), ale utrata hasła do jedynego takiego konta zostawia
+Cię z naprawą przez `psql`.
 
 ## Aktualizacja
 

@@ -121,6 +121,49 @@ forma dopełniacza to osobne pole `genitive`.
 
 ---
 
+### 1.12 Czwarta rola: konto techniczne (`superadmin`)
+
+Handoff zna trzy role. Doszła czwarta, na Twoją prośbę z 19.08.2026, bo `admin` u nas
+znaczy „para odpowiedzialna za wspólnotę" — urząd we wspólnocie, który zmienia się co
+kilka lat. Opiekun techniczny instalacji to ktoś inny i musi trwać ponad tymi zmianami:
+powołuje parę odpowiedzialną i jest drogą powrotną, gdy coś pójdzie źle.
+
+`superadmin` ma **wszystkie uprawnienia admina** (Twój wybór; wariant bez dostępu do
+kartoteki był rozważany pod kątem minimalizacji z art. 5 RODO i odpadł) oraz jedno
+więcej: zarządzanie kontami technicznymi. Cała granica między rolami to jedno zdanie
+w `canManageRole` — **admin nie może dotknąć konta technicznego**. Nie chodzi o
+podgląd, tylko o przejęcie: zmiana adresu albo wygenerowanie zaproszenia to
+w praktyce zmiana hasła, więc kto może je wystawić, ten może wejść na to konto.
+
+Admin↔admin jest świadomie **dozwolone**. Obie role trzymają już całą kartotekę, więc
+nie ma między nimi czego chronić, a zakaz zablokowałby parze odpowiedzialnej
+poprawienie własnej nazwy i adresu.
+
+Dwie blokady chronią przed zamknięciem się na zewnątrz: nikt nie wyłączy własnego
+konta, a ostatniego **aktywnego** konta technicznego nie wyłączy nikt.
+
+Pochodne zmiany: `npm run create-admin` → `npm run create-superadmin` (zakłada teraz
+konto techniczne, nie admina), a pozycja nawigacji „Konta rejonów" nazywa się **„Konta"**
+— widok trzyma już nie tylko rejony.
+
+### 1.13 Tworzenie kont z interfejsu
+
+Do 19.08.2026 konta powstawały wyłącznie z seeda i skryptu bootstrap; interfejs umiał
+je włączać, wyłączać, zapraszać i przekazywać, ale nie utworzyć. Widok **Konta** ma
+teraz formularz „+ Dodaj konto". Konto powstaje tam, gdzie zaczyna każde: bez hasła,
+w stanie `pending`, z jednorazowym zaproszeniem — ta sama ścieżka, co „Zaproś".
+
+Kto jaką rolę może założyć, rozstrzyga `canManageRole`, więc admin nie zobaczy w liście
+„Konto techniczne".
+
+**Rejon, który ma już konto, nie jest oferowany.** `regionStats` sięga po parę
+odpowiedzialną przez mapę kluczowaną numerem rejonu, więc drugie aktywne konto po cichu
+przesłoniłoby pierwsze. Zmiana pary rejonowej to „Przekaż rejon…", które przy okazji
+odbiera dostęp ustępującej parze — i formularz tam odsyła.
+
+Usuwania kont nie ma i nie planujemy: wpisy audytu wskazują na konto, a wyłączenie
+kończy sesje natychmiast i załatwia to samo bez dziury w historii.
+
 ## 2. Lista odbioru — wynik
 
 Legenda: ✅ spełnione i pokryte testem · ☑️ spełnione, sprawdzone ręcznie ·

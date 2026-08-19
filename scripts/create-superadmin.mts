@@ -1,11 +1,16 @@
 /**
- * Creates the first administrator account on a fresh production database.
+ * Creates the technical account on a fresh production database.
  *
- *   ADMIN_EMAIL=… ADMIN_NAME=… ADMIN_PASSWORD=… npm run create-admin
+ *   ADMIN_EMAIL=… ADMIN_NAME=… ADMIN_PASSWORD=… npm run create-superadmin
  *
- * Needed exactly once. Every later account is created from the "Konta rejonów"
- * view with a one-time invitation link, which needs somebody already signed in
- * — and this is how that somebody comes to exist.
+ * Needed exactly once. Every later account — including the couple responsible
+ * for the community — is created from the "Konta" view with a one-time
+ * invitation link, which needs somebody already signed in, and this is how
+ * that somebody comes to exist.
+ *
+ * The technical account rather than an admin: the admin is an office in the
+ * community that changes hands every few years, while whoever installs the
+ * thing has to be able to appoint its holder and to get back in afterwards.
  *
  * The seed script is not an alternative: it wipes the tables and fills them
  * with three hundred fictional couples.
@@ -28,24 +33,25 @@ async function main(): Promise<void> {
     throw new Error(`Hasło musi mieć co najmniej ${MIN_PASSWORD_LENGTH} znaków`);
   }
 
-  const existing = await prisma.account.findFirst({ where: { role: 'admin' } });
+  const existing = await prisma.account.findFirst({ where: { role: 'superadmin' } });
   if (existing) {
     // Refusing rather than adding a second one: this script exists to bootstrap
-    // an empty installation, and a stray extra admin is a security problem.
-    throw new Error(`Konto administratora już istnieje: ${existing.email}`);
+    // an empty installation, and a stray extra caretaker is a security problem.
+    // A second one is created from the "Konta" view, by the first.
+    throw new Error(`Konto techniczne już istnieje: ${existing.email}`);
   }
 
   const account = await prisma.account.create({
     data: {
       email,
       name,
-      role: 'admin',
+      role: 'superadmin',
       status: 'active',
       passwordHash: await hashPassword(password),
     },
   });
 
-  console.log(`Utworzono konto administratora: ${account.email}`);
+  console.log(`Utworzono konto techniczne: ${account.email}`);
   console.log('Zmień hasło po pierwszym zalogowaniu.');
 }
 

@@ -7,12 +7,14 @@ import { Nav } from './Nav';
 import style from './shell.module.css';
 
 const ROLE_LABELS: Record<User['role'], string> = {
+  superadmin: 'Konto techniczne',
   admin: 'Para odpowiedzialna za wspólnotę',
   region: 'Para rejonowa',
   viewer: 'Moderator — podgląd',
 };
 
 function accountCode(u: User): string {
+  if (u.role === 'superadmin') return 'SYS';
   if (u.role === 'admin') return 'ADM';
   if (u.role === 'viewer') return 'MOD';
   return u.regionId === null ? '—' : romanNumeral(u.regionId);

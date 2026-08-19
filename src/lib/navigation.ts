@@ -23,7 +23,7 @@ export function navItems(u: User): NavItem[] {
   ];
 
   if (canManageAccounts(u)) {
-    items.push({ href: '/accounts', label: 'Konta rejonów', key: 'accounts' });
+    items.push({ href: '/accounts', label: 'Konta', key: 'accounts' });
   }
   if (canReadAudit(u)) {
     items.push({ href: '/history', label: 'Historia zmian', key: 'audit' });
