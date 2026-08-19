@@ -3,7 +3,7 @@
 import { useActionState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { MIN_PASSWORD_LENGTH } from '@/lib/accounts/policy';
-import style from '../../logowanie/login.module.css';
+import style from '../../login/login.module.css';
 import { type InviteState, redeemAction } from './actions';
 
 function SubmitButton() {

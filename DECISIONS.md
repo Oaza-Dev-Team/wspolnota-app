@@ -71,7 +71,7 @@ uruchamia to raz na dobę, obok `pg_dump`.
 
 ### 1.8 Klauzula informacyjna z widocznymi lukami
 
-`/informacja-o-danych` to rusztowanie z jawnie oznaczonymi miejscami do uzupełnienia
+`/privacy` to rusztowanie z jawnie oznaczonymi miejscami do uzupełnienia
 (administrator danych, podstawa prawna, dostawca hostingu, okres przechowywania po
 odejściu ze wspólnoty). Treść wiążąca należy do zamawiającego. Zmyślona klauzula,
 która wygląda na gotową, jest gorsza niż taka, po której widać, że gotowa nie jest.
@@ -81,11 +81,36 @@ która wygląda na gotową, jest gorsza niż taka, po której widać, że gotowa
 Lista odbioru mówi „admin widzi 4 pozycje". Doszedł **Import**, którego handoff nie
 przewidywał jako osobnego widoku. Para rejonowa nadal widzi 1, moderator 2.
 
-### 1.10 Ścieżki tras po polsku, reszta po angielsku
+### 1.10 Ścieżki tras po angielsku — decyzja odwrócona 19.08.2026
 
-`/pary`, `/logowanie`, `/rejony` — to adresy, które widzi użytkownik. Identyfikatory,
-nazwy plików, klasy CSS, schemat bazy, komentarze i commity są po angielsku.
-Potwierdzone z zamawiającym, nie otwieramy ponownie.
+Pierwotnie trasy były po polsku (`/pary`, `/logowanie`), z uzasadnieniem „to adres,
+który widzi użytkownik". Po przejrzeniu tego uzasadnienia zamawiający zmienił zdanie
+i zdecydował o przejściu na angielski. Powody:
+
+**Korzyść się nie materializowała.** Aplikacja jest za logowaniem, nawigacja odbywa się
+przez klikanie, nikt nie wpisuje `/rejony` ręcznie. Jedyny link, który ktokolwiek komuś
+wysyła, to zaproszenie — a ono i tak niesie nieczytelny token.
+
+**Koszty wracały przy każdej trasie.** Polski rzeczownik się odmienia, a REST chce
+jednego rdzenia dla kolekcji i elementu: `/pary/1` czyta się jak „pary/1", a `/para/1`
+rozjeżdża się z listą. Znaków diakrytycznych nie mieliśmy przez przypadek, nie przez
+projekt — pierwsze `/kręgi` zamieniłoby się przy kopiowaniu w `/kr%C4%99gi`. I każdy
+plik dotyczący par nosił dwie nazwy na jedno pojęcie: katalog `pary/` obok modułu
+`couples/`.
+
+**Reguła się upraszcza.** Nie ma już granicy do rozstrzygania przy każdej nowej trasie —
+to właśnie na niej potknął się endpoint zdrowia, który powstał jako `/zdrowie`, choć
+czyta go wyłącznie Docker.
+
+Mapowanie: `/pary`→`/couples`, `/logowanie`→`/login`, `/wyloguj`→`/logout`,
+`/rejony`→`/regions`, `/konta`→`/accounts`, `/historia`→`/history`,
+`/eksport`→`/export`, `/eksport/szablon`→`/export/template`,
+`/zaproszenie`→`/invite`, `/informacja-o-danych`→`/privacy`, `/zdrowie`→`/health`.
+`/import` był już angielski.
+
+**Plany wykonawcze w `docs/superpowers/plans/` pokazują stare ścieżki i tak zostaje** —
+są zapisem tego, co robiliśmy wtedy, nie dokumentacją stanu obecnego. Tak samo jak
+handoff, którego nie poprawiamy.
 
 ### 1.11 Poprawka językowa: „Bez pilotowania"
 

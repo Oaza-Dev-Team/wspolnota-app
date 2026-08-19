@@ -48,7 +48,7 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
 - strona ustawienia hasła z jednorazowego linku zaproszenia
 - trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
   dla admina, retencja audytu i sesji jako `npm run retention`
-- klauzula informacyjna pod `/informacja-o-danych` — rusztowanie z jawnymi lukami
+- klauzula informacyjna pod `/privacy` — rusztowanie z jawnymi lukami
 - `DECISIONS.md` — odstępstwa od handoffu i wynik listy odbioru punkt po punkcie
 - obraz produkcyjny, `docker-compose.prod.yml` z Caddy i automatycznym TLS,
   szyfrowane kopie zapasowe, runbook w `docs/DEPLOYMENT.md` — obraz zbudowany
@@ -95,8 +95,12 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 - **11 rejonów, nie 12.** Handoff mówił 12; teksty poprawione, zrzuty ekranu i prototyp
   nadal pokazują 12 i zostają jako materiał historyczny.
 - **Nazewnictwo:** po polsku wyłącznie to, co czyta człowiek — interfejs, formy odmiany,
-  ścieżki tras (`/pary`), kody rekolekcji. Reszta po angielsku, łącznie ze schematem bazy.
-- **Ścieżki tras zostają polskie** — potwierdzone, nie otwieramy ponownie.
+  kody rekolekcji. Reszta po angielsku, łącznie ze schematem bazy i całymi URL-ami.
+- **Ścieżki tras po angielsku** — 19.08.2026 odwróciliśmy wcześniejszą decyzję o polskich
+  ścieżkach. Nikt tych adresów nie czyta ani nie wpisuje (nawigacja przez klikanie,
+  jedyny wysyłany link to zaproszenie z tokenem), a polski kosztował przy każdej trasie:
+  odmiana, ryzyko znaków diakrytycznych, dwie nazwy na jedno pojęcie. Rachunek w
+  `DECISIONS.md` §1.10. **Plany wykonawcze pokazują stare ścieżki i tak zostaje.**
 - **Import tylko XLSX.** CSV wypadł z zakresu 19.08.2026 na Twoją prośbę. Punkty
   listy odbioru mówiące o CSV są nieaktualne.
 - **Zaproszenia bez SMTP.** „Zaproś" generuje jednorazowy link ważny 7 dni, który
@@ -130,7 +134,7 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 1. **Push na GitHuba** — cała praca czeka lokalnie. Repozytorium jest w organizacji,
    więc push je upublicznia jej członkom.
 2. **Próbka rzeczywistych danych** — układ arkusza jest ustalony (szablon do pobrania
-   pod `/eksport/szablon`), ale warto go skonfrontować z Twoim prawdziwym plikiem,
+   pod `/export/template`), ale warto go skonfrontować z Twoim prawdziwym plikiem,
    zanim zrobimy import produkcyjny.
 3. **Hosting** — ustalone „VPS w UE + Docker", ale bez konkretów. Blokuje wdrożenie
    i uzupełnienie klauzuli informacyjnej, która musi wskazać administratora danych.

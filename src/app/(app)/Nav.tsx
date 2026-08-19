@@ -22,7 +22,7 @@ export function Nav({
   return (
     <div className={style.nav}>
       {items.map((item) => {
-        // Prefix match, so a nested route such as /konta/zaproszenie keeps its
+        // Prefix match, so a nested route such as /accounts/invite keeps its
         // parent entry highlighted.
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
         return (

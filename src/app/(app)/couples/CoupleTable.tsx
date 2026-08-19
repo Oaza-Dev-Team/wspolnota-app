@@ -20,7 +20,7 @@ function sortHref(f: Filters, key: SortKey): string {
   // Clicking the active column flips direction; any other column starts ascending.
   const dir = f.sort === key && f.dir === 'asc' ? 'desc' : 'asc';
   const qs = toSearchParams({ ...f, sort: key, dir, page: 1 }).toString();
-  return qs ? `/pary?${qs}` : '/pary';
+  return qs ? `/couples?${qs}` : '/couples';
 }
 
 function ariaSort(f: Filters, key: SortKey): 'ascending' | 'descending' | 'none' {
@@ -83,7 +83,7 @@ export function CoupleTable({
                 <td className={style.action}>
                   {/* The interactive element is a real link, so keyboard
                       navigation works without tabindex on the row. */}
-                  <Link href={`/pary?card=${r.id}`} className={style.actionLink}>
+                  <Link href={`/couples?card=${r.id}`} className={style.actionLink}>
                     {canEdit(user, { regionId: r.regionId }) ? 'Edytuj →' : 'Podgląd →'}
                   </Link>
                 </td>

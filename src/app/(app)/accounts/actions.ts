@@ -30,7 +30,7 @@ export async function toggleAccountAction(
     throw e;
   }
 
-  revalidatePath('/konta');
+  revalidatePath('/accounts');
   return {};
 }
 
@@ -45,10 +45,10 @@ export async function inviteAction(
   try {
     const token = await createInvite(u, id);
     const base = process.env.APP_URL ?? 'http://localhost:3000';
-    revalidatePath('/konta');
+    revalidatePath('/accounts');
     // The raw token exists only here; the row shows it once and it is never
     // recoverable afterwards, because only its digest was stored.
-    return { inviteLink: `${base}/zaproszenie/${token}` };
+    return { inviteLink: `${base}/invite/${token}` };
   } catch (e) {
     if (e instanceof Forbidden) return { error: e.message };
     throw e;

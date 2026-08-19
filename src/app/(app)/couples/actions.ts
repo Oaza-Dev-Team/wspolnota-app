@@ -74,8 +74,8 @@ export async function saveCoupleAction(
     throw e;
   }
 
-  revalidatePath('/pary');
-  redirect('/pary?saved=1');
+  revalidatePath('/couples');
+  redirect('/couples?saved=1');
 }
 
 export async function deleteCoupleAction(
@@ -94,8 +94,8 @@ export async function deleteCoupleAction(
     throw e;
   }
 
-  revalidatePath('/pary');
-  redirect('/pary?deleted=1');
+  revalidatePath('/couples');
+  redirect('/couples?deleted=1');
 }
 
 /**
@@ -125,6 +125,6 @@ export async function purgeCoupleAction(
     throw e;
   }
 
-  revalidatePath('/pary');
-  redirect('/pary?purged=1');
+  revalidatePath('/couples');
+  redirect('/couples?purged=1');
 }

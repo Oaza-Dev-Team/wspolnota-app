@@ -44,7 +44,7 @@ export function ImportForm() {
     <div className={style.wrapper}>
       <p className={style.hint}>
         Nie masz pliku w tym układzie?{' '}
-        <a href="/eksport/szablon" className={style.link}>
+        <a href="/export/template" className={style.link}>
           Pobierz pusty szablon
         </a>{' '}
         albo wyeksportuj obecną kartotekę i popraw ją w arkuszu.

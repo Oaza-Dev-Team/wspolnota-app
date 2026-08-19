@@ -3,11 +3,11 @@ import { type Page, expect, test } from '@playwright/test';
 const PASSWORD = 'kartoteka123';
 
 async function signIn(page: Page, email: string) {
-  await page.goto('/logowanie');
+  await page.goto('/login');
   await page.getByLabel('Adres e-mail').fill(email);
   await page.getByLabel('Hasło').fill(PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/pary/);
+  await expect(page).toHaveURL(/\/couples/);
 }
 
 /**
@@ -36,7 +36,7 @@ test('the drawer closes on the close button and returns to the list', async ({ p
   await signIn(page, 'admin@example.pl');
   await openFirstCard(page);
   await page.getByRole('button', { name: 'Zamknij' }).click();
-  await expect(page).toHaveURL(/\/pary$/);
+  await expect(page).toHaveURL(/\/couples$/);
 });
 
 test('a card can be opened directly by link', async ({ page }) => {
@@ -57,7 +57,7 @@ test('saving a change updates the list and shows a toast', async ({ page }) => {
   await page.getByRole('button', { name: 'Zapisz' }).click();
 
   await expect(page.getByText('Zapisano zmiany')).toBeVisible();
-  await page.goto(`/pary?q=${surname}`);
+  await page.goto(`/couples?q=${surname}`);
   await expect(page.locator('tbody tr')).toHaveCount(1);
 });
 
@@ -83,7 +83,7 @@ test('an empty surname blocks the save', async ({ page }) => {
 
 test('adding a retreat suggests the first missing degree', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?formation=none');
+  await page.goto('/couples?formation=none');
   await openFirstCard(page);
 
   await expect(page.getByText('Brak wpisów o rekolekcjach.')).toBeVisible();
@@ -93,7 +93,7 @@ test('adding a retreat suggests the first missing degree', async ({ page }) => {
 
 test('the name field appears only for INNE and is then required', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?formation=none');
+  await page.goto('/couples?formation=none');
   await openFirstCard(page);
 
   await page.getByRole('button', { name: '+ Dodaj rekolekcje' }).click();
@@ -136,7 +136,7 @@ test('adding a couple works end to end', async ({ page }) => {
   // wait for the server action, so a goto here can outrun the commit.
   await expect(page).toHaveURL(/saved=1/);
 
-  await page.goto(`/pary?q=${surname}`);
+  await page.goto(`/couples?q=${surname}`);
   await expect(page.locator('tbody tr')).toHaveCount(1);
 
   // Clean up: list.spec.ts asserts an exact 300, and Playwright runs spec
@@ -154,12 +154,12 @@ test('deleting a couple removes it from the list', async ({ page }) => {
   await page.getByRole('button', { name: 'Zapisz' }).click();
   await expect(page).toHaveURL(/saved=1/);
 
-  await page.goto(`/pary?q=${surname}`);
+  await page.goto(`/couples?q=${surname}`);
   await openFirstCard(page);
   await page.getByRole('button', { name: 'Usuń parę' }).click();
   // Same reason as the save above: the click does not wait for the action.
   await expect(page).toHaveURL(/deleted=1/);
 
-  await page.goto(`/pary?q=${surname}`);
+  await page.goto(`/couples?q=${surname}`);
   await expect(page.getByText('Brak wyników dla podanych kryteriów.').first()).toBeVisible();
 });

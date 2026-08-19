@@ -43,7 +43,7 @@ export function FilterBar({
     // Any filter change returns to page one; a filtered result set has no
     // page 4 to stay on.
     const qs = toSearchParams({ ...filters, ...change, page: 1 }).toString();
-    startTransition(() => router.replace(qs ? `/pary?${qs}` : '/pary', { scroll: false }));
+    startTransition(() => router.replace(qs ? `/couples?${qs}` : '/couples', { scroll: false }));
   }
 
   function applySearch(q: string) {
@@ -127,7 +127,7 @@ export function FilterBar({
           if (e.currentTarget.value === 'any') params.delete('formation');
           else params.set('formation', e.currentTarget.value);
           const qs = params.toString();
-          startTransition(() => router.replace(qs ? `/pary?${qs}` : '/pary', { scroll: false }));
+          startTransition(() => router.replace(qs ? `/couples?${qs}` : '/couples', { scroll: false }));
         }}
       >
         {FORMATION_OPTIONS.map((o) => (

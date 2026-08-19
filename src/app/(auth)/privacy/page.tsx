@@ -105,7 +105,7 @@ export default function DataNoticePage() {
           </p>
         </section>
 
-        <Link href="/logowanie" className={style.back}>
+        <Link href="/login" className={style.back}>
           ← Wróć do logowania
         </Link>
       </main>

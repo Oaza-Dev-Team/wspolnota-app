@@ -12,7 +12,7 @@ export function CoupleCards({ rows }: { rows: CoupleRow[] }) {
   return (
     <div className={style.cards}>
       {rows.map((r) => (
-        <Link key={String(r.id)} href={`/pary?card=${r.id}`} className={style.card}>
+        <Link key={String(r.id)} href={`/couples?card=${r.id}`} className={style.card}>
           <div className={style.cardRow}>
             <span className={style.cardSurname}>{r.surname}</span>
             <RegionBadge region={r.regionId} suffix={r.circle ? `krąg ${r.circle}` : undefined} />

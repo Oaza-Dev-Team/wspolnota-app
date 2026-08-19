@@ -3,16 +3,16 @@ import { type Page, expect, test } from '@playwright/test';
 const PASSWORD = 'kartoteka123';
 
 async function signIn(page: Page, email: string) {
-  await page.goto('/logowanie');
+  await page.goto('/login');
   await page.getByLabel('Adres e-mail').fill(email);
   await page.getByLabel('Hasło').fill(PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/pary/);
+  await expect(page).toHaveURL(/\/couples/);
 }
 
 async function signOut(page: Page) {
   await page.getByRole('button', { name: 'Wyloguj' }).click();
-  await expect(page).toHaveURL(/\/logowanie/);
+  await expect(page).toHaveURL(/\/login/);
 }
 
 test('admin sees the whole community with the shell', async ({ page }) => {
@@ -41,7 +41,7 @@ test('a region account sees only its own region', async ({ page }) => {
 
 test('a region account cannot widen its scope through the URL', async ({ page }) => {
   await signIn(page, 'rejon7@example.pl');
-  await page.goto('/pary?region=3');
+  await page.goto('/couples?region=3');
   // Scope is enforced server-side, so the region filter cannot reach region III.
   const otherRegions = page.locator('tbody tr td:nth-child(5)').getByText(/^III$/);
   await expect(otherRegions).toHaveCount(0);
@@ -115,13 +115,13 @@ test('search matches without Polish diacritics', async ({ page }) => {
 
 test('an impossible filter shows the empty-state message', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?q=nieistniejacenazwisko123');
+  await page.goto('/couples?q=nieistniejacenazwisko123');
   await expect(page.getByText('Brak wyników dla podanych kryteriów.').first()).toBeVisible();
 });
 
 test('a hand-edited query string degrades instead of failing', async ({ page }) => {
   await signIn(page, 'admin@example.pl');
-  await page.goto('/pary?region=999&sort=cokolwiek&page=0&formation=ONZ_XVII');
+  await page.goto('/couples?region=999&sort=cokolwiek&page=0&formation=ONZ_XVII');
   await expect(page.getByRole('heading', { name: 'Pary wspólnoty' })).toBeVisible();
   await expect(page.getByRole('status')).toHaveText('300 / 300');
 });

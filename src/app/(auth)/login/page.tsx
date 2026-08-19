@@ -9,7 +9,7 @@ export default async function LoginPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  if (await currentUser()) redirect('/pary');
+  if (await currentUser()) redirect('/couples');
 
   const invited = (await searchParams).invited === '1';
 
@@ -51,7 +51,7 @@ export default async function LoginPage({
         <p className={style.formFooter}>
           Dostęp nadaje para odpowiedzialna za wspólnotę.
           <br />
-          <Link href="/informacja-o-danych" className={style.noticeLink}>
+          <Link href="/privacy" className={style.noticeLink}>
             Informacja o przetwarzaniu danych
           </Link>
         </p>

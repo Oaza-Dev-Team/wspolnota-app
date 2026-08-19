@@ -28,7 +28,7 @@ gdańska), podzielonych na **11 rejonów**. Siedem widoków: logowanie, lista pa
 > Przy rozbieżności obowiązuje tekst, nie obrazek.
 >
 > W kodzie liczba rejonów **nie jest literałem** — wynika z długości tablicy `ROMAN`
-> w `src/lib/domena/rejony.ts` (stała `LICZBA_REJONOW`). Zakres w bazie pilnuje
+> w `src/lib/domena/regions.ts` (stała `LICZBA_REJONOW`). Zakres w bazie pilnuje
 > `CHECK (id BETWEEN 1 AND 11)`, a paleta w `tokens.css` ma dokładnie tyle kolorów,
 > ile rejonów — test tokenów wykrywa wpis pozostawiony po zmianie liczby.
 
@@ -101,10 +101,10 @@ Po polsku:
 
 - **Cały interfejs** — etykiety, komunikaty, teksty błędów. `lang="pl"` na `<html>`.
 - **Formy odmiany liczebników** — `COUPLES = ['para', 'pary', 'par']`.
-- **Ścieżki tras** — `/pary`, `/logowanie`, `/rejony`. To zapamiętywalna część adresu,
+- **Ścieżki tras** — `/couples`, `/login`, `/regions`. To zapamiętywalna część adresu,
   którą użytkownik widzi i wysyła dalej. W Next.js katalog trasy **jest** adresem,
-  więc `src/app/(app)/pary/` pozostaje polskie mimo reguły o nazwach plików.
-  **Decyzja potwierdzona 18.08.2026 — nie wracamy do niej.** Adres `/pary?card=5`
+  więc `src/app/(app)/couples/` pozostaje polskie mimo reguły o nazwach plików.
+  **Decyzja potwierdzona 18.08.2026 — nie wracamy do niej.** Adres `/couples?card=5`
   czyta się naturalnie dla polskiego użytkownika, a niespójność ze ścieżką angielską
   (`?sort=surname`) jest ceną, którą świadomie płacimy.
 - **Kody rekolekcji** — `ONŻ I`, `ORAR II`. To nazwy własne, nie do tłumaczenia.
@@ -178,7 +178,7 @@ parafia_efektywna(para) = COALESCE(para.parafia_id, krag.parafia_id)
 ```
 
 Filtrowanie po samym `para.parafia_id` gubi wszystkie pary korzystające z parafii kręgu
-(czyli większość). Wyrażenie żyje w jednym miejscu — `lib/pary/zapytania.ts` — i jest
+(czyli większość). Wyrażenie żyje w jednym miejscu — `lib/couples/zapytania.ts` — i jest
 używane przez listę, eksport i statystyki rejonów.
 
 ### 4.3 Encje `krag` i `parafia` zamiast pól tekstowych
@@ -252,7 +252,7 @@ zapytaniu — jest strukturalne. Ten sam moduł zasila UI (ukrywanie przycisków
 - **Cookie:** `httpOnly`, `secure`, `sameSite=lax`, `path=/`, czas życia 30 dni,
   odświeżane przy aktywności.
 - **`requireUser()`** — czyta cookie, waliduje sesję, sprawdza `konto.status = 'aktywne'`,
-  zwraca `Uzytkownik` albo przekierowuje na `/logowanie`. Wywoływana w layoucie
+  zwraca `Uzytkownik` albo przekierowuje na `/login`. Wywoływana w layoucie
   chronionej grupy tras **oraz** na wejściu każdej server action (layout nie chroni akcji).
 - **Ograniczenie prób logowania:** 10 prób / 15 min na adres e-mail i na IP,
   licznik w Postgresie.
@@ -270,7 +270,7 @@ i `o2.pl`, dla których założenie konta Google jest realnym tarciem wdrożenio
 **Odłożenie nic nie kosztuje, bo szew jest już we właściwym miejscu.** Obie metody
 schodzą się w `utworzSesje(kontoId)`; wszystko za tym punktem — sesje, `requireUser()`,
 uprawnienia, widoki — jest wspólne. Dodanie Google to dopisanie pary tras
-(`/logowanie/google` + callback) kończących się wywołaniem tej samej funkcji,
+(`/login/google` + callback) kończących się wywołaniem tej samej funkcji,
 plus jedna przyrostowa migracja z kolumną `konto.google_sub` (unikalna, nullable).
 `konto.hash_hasla` jest już nullable, więc nie wymaga zmiany.
 
@@ -319,7 +319,7 @@ dodanie, usunięcie i eksport miały wpis.
 
 ### Zapis pary poza server action
 
-`lib/pary/zapisz.ts` zawiera walidację i zapis. Server action jest cienkim adapterem.
+`lib/couples/zapisz.ts` zawiera walidację i zapis. Server action jest cienkim adapterem.
 Powód: **import z Excela musi przejść przez dokładnie tę samą walidację i ten sam
 zapis** — inaczej stanie się drugą, słabiej strzeżoną drogą do bazy.
 
@@ -330,7 +330,7 @@ zapis** — inaczej stanie się drugą, słabiej strzeżoną drogą do bazy.
 Wszystko po stronie serwera, wszystko w URL.
 
 ```
-/pary?q=&rejon=&parafia=&krag=&formacja=&sort=&dir=&page=&karta=
+/couples?q=&rejon=&parafia=&krag=&formacja=&sort=&dir=&page=&karta=
 ```
 
 - **Szukanie** obejmuje: nazwisko, imię żony, imię męża, e-mail, telefon, parafię, krąg.
@@ -385,7 +385,7 @@ przełączane CSS-em (nie `window.innerWidth`), żeby uniknąć skoku przy hydra
 > ustawień regionalnych) i to tam najczęściej psują się polskie znaki. XLSX niesie
 > kodowanie w sobie.
 
-Route handler `GET /eksport?<te same parametry co lista>`.
+Route handler `GET /export?<te same parametry co lista>`.
 
 Używa **tego samego** `parseFilters()` i tego samego `listScope(user)` co lista.
 Dzięki temu „eksportuje aktualnie przefiltrowaną listę" jest prawdziwe z konstrukcji,
@@ -438,7 +438,7 @@ Rozpoznawanie duplikatów bez kolumny `ID`: `(nazwisko, imię żony, imię męż
 2. Walidacja wiersz po wierszu przez **ten sam schemat Zod** co formularz.
 3. **Podgląd przed zapisem:** ile rekordów nowych, ile do aktualizacji, ile błędnych —
    z numerem wiersza i treścią błędu. Nic nie trafia do bazy przed potwierdzeniem.
-4. Zapis w jednej transakcji przez `lib/pary/zapisz.ts`.
+4. Zapis w jednej transakcji przez `lib/couples/zapisz.ts`.
 5. Zbiorczy wpis do audytu.
 
 Import dostępny **wyłącznie dla roli `admin`**.
@@ -521,7 +521,7 @@ Każdy punkt listy = jeden test, nazwany tak, żeby raport z przebiegu dało si�
 zestawić z listą pozycja po pozycji.
 
 **Uprawnienia testowane na poziomie serwera, nie UI:** wywołanie server action jako
-`podglad` → odmowa; `GET /eksport?rejon=<obcy>` jako para rejonowa → dane zawężone
+`podglad` → odmowa; `GET /export?rejon=<obcy>` jako para rejonowa → dane zawężone
 do własnego rejonu mimo parametru.
 
 ---

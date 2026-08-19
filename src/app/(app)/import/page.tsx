@@ -7,7 +7,7 @@ import { ImportForm } from './ImportForm';
 export default async function ImportPage() {
   const u = await requireUser();
   // The nav hides the entry, but the address bar does not respect the nav.
-  if (!canImport(u)) redirect('/pary');
+  if (!canImport(u)) redirect('/couples');
 
   return (
     <>

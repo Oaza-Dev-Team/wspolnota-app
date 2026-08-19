@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import { INVITE_DAYS } from '@/lib/accounts/policy';
 import { currentUser } from '@/lib/auth/requireUser';
-import style from '../../logowanie/login.module.css';
+import style from '../../login/login.module.css';
 import { InviteForm } from './InviteForm';
 
 /**
@@ -15,7 +15,7 @@ export default async function InvitePage({
 }: {
   params: Promise<{ token: string }>;
 }) {
-  if (await currentUser()) redirect('/pary');
+  if (await currentUser()) redirect('/couples');
 
   const { token } = await params;
 

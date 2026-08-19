@@ -58,7 +58,7 @@ export async function importAction(
 
   try {
     const applied = await applyImport(u, plan);
-    revalidatePath('/pary');
+    revalidatePath('/couples');
     return { applied };
   } catch (e) {
     if (e instanceof Forbidden) return { error: e.message };

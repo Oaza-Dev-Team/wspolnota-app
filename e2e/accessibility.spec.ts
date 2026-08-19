@@ -4,11 +4,11 @@ const PASSWORD = 'kartoteka123';
 const PHONE = { width: 390, height: 844 };
 
 async function signIn(page: Page, email: string) {
-  await page.goto('/logowanie');
+  await page.goto('/login');
   await page.getByLabel('Adres e-mail').fill(email);
   await page.getByLabel('Hasło').fill(PASSWORD);
   await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/pary/);
+  await expect(page).toHaveURL(/\/couples/);
 }
 
 /**
@@ -65,7 +65,7 @@ test.describe('touch targets', () => {
   test('no control on the accounts view is shorter than 44px on a phone', async ({ page }) => {
     await page.setViewportSize(PHONE);
     await signIn(page, 'admin@example.pl');
-    await page.goto('/konta');
+    await page.goto('/accounts');
 
     const small = (await controlHeights(page)).filter((c) => c.height < 44);
     expect(small, JSON.stringify(small)).toEqual([]);
@@ -76,7 +76,7 @@ test.describe('keyboard', () => {
   // The spec asks for an outline rather than a border-colour change: at a
   // glance the two look alike, and only one of them survives a dark row.
   test('a focused field draws an outline, not only a coloured border', async ({ page }) => {
-    await page.goto('/logowanie');
+    await page.goto('/login');
     await page.keyboard.press('Tab');
 
     const outline = await page.evaluate(() => {
@@ -118,7 +118,7 @@ test.describe('console', () => {
     page.on('pageerror', (e) => errors.push(e.message));
 
     await signIn(page, 'admin@example.pl');
-    for (const path of ['/pary', '/rejony', '/konta', '/historia', '/import']) {
+    for (const path of ['/couples', '/regions', '/accounts', '/history', '/import']) {
       await page.goto(path);
       await expect(page.getByRole('heading').first()).toBeVisible();
     }

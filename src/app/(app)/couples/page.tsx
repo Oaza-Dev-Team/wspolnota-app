@@ -39,7 +39,7 @@ export default async function CouplesPage({
   // The export must carry whatever the user is looking at, so its address is
   // built from the same filters the list was rendered with.
   const exportQuery = toSearchParams(filters).toString();
-  const exportHref = exportQuery ? `/eksport?${exportQuery}` : '/eksport';
+  const exportHref = exportQuery ? `/export?${exportQuery}` : '/export';
 
   // The drawer is a URL state, so the back button works and a card can be
   // linked to. Its content is fetched here, on the server.
@@ -91,7 +91,7 @@ export default async function CouplesPage({
       <ViewHeader title={title} subtitle={subtitle}>
         <a href={exportHref} className={style.exportButton}>Eksport XLSX</a>
         {u.role !== 'viewer' && (
-          <Link href="/pary?card=new" className={style.addButton}>
+          <Link href="/couples?card=new" className={style.addButton}>
             + Dodaj parę
           </Link>
         )}

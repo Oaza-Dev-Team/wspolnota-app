@@ -48,7 +48,7 @@ Sprawdzenie:
 
 ```bash
 docker compose -f docker-compose.prod.yml ps
-curl -sf https://TWOJA-DOMENA/zdrowie      # {"status":"ok"}
+curl -sf https://TWOJA-DOMENA/health      # {"status":"ok"}
 ```
 
 ### Pierwsze konto
@@ -114,7 +114,7 @@ to hipoteza, nie zabezpieczenie.
 Tylko porty 80 i 443 proxy. Baza nie publikuje portu — jest osiągalna wyłącznie
 z sieci compose'a, więc błąd w konfiguracji firewalla jej nie odsłoni.
 
-`/zdrowie` odpowiada bez sesji, bo pyta o nią orkiestrator, nie człowiek. Mówi
+`/health` odpowiada bez sesji, bo pyta o nią orkiestrator, nie człowiek. Mówi
 wyłącznie „działa" albo „nie działa" — żadnej wersji, żadnych liczników, żadnej
 treści błędu.
 
