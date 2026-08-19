@@ -54,7 +54,7 @@ export type ClientFilters = Omit<Filters, 'parish' | 'circle'> & {
 export const FORMATION_OPTIONS: readonly { value: string; label: string }[] = [
   { value: 'any', label: 'Formacja — dowolna' },
   ...DEGREES.map((d) => ({ value: d, label: `Ma ${retreatInfo(d).code}` })),
-  ...DEGREES.map((d) => ({ value: `without:${d}`, label: `Bez ${retreatInfo(d).code}` })),
+  ...DEGREES.map((d) => ({ value: `without:${d}`, label: `Bez ${retreatInfo(d).genitive}` })),
   { value: 'INNE', label: 'Ma inne rekolekcje' },
   { value: 'none', label: 'Bez żadnych rekolekcji' },
 ];
