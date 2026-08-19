@@ -103,6 +103,15 @@ npm run db:reset
 - **`npm audit` zgłasza 3 podatności high** (`deepmerge-ts`). Ścieżka to
   `prisma → @prisma/config`, czyli devDependency; `@prisma/client` jest czysty.
   **Nie uruchamiaj `npm audit fix --force`** — cofa do Prismy 6 i łamie konfigurację.
+- **Alert Dependabota o `uuid` (GHSA-w5hq-g745-h8pq) jest dla nas fałszywie trafny
+  i zostaje otwarty świadomie.** `uuid@8.3.2` wchodzi przechodnio przez `exceljs`.
+  Podatność dotyczy `v3`/`v5`/`v6` wywołanych **z buforem docelowym**; `exceljs` zna
+  wyłącznie `v4`, woła je bez argumentów, i to w obsłudze formatowania warunkowego,
+  którego nie używamy. **Podpowiedź npm proponuje cofnięcie `exceljs` do 3.4.0** —
+  to złamałoby eksport i import. Pin przez `overrides` też odpadł (sprawdzony, testy
+  przechodziły) — nie nosimy pinu dla nieistniejącego problemu, bo wymusza kombinację,
+  której autorzy `exceljs` nigdy nie testowali. Zanim zareagujesz na alert, sprawdź
+  najpierw, czy podatna ścieżka jest u nas w ogóle osiągalna.
 - **`prisma migrate dev` potrafi zawisnąć po zastosowaniu migracji.** Zanim uznasz, że
   padła, sprawdź `prisma migrate status` — jeśli mówi "up to date", migracja przeszła
   i wystarczy ubić proces. Wiszący proces trzyma blokadę advisory i zablokuje kolejne
