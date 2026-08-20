@@ -20,7 +20,8 @@ Wszystko poniżej jest od tych dwóch rzeczy niezależne i leży już w repozyto
 |---|---|
 | `Dockerfile` | obraz produkcyjny — etapy `deps`, `build`, `migrate`, `runner` |
 | `docker-compose.prod.yml` | baza, migracje, aplikacja, proxy |
-| `Caddyfile` | reverse proxy, automatyczny TLS, nagłówki bezpieczeństwa |
+| `docker-compose.coolify.yml` | to samo bez proxy — patrz „Wdrożenie przez Coolify" |
+| `Caddyfile` | reverse proxy, automatyczny TLS |
 | `.env.production.example` | szablon konfiguracji — skopiuj do `.env` na serwerze |
 | `scripts/create-superadmin.mts` | pierwsze konto — techniczne — na pustej bazie |
 | `scripts/backup.sh` | szyfrowany `pg_dump` z retencją 30 dni |
@@ -104,9 +105,50 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Migracje zastosują się same. Stare obrazy: `docker image prune -f`.
 
+## Wdrożenie przez Coolify
+
+Produkcja stoi na Coolify. Wszystko powyżej opisuje ścieżkę samodzielną — zostaje
+ważne jako droga odwrotu na dowolnego hosta z Dockerem — ale różni się w czterech
+miejscach.
+
+**Plik compose to `docker-compose.coolify.yml`**, czyli `prod` bez usługi `proxy`.
+TLS kończy Traefik należący do Coolify, a domenę przypisujesz usłudze `app`
+w panelu, w formacie `https://kartoteka.example.pl:3000`. Port po dwukropku to
+adresowanie wewnętrzne — nie publikuje niczego.
+
+**Nagłówki bezpieczeństwa nie są już w `Caddyfile`.** Przeniosły się do
+`next.config.ts`, bo należą do aplikacji, a nie do wymiennej warstwy wejściowej.
+Pilnuje ich `e2e/security-headers.spec.ts`, uruchamiany przeciwko produkcyjnemu
+buildowi.
+
+**Zmienne środowiskowe ustawiasz w panelu**, nie w pliku `.env`. Coolify zapisuje
+je do `.env` w katalogu aplikacji — także te, do których plik compose się nie
+odwołuje, jak `BACKUP_PASSPHRASE`. `APP_DOMAIN` przestaje być potrzebna; istniała
+wyłącznie po to, żeby Caddy wiedział, dla jakiej domeny wystawić certyfikat.
+
+**Repozytorium nie istnieje na serwerze.** Coolify klonuje kod do katalogu
+tymczasowego, buduje obrazy i zostawia pod
+`/data/coolify/applications/<UUID>/` wyłącznie `.env` i wynikowy
+`docker-compose.yaml`. Skrypty z `scripts/` trzeba wgrać na host osobno; te, które
+mają działać wewnątrz kontenera, uruchamiasz przez `docker compose run --rm migrate`,
+bo są wbudowane w obraz.
+
+Konto techniczne zakładasz tak samo, tylko z katalogu aplikacji Coolify i przez
+wygenerowany plik compose:
+
+```bash
+cd /data/coolify/applications/<UUID>
+docker compose run --rm \
+  -e ADMIN_EMAIL -e ADMIN_NAME -e ADMIN_PASSWORD \
+  migrate npm run create-superadmin
+```
+
 ## Zadania crona hosta
 
 Oba świadomie **nie** są schedulerem wewnątrz aplikacji — patrz `DECISIONS.md` §1.7.
+Oba działają na hoście, nie w Scheduled Tasks Coolify: backup potrzebuje `gpg`,
+którego nie ma w obrazie `postgres`, a retencja potrzebuje obrazu `migrate`, który
+nie działa w tle.
 
 ```cron
 # kopia zapasowa, 03:15 UTC
@@ -116,9 +158,26 @@ Oba świadomie **nie** są schedulerem wewnątrz aplikacji — patrz `DECISIONS.
 45 3 * * *  cd /srv/kartoteka && docker compose -f docker-compose.prod.yml run --rm migrate npm run retention >> /var/log/kartoteka-retention.log 2>&1
 ```
 
-`backup.sh` czyta `BACKUP_PASSPHRASE` z `.env` obok compose'a. **Kopię hasła trzymaj
-poza tym serwerem** — kopia zapasowa, której nie da się odszyfrować, nie jest kopią
-zapasową.
+Na Coolify te same dwa zadania, ze ścieżką katalogu aplikacji i wygenerowanym plikiem
+compose. `backup.sh` wgrywasz na host osobno, bo w tym katalogu nie ma repozytorium:
+
+```cron
+KARTOTEKA=/data/coolify/applications/<UUID>
+
+# kopia zapasowa, 03:15 UTC
+15 3 * * * root cd $KARTOTEKA && COMPOSE_FILE=docker-compose.yaml /usr/local/bin/kartoteka-backup /var/backups/kartoteka >> /var/log/kartoteka-backup.log 2>&1
+
+# retencja audytu i sesji, 03:45 UTC
+45 3 * * * root cd $KARTOTEKA && docker compose run --rm migrate npm run retention >> /var/log/kartoteka-retention.log 2>&1
+```
+
+`backup.sh` czyta `BACKUP_PASSPHRASE` z `.env` obok compose'a — **wczytuje ten plik
+zanim sprawdzi, czy hasło jest ustawione**, i ta kolejność jest celowa. Odwrotna
+sprawiała, że powyższy wpis crona, który świadomie nie eksportuje hasła, odmawiał
+każdej nocy do pliku logu, którego nikt nie czyta.
+
+**Kopię hasła trzymaj poza tym serwerem** — kopia zapasowa, której nie da się
+odszyfrować, nie jest kopią zapasową.
 
 ## Odtworzenie z kopii
 
