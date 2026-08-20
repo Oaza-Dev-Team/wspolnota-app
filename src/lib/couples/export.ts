@@ -83,7 +83,15 @@ export async function buildWorkbook(rows: SheetRow[]): Promise<Buffer> {
   return Buffer.from(await workbook.xlsx.writeBuffer());
 }
 
-export function exportFileName(now: Date): string {
+/**
+ * `region` names the one region the file holds, when it holds exactly one —
+ * the file usually leaves the application for somebody's disk or inbox, and
+ * "kartoteka-2026-08-20.xlsx" says nothing about which part of the community
+ * is inside it. Roman numerals stay ASCII, so nothing has to be escaped.
+ */
+export function exportFileName(now: Date, region: number | null = null): string {
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `kartoteka-${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.xlsx`;
+  const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const scope = region === null ? '' : `rejon-${romanNumeral(region)}-`;
+  return `kartoteka-${scope}${date}.xlsx`;
 }

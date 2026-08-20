@@ -49,7 +49,33 @@ test('the export downloads an xlsx carrying the current filters', async ({ page 
     page.getByRole('link', { name: 'Eksport XLSX' }).click(),
   ]);
 
+  // Filtered to one region, so the file says which one.
+  expect(download.suggestedFilename()).toMatch(/^kartoteka-rejon-III-\d{4}-\d{2}-\d{2}\.xlsx$/);
+});
+
+test('an export of the whole community carries no region in its name', async ({ page }) => {
+  await signIn(page, 'admin@example.pl');
+  await page.goto('/couples');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Eksport XLSX' }).click(),
+  ]);
+
   expect(download.suggestedFilename()).toMatch(/^kartoteka-\d{4}-\d{2}-\d{2}\.xlsx$/);
+});
+
+test('a region account gets its own region in the name without filtering for it', async ({ page }) => {
+  await signIn(page, 'rejon7@example.pl');
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('link', { name: 'Eksport XLSX' }).click(),
+  ]);
+
+  // listScope narrows it whatever the query string says, so the region is
+  // known from the account rather than from a filter it never set.
+  expect(download.suggestedFilename()).toMatch(/^kartoteka-rejon-VII-\d{4}-\d{2}-\d{2}\.xlsx$/);
 });
 
 test('the export link keeps the filters in its address', async ({ page }) => {

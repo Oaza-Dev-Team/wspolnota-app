@@ -114,4 +114,13 @@ describe('exportFileName', () => {
   it('carries the date so downloads do not collide', () => {
     expect(exportFileName(new Date('2026-08-19T21:12:00'))).toBe('kartoteka-2026-08-19.xlsx');
   });
+
+  it('names the region when the file holds exactly one', async () => {
+    // The file leaves the application; the date alone does not say which part
+    // of the community is inside it.
+    expect(exportFileName(new Date('2026-08-20T09:00:00'), 3))
+      .toBe('kartoteka-rejon-III-2026-08-20.xlsx');
+    expect(exportFileName(new Date('2026-08-20T09:00:00'), 11))
+      .toBe('kartoteka-rejon-XI-2026-08-20.xlsx');
+  });
 });
