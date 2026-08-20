@@ -137,6 +137,9 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 ## Pułapki tego środowiska
 
 - **Port bazy to 5433**, nie 5432 — 5432 zajmuje `docfields_postgres` z innego projektu.
+- **Seed odmawia bez `SEED_ALLOW_WIPE=1` w `.env`.** Kasuje wszystkie tabele, a leży
+  w obrazie `migrate` — tym samym, w którym zakłada się pierwsze konto na serwerze.
+  `.dockerignore` trzyma `.env` poza obrazami, więc na produkcji nie ma jak go odpalić.
 - **Prisma 7 wymaga sterownika** — `new PrismaClient()` bez `adapter` nie kompiluje się.
 - **`prisma generate` po każdej zmianie schematu** — `migrate` tego nie robi.
 - **`prisma migrate dev` potrafi zawisnąć po zastosowaniu migracji.** Sprawdź

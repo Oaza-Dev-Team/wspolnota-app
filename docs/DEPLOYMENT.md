@@ -69,6 +69,20 @@ Skrypt odmawia, jeśli konto techniczne już istnieje — jest do postawienia pu
 instalacji, a przypadkowe drugie to problem bezpieczeństwa. Hasło zmień po pierwszym
 zalogowaniu.
 
+**Danych testowych na produkcji nie ma i nie będzie.** Usługa `migrate` wykonuje
+wyłącznie `prisma migrate deploy`, czyli zakłada schemat — `prisma.config.ts` nie ma
+wpisu `seed`, więc nie ma czego uruchomić. Obraz aplikacji (`runner`) zawiera tylko
+`.next/standalone`, `.next/static` i `public`: nie ma w nim ani seeda, ani `tsx`,
+ani CLI Prismy. Po wdrożeniu baza jest pusta poza schematem, a jedyne konto to to,
+które zaraz utworzysz.
+
+**Uwaga na kontener `migrate`.** Budowany jest z etapu `build`, więc *ma* w środku
+`prisma/seed.ts` — a to ten sam kontener, w którym uruchamiasz polecenie poniżej.
+`npm run db:seed` wpisane tam skasowałoby całą wspólnotę i zastąpiło ją trzystoma
+zmyślonymi rodzinami oraz piętnastoma kontami ze wspólnym hasłem z dokumentacji.
+Dlatego seed **odmawia bez `SEED_ALLOW_WIPE=1`**, a ta zmienna żyje w `.env`, które
+`.dockerignore` trzyma poza każdym obrazem. Nie dodawaj jej na serwerze.
+
 To konto **nie jest parą odpowiedzialną za wspólnotę**. Para odpowiedzialna ma rolę
 `admin` i jest urzędem, który zmienia się co kilka lat; konto techniczne trwa ponad
 tymi zmianami i istnieje po to, żeby ją powołać i żeby dało się wrócić do aplikacji,

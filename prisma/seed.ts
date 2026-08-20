@@ -65,7 +65,29 @@ function phoneNumber(): string {
   return `+48 ${500 + Math.floor(rnd() * 400)} ${block()} ${block()}`;
 }
 
+/**
+ * This script empties every table before it writes, and it ships inside the
+ * `migrate` image — the very container the runbook tells you to open on the
+ * server to create the first account. One `npm run db:seed` typed there would
+ * erase the community and replace it with three hundred invented families and
+ * fifteen accounts sharing a password printed in the docs.
+ *
+ * So it refuses unless a variable says otherwise, and that variable lives in
+ * `.env`, which `.dockerignore` keeps out of every image. Locally it is simply
+ * there; on the server there is nothing to forget to set.
+ */
+function assertSeedAllowed(): void {
+  if (process.env['SEED_ALLOW_WIPE'] === '1') return;
+  throw new Error(
+    'Seed kasuje wszystkie tabele i odmawia bez SEED_ALLOW_WIPE=1 w .env. '
+    + 'To jest skrypt deweloperski. Na produkcji pierwsze konto zakłada '
+    + '`npm run create-superadmin`, a danych nie zasiewa się wcale.',
+  );
+}
+
 async function main() {
+  assertSeedAllowed();
+
   console.log('Clearing database...');
   await prisma.retreat.deleteMany();
   await prisma.couple.deleteMany();
