@@ -1,0 +1,12 @@
+# The project is developed on Windows and runs on Linux. Without this, git
+# hands shell scripts to the working tree with CRLF endings, and a script
+# copied straight from there to a server dies on `/bin/bash^M: bad
+# interpreter` — a failure that says nothing about its own cause.
+#
+# Everything a Linux process interprets keeps LF regardless of platform.
+
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+Caddyfile   text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
