@@ -94,7 +94,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  border-radius: var(--r-8);
+  padding: 6px;
+  margin: 0 -6px;
 }
+
+.account:hover { background: var(--sidebar-hover); }
 
 .avatar {
   display: grid;

@@ -53,6 +53,8 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
 - rejon może mieć **parę odpowiedzialną i pomocników** — uprawnienia takie same,
   różnią się tylko kafelkiem rejonu i tym, czyje konto da się przekazać
 - strona ustawienia hasła z jednorazowego linku zaproszenia
+- **własne hasło zmienia się pod `/account`** — wejście z karty konta w stopce panelu
+  bocznego, dostępne każdej roli; zmiana kończy pozostałe sesje i rotuje bieżącą
 - **reset hasła cudzego konta** to „Nowe hasło…" na `/accounts`: ten sam
   jednorazowy link co zaproszenie. Dotychczasowe hasło działa do chwili jego użycia
   — żeby zabrać dostęp od razu, najpierw „Wyłącz"

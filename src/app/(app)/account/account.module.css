@@ -1,0 +1,129 @@
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-12);
+  box-shadow: var(--shadow-table);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+  max-width: 560px;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.term {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.value {
+  margin: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.hint {
+  margin: 16px 0 0;
+  font-size: 13px;
+  color: var(--text-faint);
+}
+
+.heading {
+  font-family: var(--font-heading), Georgia, serif;
+  font-size: 19px;
+  font-weight: 400;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.input {
+  background: var(--surface);
+  border: 1px solid var(--border-input);
+  border-radius: var(--r-8);
+  padding: 12px;
+  font-size: 15px;
+  color: var(--text);
+  min-height: 44px;
+  width: 100%;
+}
+
+.input:focus {
+  border-color: var(--blue-500);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+/* The soft ring reads as "active" for the mouse; the keyboard needs an actual
+   outline, and this rule has to outrank the :focus above to get one. */
+.input:focus-visible {
+  outline: 2px solid var(--blue-500);
+  outline-offset: 2px;
+}
+
+.button {
+  align-self: flex-start;
+  background: var(--navy-700);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--r-8);
+  padding: 12px 17px;
+  font-size: 14px;
+  font-weight: 600;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.button:hover { background: var(--navy-900); }
+.button:disabled { opacity: .6; cursor: progress; }
+
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--danger-fg);
+  margin: 0;
+}
+
+.done {
+  background: var(--success-bg);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--success-fg);
+  margin: 0;
+}
+
+@media (max-width: 860px) {
+  .panel { padding: 18px 16px; }
+}

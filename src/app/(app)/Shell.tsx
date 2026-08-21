@@ -2,16 +2,10 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { User } from '@/lib/auth/permissions';
 import { romanNumeral } from '@/lib/domain/regions';
+import { ROLE_LABELS } from '@/lib/domain/roles';
 import { type ViewKey, navItems } from '@/lib/navigation';
 import { Nav } from './Nav';
 import style from './shell.module.css';
-
-const ROLE_LABELS: Record<User['role'], string> = {
-  superadmin: 'Konto techniczne',
-  admin: 'Para odpowiedzialna za wspólnotę',
-  region: 'Para rejonowa',
-  viewer: 'Moderator — podgląd',
-};
 
 function accountCode(u: User): string {
   if (u.role === 'superadmin') return 'SYS';
@@ -50,14 +44,16 @@ export function Shell({
         </nav>
 
         <div className={style.footer}>
-          <div className={style.account}>
+          {/* The way to one's own password. Every role has one, so this sits
+              in the shell rather than in the nav, which is scoped by role. */}
+          <Link href="/account" className={style.account} aria-label="Moje konto">
             <span className={style.avatar} aria-hidden="true">{accountCode(user)}</span>
             <span>
               <span className={style.accountName}>{accountName}</span>
               <br />
               <span className={style.accountRole}>{ROLE_LABELS[user.role]}</span>
             </span>
-          </div>
+          </Link>
           <form action="/logout" method="post">
             <button type="submit" className={style.signOut}>Wyloguj</button>
           </form>
