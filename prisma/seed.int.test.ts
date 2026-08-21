@@ -22,11 +22,6 @@ describe('seed data', () => {
     expect(await prisma.account.count({ where: { status: 'pending' } })).toBe(1);
   });
 
-  it('leaves the pending account without a password hash', async () => {
-    const pending = await prisma.account.findFirstOrThrow({ where: { status: 'pending' } });
-    expect(pending.passwordHash).toBeNull();
-  });
-
   // The acceptance checklist requires all 17 formation filter options to
   // return a non-empty result on seed data.
   it.each([...DEGREES])('has couples with and without %s', async (degree) => {

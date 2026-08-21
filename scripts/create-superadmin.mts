@@ -1,7 +1,7 @@
 /**
  * Creates the technical account on a fresh production database.
  *
- *   ADMIN_EMAIL=… ADMIN_NAME=… ADMIN_PASSWORD=… npm run create-superadmin
+ *   ADMIN_EMAIL=… ADMIN_NAME=… npm run create-superadmin
  *
  * Needed exactly once. Every later account — including the couple responsible
  * for the community — is created from the "Konta" view with a one-time
@@ -16,21 +16,22 @@
  * with three hundred fictional couples.
  */
 import 'dotenv/config';
-import { hashPassword } from '../src/lib/auth/password';
+import { createHash, randomBytes } from 'node:crypto';
+import { INVITE_DAYS } from '../src/lib/accounts/policy';
 import { prisma } from '../src/lib/db';
 
-const MIN_PASSWORD_LENGTH = 10;
+/** Same reasoning as manage.ts's hashToken: the token is 32 random bytes, not
+ * a guessable secret, so a fast digest defends it as well as a slow one would. */
+function hashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 async function main(): Promise<void> {
   const email = process.env['ADMIN_EMAIL'];
   const name = process.env['ADMIN_NAME'];
-  const password = process.env['ADMIN_PASSWORD'];
 
-  if (!email || !name || !password) {
-    throw new Error('Ustaw ADMIN_EMAIL, ADMIN_NAME i ADMIN_PASSWORD');
-  }
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new Error(`Hasło musi mieć co najmniej ${MIN_PASSWORD_LENGTH} znaków`);
+  if (!email || !name) {
+    throw new Error('Ustaw ADMIN_EMAIL i ADMIN_NAME');
   }
 
   const existing = await prisma.account.findFirst({ where: { role: 'superadmin' } });
@@ -41,18 +42,21 @@ async function main(): Promise<void> {
     throw new Error(`Konto techniczne już istnieje: ${existing.email}`);
   }
 
+  const token = randomBytes(32).toString('base64url');
+
   const account = await prisma.account.create({
     data: {
       email,
       name,
       role: 'superadmin',
-      status: 'active',
-      passwordHash: await hashPassword(password),
+      status: 'pending',
+      inviteTokenHash: hashToken(token),
+      inviteExpiresAt: new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000),
     },
   });
 
   console.log(`Utworzono konto techniczne: ${account.email}`);
-  console.log('Zmień hasło po pierwszym zalogowaniu.');
+  console.log(`Otwórz link i utwórz klucz: ${process.env['APP_URL']}/invite/${token}`);
 }
 
 main()

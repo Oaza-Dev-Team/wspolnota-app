@@ -3,7 +3,6 @@
 // missing DATABASE_URL. Keep it first: db.ts reads the variable at import time.
 import 'dotenv/config';
 import type { RetreatKind } from '@/generated/prisma/enums';
-import { hashPassword } from '@/lib/auth/password';
 import { prisma } from '@/lib/db';
 import { REGION_COUNT, ROMAN } from '@/lib/domain/regions';
 import { DEGREES } from '@/lib/domain/retreats';
@@ -12,7 +11,6 @@ import {
 } from './seed/data';
 
 const COUPLE_COUNT = 300;
-const TEST_PASSWORD = 'kartoteka123';
 
 /** Deterministic PRNG (mulberry32) so reseeding reproduces the same data. */
 function seeded(seed: number) {
@@ -70,7 +68,7 @@ function phoneNumber(): string {
  * `migrate` image — the very container the runbook tells you to open on the
  * server to create the first account. One `npm run db:seed` typed there would
  * erase the community and replace it with three hundred invented families and
- * fifteen accounts sharing a password printed in the docs.
+ * fifteen accounts nobody holds a passkey for.
  *
  * So it refuses unless a variable says otherwise, and that variable lives in
  * `.env`, which `.dockerignore` keeps out of every image. Locally it is simply
@@ -121,24 +119,23 @@ async function main() {
   }
 
   console.log('Accounts...');
-  const hash = await hashPassword(TEST_PASSWORD);
   await prisma.account.create({
     data: {
       email: 'superadmin@example.pl', name: 'Konto techniczne',
-      role: 'superadmin', passwordHash: hash, status: 'active',
+      role: 'superadmin', status: 'active',
     },
   });
 
   await prisma.account.create({
     data: {
       email: 'admin@example.pl', name: 'Maria i Piotr Lewandowscy',
-      role: 'admin', passwordHash: hash, status: 'active',
+      role: 'admin', status: 'active',
     },
   });
   await prisma.account.create({
     data: {
       email: 'moderator@example.pl', name: 'ks. Marek Górzyński',
-      role: 'viewer', passwordHash: hash, status: 'active',
+      role: 'viewer', status: 'active',
     },
   });
   for (let regionId = 1; regionId <= REGION_COUNT; regionId++) {
@@ -152,7 +149,6 @@ async function main() {
           ? 'Do obsadzenia'
           : `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
         role: 'region', regionId, regionLead: true,
-        passwordHash: pending ? null : hash,
         status: pending ? 'pending' : 'active',
         lastLoginAt: pending
           ? null
@@ -168,7 +164,7 @@ async function main() {
       email: 'rejon1.pomoc@example.pl',
       name: `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
       role: 'region', regionId: 1, regionLead: false,
-      passwordHash: hash, status: 'active',
+      status: 'active',
     },
   });
 
@@ -206,7 +202,10 @@ async function main() {
     }
   }
 
-  console.log(`Done. Password for every test account: ${TEST_PASSWORD}`);
+  // No sign-in key: these accounts are `active` for the views that list and
+  // filter by account, but nothing here registers a passkey for any of
+  // them — there is no password left to seed instead.
+  console.log('Done.');
 }
 
 // No top-level await: the project has no "type": "module", so tsx loads .ts

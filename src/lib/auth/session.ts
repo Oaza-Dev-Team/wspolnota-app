@@ -2,7 +2,13 @@ import { createHash, randomBytes } from 'node:crypto';
 import { prisma } from '@/lib/db';
 import type { User } from './permissions';
 
-export const SESSION_DAYS = 30;
+/**
+ * Seven rather than thirty: a stolen session cookie is now the shortest way in,
+ * since there is no password to leak. Signing in again costs one touch of a
+ * reader, so the narrower window is nearly free — which it would not have been
+ * with a password or a six-digit code.
+ */
+export const SESSION_DAYS = 7;
 
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');

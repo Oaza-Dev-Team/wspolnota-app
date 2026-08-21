@@ -26,9 +26,9 @@ function SubmitButton() {
 
 /**
  * Until this existed, accounts came only from the seed and from the bootstrap
- * script. A new account starts where every account starts: no password,
- * `pending`, holding a one-time invitation the caller passes on by hand —
- * there is no SMTP in this project.
+ * script. A new account starts where every account starts: `pending`, holding
+ * a one-time invitation the caller passes on by hand — there is no SMTP in
+ * this project.
  */
 export function NewAccountForm({
   kinds,
@@ -100,8 +100,8 @@ export function NewAccountForm({
       */}
       <form action={create} className={style.newAccount} aria-label="Nowe konto">
         <p className={style.handoverNote}>
-          Konto powstaje bez hasła. Dostaniesz jednorazowy link, który przekazujesz tej
-          parze — dopiero ona ustawia sobie hasło.
+          Konto powstaje bez klucza dostępu. Dostaniesz jednorazowy link, który przekazujesz tej
+          parze — dopiero ona rejestruje na nim swój klucz.
         </p>
 
         <label className={style.editField}>

@@ -17,8 +17,10 @@ export class InviteError extends Error {
 
 /**
  * An invite token is a bearer credential, so only its digest is stored — the
- * same reasoning as for session tokens. SHA-256 rather than argon2 because the
- * token is 32 random bytes, not a guessable secret.
+ * same reasoning as for session tokens. A fast hash rather than a slow,
+ * salted one (the kind a password would need) because the token is 32 random
+ * bytes, not a guessable secret — there is nothing here for a slow hash to
+ * defend against.
  */
 function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');

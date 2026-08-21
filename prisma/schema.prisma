@@ -138,7 +138,6 @@ model Retreat {
 model Account {
   id               BigInt        @id @default(autoincrement())
   email            String        @unique
-  passwordHash     String?       @map("password_hash")
   name             String
   role             Role
   regionId         Int?          @map("region_id") @db.SmallInt

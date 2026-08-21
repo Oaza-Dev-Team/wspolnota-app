@@ -1,3 +1,8 @@
+/**
+ * The counter now only protects the challenge table from being filled with
+ * junk — a cryptographic signature is not something you can guess by trying
+ * again and again.
+ */
 import { prisma } from '@/lib/db';
 
 export const ATTEMPT_LIMIT = 10;
@@ -19,8 +24,9 @@ export async function recordAttempt(key: string): Promise<void> {
 }
 
 /**
- * Called after a successful login so a user who finally remembers their
- * password is not locked out by their own earlier mistakes.
+ * Called after a successful sign-in, so a key that took a few tries to
+ * reach — a fumbled fingerprint, a wrong PIN — is not locked out by its own
+ * earlier attempts.
  */
 export async function clearAttempts(key: string): Promise<void> {
   await prisma.loginAttempt.deleteMany({ where: { key } });

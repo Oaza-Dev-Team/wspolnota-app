@@ -26,9 +26,10 @@ beforeAll(async () => {
   admin = await byEmail('admin@example.pl');
   caretaker = await byEmail('superadmin@example.pl');
   regionVII = await byEmail('rejon7@example.pl');
-  // A throwaway account rather than a seeded one: redeeming an invite rewrites
-  // the password, and a run interrupted halfway would leave a seeded account
-  // unable to sign in for every later test.
+  // A throwaway account rather than a seeded one: this file rewrites its
+  // status, its address and its invitations, and a run interrupted halfway
+  // would leave a seeded account unusable — or answering to the wrong address
+  // — for every later test.
   // handOverRegion only accepts the couple responsible for a region, and a
   // partial unique index allows one per region — so region V lends its slot
   // for the length of this file and gets it back in afterAll. Integration
@@ -47,7 +48,6 @@ beforeAll(async () => {
       regionId: 5,
       regionLead: true,
       status: 'active',
-      passwordHash: null,
     },
   });
   targetId = target.id;
@@ -72,7 +72,6 @@ afterEach(async () => {
       name: TARGET_NAME,
       email: TARGET_EMAIL,
       status: 'active',
-      passwordHash: null,
       inviteTokenHash: null,
       inviteExpiresAt: null,
     },
@@ -221,17 +220,17 @@ describe('changeEmail', () => {
   });
 
   // The point of the separate operation: same people, different address.
-  it('leaves the password and the sessions alone', async () => {
-    await prisma.account.update({
-      where: { id: targetId },
-      data: { passwordHash: 'nietkniety', status: 'active' },
+  it('leaves the key and the sessions alone', async () => {
+    const credentialId = randomBytes(16).toString('base64url');
+    await prisma.credential.create({
+      data: { id: credentialId, accountId: targetId, publicKey: randomBytes(64), label: 'Telefon' },
     });
     const token = await createSession(targetId);
 
     await changeEmail(admin, targetId, 'bez.skutkow@example.pl');
 
+    expect(await prisma.credential.count({ where: { id: credentialId } })).toBe(1);
     const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
-    expect(account.passwordHash).toBe('nietkniety');
     expect(account.status).toBe('active');
     expect(await userFromToken(token)).not.toBeNull();
   });
@@ -347,12 +346,11 @@ describe('creating accounts', () => {
     await prisma.audit.deleteMany({ where: { description: { contains: 'nowe.konto' } } });
   });
 
-  it('starts an account with no password, pending, holding an invite', async () => {
+  it('starts an account pending, holding an invite', async () => {
     const { token, account } = await create(admin, {
       name: 'Nowa i Para', email: 'nowe.konto@example.pl', role: 'viewer', regionId: null, regionLead: false,
     });
 
-    expect(account.passwordHash).toBeNull();
     expect(account.status).toBe('pending');
     expect(account.regionId).toBeNull();
     expect(token).toHaveLength(43);
@@ -427,7 +425,8 @@ describe('creating accounts', () => {
 
 describe('the technical account is out of the admin reach', () => {
   it('refuses a rename, a re-address and an invitation from an admin', async () => {
-    // All three are takeover routes: the last one issues a password.
+    // All three are takeover routes: the last one issues an invite that would
+    // let a new key be registered.
     const id = caretaker.id;
     await expect(renameAccount(admin, id, 'Przejęte')).rejects.toThrow(Forbidden);
     await expect(changeEmail(admin, id, 'przejete@example.pl')).rejects.toThrow(Forbidden);
@@ -533,7 +532,7 @@ describe('deleting accounts', () => {
     const account = await throwaway('kasowana.a@example.pl');
     await prisma.account.update({
       where: { id: account.id },
-      data: { passwordHash: 'x', status: 'active' },
+      data: { status: 'active' },
     });
     const token = await createSession(account.id);
     expect(await userFromToken(token)).not.toBeNull();

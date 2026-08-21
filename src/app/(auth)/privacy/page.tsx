@@ -99,9 +99,11 @@ export default function DataNoticePage() {
         <section className={style.section}>
           <h2 className={style.heading}>Zabezpieczenia</h2>
           <p className={style.body}>
-            Połączenie jest szyfrowane, hasła przechowujemy wyłącznie w postaci skrótów
-            argon2id, a fonty i inne zasoby strony serwujemy z własnego serwera — Twoja
-            przeglądarka nie łączy się przy tym z żadną firmą trzecią.
+            Połączenie jest szyfrowane, logowanie odbywa się kluczem dostępu przechowywanym
+            na Twoim urządzeniu — serwer zna wyłącznie jego jawną połowę, bezużyteczną dla
+            kogoś, kto skopiowałby bazę danych — a fonty i inne zasoby strony serwujemy
+            z własnego serwera, więc Twoja przeglądarka nie łączy się przy tym z żadną firmą
+            trzecią.
           </p>
         </section>
 

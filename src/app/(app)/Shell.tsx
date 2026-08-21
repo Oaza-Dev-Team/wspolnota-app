@@ -44,7 +44,7 @@ export function Shell({
         </nav>
 
         <div className={style.footer}>
-          {/* The way to one's own password. Every role has one, so this sits
+          {/* The way to one's own keys. Every role has one, so this sits
               in the shell rather than in the nav, which is scoped by role. */}
           <Link href="/account" className={style.account} aria-label="Moje konto">
             <span className={style.avatar} aria-hidden="true">{accountCode(user)}</span>
