@@ -1,4 +1,4 @@
-# Stan projektu — 19.08.2026
+# Stan projektu — 21.08.2026
 
 Dokument do wznowienia pracy po przerwie. Aktualizuj przy każdym zatrzymaniu.
 
@@ -13,10 +13,15 @@ Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
 
 ## Gałąź i commity
 
-**Aktualna gałąź: `main`** — drzewo czyste, plany 1–7 scalone.
+**Plany 1–7 są scalone do `main`.** Logowanie kluczem dostępu (passkey) to osobny
+plan, wykonany na gałęzi **`feat/passkey-login`** — 15 zadań, wszystkie skończone,
+jeszcze nie scalone do `main` (szybkie przewinięcie: `main` nie ma niczego, czego
+brakowałoby tej gałęzi). Projekt: `docs/superpowers/specs/2026-08-21-passkey-login-design.md`;
+plan wykonawczy: `docs/superpowers/plans/2026-08-21-passkey-login.md`.
 
 `main` jest **wiele commitów przed `origin/main`** — nic nie wypchnięte na GitHuba
 (`github.com/Oaza-Dev-Team/wspolnota-app`). To świadoma decyzja, czeka na Twoją zgodę.
+Scalenie `feat/passkey-login` do `main` to osobna decyzja, czeka tak samo.
 
 ## Postęp planów
 
@@ -30,13 +35,17 @@ Odstępstwa i wynik odbioru: `DECISIONS.md` w katalogu głównym.
 | 5 | rejony, konta rejonów, historia zmian | ✅ scalony do `main` |
 | 6 | RODO, dostępność, lista odbioru | ✅ scalony do `main` |
 | 7 | wdrożenie: obraz, compose, TLS, kopie zapasowe | ✅ scalony do `main` |
+| passkey | zamiana logowania hasłem na klucz dostępu (WebAuthn) | ✅ skończony na `feat/passkey-login`, czeka na scalenie |
 
 **Wszystkie zaplanowane prace są skończone.** Do postawienia produkcji brakuje już
-tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md`.
+tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md`. Scalenie
+gałęzi `feat/passkey-login` jest trzecią, oddzielną decyzją.
 
 ### Co działa
 
-- logowanie hasłem, sesje w bazie, limit prób, trzy role
+- **logowanie kluczem dostępu (passkey)** — hasła nie ma już nigdzie w aplikacji;
+  projekt w `docs/superpowers/specs/2026-08-21-passkey-login-design.md`. Sesje
+  w bazie, limit prób kluczowany po adresie IP, trzy role
 - lista par z filtrami, wyszukiwaniem bez znaków diakrytycznych, paginacją i kartami
   poniżej 860 px
 - karta pary w `<dialog>`: edycja danych, sekcja formacji, usunięcie miękkie
@@ -49,15 +58,24 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   (`kartoteka-rejon-VII-2026-08-20.xlsx`)
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
 - kafelki rejonów ze statystykami, konta (utwórz / usuń / włącz / wyłącz / zaproś /
-  nowe hasło / zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
+  nowy klucz / zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
 - rejon może mieć **parę odpowiedzialną i pomocników** — uprawnienia takie same,
   różnią się tylko kafelkiem rejonu i tym, czyje konto da się przekazać
-- strona ustawienia hasła z jednorazowego linku zaproszenia
-- **własne hasło zmienia się pod `/account`** — wejście z karty konta w stopce panelu
-  bocznego, dostępne każdej roli; zmiana kończy pozostałe sesje i rotuje bieżącą
-- **reset hasła cudzego konta** to „Nowe hasło…" na `/accounts`: ten sam
-  jednorazowy link co zaproszenie. Dotychczasowe hasło działa do chwili jego użycia
-  — żeby zabrać dostęp od razu, najpierw „Wyłącz"
+- **strona rejestracji klucza dostępu pod jednorazowym linkiem zaproszenia** —
+  bez pól na hasło; jeden przycisk „Utwórz klucz", ceremonia WebAuthn
+  (`@simplewebauthn/browser` + `@simplewebauthn/server`), logowanie od razu po
+  rejestracji
+- **zarządzanie kluczami pod `/account`** — wejście z karty konta w stopce panelu
+  bocznego, dostępne każdej roli: lista kluczy (nazwa, data dodania, ostatnie
+  użycie), zmiana nazwy, usunięcie (ostatniego klucza nie da się usunąć — sprawdzane
+  na serwerze), „Dodaj urządzenie"; usunięcie klucza nie kończy bieżącej sesji
+- **„Nowy klucz…" cudzego konta** na `/accounts` zamiast dawnego resetu hasła: ten
+  sam jednorazowy link co zaproszenie. Dotychczasowe klucze działają do chwili
+  użycia linku — żeby zabrać dostęp od razu, najpierw „Wyłącz". **Uwaga:**
+  zarejestrowanie klucza z takiego linku przełącza konto z powrotem na `active`,
+  nawet jeśli było `disabled` — to samo zachowanie, co miały zaproszenia od zawsze,
+  ale „Wyłącz" i „Nowy klucz…" stoją teraz obok siebie w interfejsie, więc łatwiej
+  o nie potknąć się niż wcześniej
 - trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
   dla admina, retencja audytu i sesji jako `npm run retention`
 - klauzula informacyjna pod `/privacy` — rusztowanie z jawnymi lukami
@@ -77,26 +95,43 @@ npm run dev                   # http://localhost:3000
 Baza jest zaseedowana (300 par, 11 rejonów, 15 kont). Jeśli po restarcie okaże się
 pusta albo rozjechana: `npm run db:seed`.
 
-Konta testowe, wszystkie z hasłem `kartoteka123`:
+**Żadne konto nie ma jeszcze klucza.** Hasła nie ma w aplikacji w ogóle, a klucza
+nie da się zaseedować — musi go podpisać prawdziwy uwierzytelniacz. Każde konto
+seed zostawia więc w stanie `pending`, z jednorazowym zaproszeniem, i wypisuje
+komplet linków na konsolę:
+
+```
+Konta czekają na klucz. Otwórz link i utwórz klucz w DevTools →
+More tools → WebAuthn → Enable virtual authenticator environment.
+
+  admin@example.pl             http://localhost:3000/invite/<token>
+  moderator@example.pl         http://localhost:3000/invite/<token>
+  …
+```
+
+Żeby się zalogować: w DevTools Chrome włącz wirtualny uwierzytelniacz (**More tools
+→ WebAuthn → Enable virtual authenticator environment**), otwórz jeden z wypisanych
+linków i kliknij „Utwórz klucz" — kilka kliknięć, nie ceremonia z telefonem. Konto
+loguje się od razu po rejestracji.
 
 | E-mail | Rola |
 |---|---|
 | `admin@example.pl` | para odpowiedzialna za wspólnotę |
 | `moderator@example.pl` | moderator, tylko podgląd |
 | `rejon1@example.pl` … `rejon10@example.pl` | pary rejonowe |
-| `rejon11@example.pl` | status `pending`, **nie zaloguje się** (to jest testowane) |
+| `rejon11@example.pl` | nazwa „Do obsadzenia" — rejon celowo bez pary, dla kafelka „Do obsadzenia" |
 | `superadmin@example.pl` | konto techniczne — jedyne, którego admin nie tknie |
 | `rejon1.pomoc@example.pl` | pomocnik rejonu I — kilka kont na jeden rejon |
 
 ## Weryfikacja
 
 ```bash
-npm test          # 141 testów jednostkowych
-npm run test:int  # 198 integracyjnych (wymagają bazy)
+npm test          # 148 testów jednostkowych
+npm run test:int  # 229 integracyjnych (wymagają bazy)
 npm run lint
 npm run build
-npm run e2e       # 86 testów Playwright, na buildzie produkcyjnym
-npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
+npm run e2e       # 92 testy Playwright, na buildzie produkcyjnym
+npm run retention # czyszczenie audytu, sesji i wygasłych wyzwań logowania kluczem — na produkcji z crona hosta
 ```
 
 ## Decyzje, do których nie wracamy
@@ -134,10 +169,11 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
   administrator kopiuje i przekazuje sam. Poczta nie jest w tym projekcie skonfigurowana,
   a przy piętnastu kontach zakładanych raz serwer poczty kosztowałby więcej, niż daje.
   Odwracalne: gdy SMTP się pojawi, wysyłka to jedno wywołanie w tej samej akcji.
-- **Logowanie Google — nadal odłożone.** Spec §6.1 wyznaczał Plan 5 jako moment decyzji,
-  ale wariant z linkiem zaproszenia działa tak samo przy haśle i przy Google, więc
-  odłożenie nic nie kosztuje. **Potrzebna Twoja wiedza:** czy te piętnaście osób ma
-  konta Google?
+- **Logowanie Google — rozstrzygnięte odmownie, i bezprzedmiotowo.** Spec §6.1
+  wyznaczał Plan 5 jako moment decyzji; rozstrzygnęło ją przejście na klucze dostępu
+  (21.08.2026, `docs/superpowers/specs/2026-08-21-passkey-login-design.md` §1.1).
+  Passkey nie potrzebuje konta u żadnego dostawcy zewnętrznego, więc pytanie „czy te
+  piętnaście osób ma konta Google" przestało mieć znaczenie. `DECISIONS.md` §1.4.
 
 ## Pułapki tego środowiska
 
@@ -153,7 +189,12 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
 - **Kolumny `search_text` są `GENERATED ALWAYS`** — nigdy nie wymieniaj ich w `data`.
 - **E2E tylko na buildzie produkcyjnym** — na `next dev` kompilacja tras na żądanie
   daje losowo padające testy. Uruchamiaj `npm run e2e`, nie `npx playwright test`:
-  bez `e2e/prepare.ts` limiter prób logowania zablokuje konto testowe.
+  ten skrypt seeduje bazę i dopiero potem odpala Playwright, którego
+  `webServer` sam startuje `e2e/support/testServer.ts` (bramkowany
+  `E2E_SUPPORT=1` — nigdy nie ustawiaj tego gdzie indziej). `e2e/prepare.ts` zniknął
+  wraz z hasłem: czyścił nieudane próby logowania hasłem, a limiter jest teraz
+  kluczowany po adresie IP, nie po koncie — czyści go ten sam support server przy
+  starcie.
 - **Po `npm run e2e` przeseeduj bazę, zanim puścisz `npm run test:int`.** Suite e2e
   zaczyna od seeda, ale **kończy z bazą zmienioną** — przekazanie rejonu zostawia konto
   w stanie `pending`, testy karty zostawiają parafię i krąg. Testy integracyjne zakładają
@@ -181,9 +222,10 @@ npm run retention # czyszczenie audytu i sesji — na produkcji z crona hosta
    zanim zrobimy import produkcyjny.
 3. **Hosting** — ustalone „VPS w UE + Docker", ale bez konkretów. Blokuje wdrożenie
    i uzupełnienie klauzuli informacyjnej, która musi wskazać administratora danych.
-4. **Logowanie Google** — patrz wyżej.
-5. **Treść klauzuli informacyjnej** — strona stoi, luki są oznaczone: administrator
+4. **Treść klauzuli informacyjnej** — strona stoi, luki są oznaczone: administrator
    danych, podstawa prawna, dostawca hostingu, okres przechowywania po odejściu.
-6. **Co dalej?** Cała infrastruktura wdrożeniowa leży w repozytorium i została
+5. **Co dalej?** Cała infrastruktura wdrożeniowa leży w repozytorium i została
    sprawdzona lokalnie. Brakuje wyłącznie dostawcy VPS (z umową powierzenia)
-   i domeny wskazującej na serwer.
+   i domeny wskazującej na serwer. **Uwaga:** domena musi być ostateczna, zanim
+   ktokolwiek zarejestruje pierwszy klucz dostępu — zmiana potem unieważnia
+   wszystkie klucze. Patrz `docs/DEPLOYMENT.md`.

@@ -127,5 +127,14 @@ npm run db:reset
   **skasowany indeks wyszukiwania**. Migracje dotykające tylko enumów albo kolumn pisz
   ręcznie i sprawdzaj na jednorazowej bazie (`CREATE DATABASE …` + `migrate deploy`),
   zamiast kasować bazę deweloperską.
+- **Klucz dostępu jest przywiązany do domeny.** Klucz zarejestrowany na `localhost`
+  nie zadziała na produkcji i odwrotnie — nie ma czego migrować ani synchronizować.
+  Przy debugowaniu wygląda to jak zepsute logowanie, a jest zwykłą konsekwencją innej
+  wartości `APP_URL` (`src/lib/auth/webauthn/config.ts`).
+- **Po `npm run db:reset` żadne konto nie ma klucza.** Hasła nie ma już w aplikacji,
+  a klucza nie da się zaseedować — musi go podpisać prawdziwy uwierzytelniacz. Seed
+  wypisuje na konsolę jednorazowe linki zaproszeń; klucz rejestrujesz sam, przez
+  wirtualny uwierzytelniacz w Chrome DevTools (More tools → WebAuthn → Enable virtual
+  authenticator environment).
 - Konfiguracje Vitest mają rozszerzenie `.mts` i używają natywnego
   `resolve.tsconfigPaths` zamiast wtyczki.
