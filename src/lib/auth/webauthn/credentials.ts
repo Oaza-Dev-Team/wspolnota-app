@@ -53,7 +53,7 @@ export async function renameCredential(
 ): Promise<void> {
   await ownedOrThrow(accountId, id);
   const label = rawLabel.trim().slice(0, MAX_LABEL) || 'Klucz dostępu';
-  await prisma.credential.update({ where: { id }, data: { label } });
+  await prisma.credential.update({ where: { id, accountId }, data: { label } });
 }
 
 export async function removeCredential(accountId: bigint, id: string): Promise<void> {
@@ -62,11 +62,18 @@ export async function removeCredential(accountId: bigint, id: string): Promise<v
   // Checked on the server, not merely hidden in the interface: a server action
   // is a public POST endpoint, and this is the guard against an account
   // locking itself out, not a cosmetic one.
-  const remaining = await prisma.credential.count({ where: { accountId } });
-  if (remaining <= 1) throw new LastKeyError();
-
   await prisma.$transaction(async (tx) => {
-    await tx.credential.delete({ where: { id } });
+    // Serialises concurrent removals for this account. Without it, two
+    // requests each see two keys remaining under READ COMMITTED, each pass
+    // the guard below, and the account ends up with none - the lockout this
+    // guard exists to prevent. Throwing later in this callback rolls back
+    // and releases the lock without writing anything.
+    await tx.$queryRaw`SELECT "id" FROM "account" WHERE "id" = ${accountId} FOR UPDATE`;
+
+    const remaining = await tx.credential.count({ where: { accountId } });
+    if (remaining <= 1) throw new LastKeyError();
+
+    await tx.credential.delete({ where: { id, accountId } });
     await tx.audit.create({
       data: {
         kind: 'account',

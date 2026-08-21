@@ -3,6 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
 import {
   LastKeyError,
+  MAX_LABEL,
   UnknownKeyError,
   listCredentials,
   removeCredential,
@@ -62,6 +63,24 @@ it('renames a key', async () => {
   expect(key.label).toBe('Telefon Ani');
 });
 
+it('truncates a label longer than MAX_LABEL', async () => {
+  const { account, ids } = await accountWith(1);
+  const longLabel = 'x'.repeat(MAX_LABEL + 20);
+  await renameCredential(account.id, ids[0] ?? '', longLabel);
+
+  const key = await prisma.credential.findUniqueOrThrow({ where: { id: ids[0] ?? '' } });
+  expect(key.label).toBe('x'.repeat(MAX_LABEL));
+  expect(key.label).toHaveLength(MAX_LABEL);
+});
+
+it('falls back to a default label when given only whitespace', async () => {
+  const { account, ids } = await accountWith(1);
+  await renameCredential(account.id, ids[0] ?? '', '    ');
+
+  const key = await prisma.credential.findUniqueOrThrow({ where: { id: ids[0] ?? '' } });
+  expect(key.label).toBe('Klucz dostępu');
+});
+
 it('removes a key when another one remains', async () => {
   const { account, ids } = await accountWith(2);
   await removeCredential(account.id, ids[0] ?? '');
@@ -71,6 +90,28 @@ it('removes a key when another one remains', async () => {
 it('refuses to remove the last key, which would lock the account out', async () => {
   const { account, ids } = await accountWith(1);
   await expect(removeCredential(account.id, ids[0] ?? '')).rejects.toThrow(LastKeyError);
+  expect(await prisma.credential.count({ where: { accountId: account.id } })).toBe(1);
+});
+
+it('serialises two concurrent removals so a 2-key account cannot reach zero', async () => {
+  // Two different keys, removed at once - e.g. the account-settings page open
+  // in two tabs, or a double-click on two different "remove" buttons. The
+  // `SELECT ... FOR UPDATE` inside removeCredential's transaction is what
+  // makes this deterministic rather than a timing gamble: whichever call
+  // reaches the lock first serialises the other behind it, so no matter which
+  // wins, exactly one succeeds and the account never drops to zero keys.
+  const { account, ids } = await accountWith(2);
+
+  const results = await Promise.allSettled([
+    removeCredential(account.id, ids[0] ?? ''),
+    removeCredential(account.id, ids[1] ?? ''),
+  ]);
+
+  expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+  const rejected = results.filter((r) => r.status === 'rejected');
+  expect(rejected).toHaveLength(1);
+  expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(LastKeyError);
+
   expect(await prisma.credential.count({ where: { accountId: account.id } })).toBe(1);
 });
 
