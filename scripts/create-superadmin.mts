@@ -55,8 +55,9 @@ async function main(): Promise<void> {
     },
   });
 
+  const appUrl = process.env['APP_URL'] ?? 'http://localhost:3000';
   console.log(`Utworzono konto techniczne: ${account.email}`);
-  console.log(`Otwórz link i utwórz klucz: ${process.env['APP_URL']}/invite/${token}`);
+  console.log(`Otwórz link i utwórz klucz: ${appUrl}/invite/${token}`);
 }
 
 main()
