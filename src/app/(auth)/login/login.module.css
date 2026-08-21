@@ -119,6 +119,18 @@
   margin: 0;
 }
 
+/* A cancelled ceremony is not a failure — same treatment as the advice notice
+   on /account, deliberately not the danger box above. */
+.notice {
+  background: var(--warn-bg);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--r-8);
+  padding: 11px 13px;
+  font-size: 13px;
+  color: var(--warn-fg);
+  margin: 0;
+}
+
 .formFooter {
   font-size: 12px;
   color: var(--text-faint);

@@ -4,6 +4,7 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useWebAuthnSupport } from '@/hooks/useWebAuthnSupport';
+import { isCancelledCeremony } from '@/lib/auth/webauthn/cancelled';
 import { beginEnrollment, finishEnrollment } from './actions';
 import style from '../../login/login.module.css';
 
@@ -31,9 +32,10 @@ export function InviteForm({ token }: { token: string }) {
         return;
       }
       router.push('/account?welcome=1');
-    } catch {
-      // Includes the person closing the system dialog, which is not an error
-      // worth alarming them about.
+    } catch (e) {
+      // Closing the system dialog is a decision, not a failure: the button is
+      // simply ready again. Everything else keeps the message.
+      if (isCancelledCeremony(e)) return;
       setError('Nie udało się utworzyć klucza. Spróbuj jeszcze raz.');
     } finally {
       setBusy(false);

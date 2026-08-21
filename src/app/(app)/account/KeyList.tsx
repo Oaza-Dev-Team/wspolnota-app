@@ -4,9 +4,11 @@ import { startRegistration } from '@simplewebauthn/browser';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useWebAuthnSupport } from '@/hooks/useWebAuthnSupport';
+// cancelled.ts and policy.ts are both pure (no Prisma, no I/O — see their own
+// doc comments), so this Client Component can import the real thing instead of
+// mirroring it.
+import { isCancelledCeremony } from '@/lib/auth/webauthn/cancelled';
 import type { CredentialSummary } from '@/lib/auth/webauthn/credentials';
-// policy.ts is pure (no Prisma, no I/O — see its own doc comment), so this
-// Client Component can import the real constant instead of mirroring it.
 import { MAX_LABEL } from '@/lib/auth/webauthn/policy';
 import { formatDate } from '@/lib/pl';
 import { beginAddKey, finishAddKey, removeKeyAction, renameKeyAction } from './actions';
@@ -48,9 +50,10 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
       const response = await startRegistration({ optionsJSON: begun.options });
       const done = await finishAddKey(response);
       if (done.error) setError(done.error);
-    } catch {
-      // Includes the person closing the system dialog, which is not an error
-      // worth alarming them about.
+    } catch (e) {
+      // Closing the system dialog is a decision, not a failure: the button is
+      // simply ready again. Everything else keeps the message.
+      if (isCancelledCeremony(e)) return;
       setError('Nie udało się dodać klucza. Spróbuj jeszcze raz.');
     } finally {
       setBusy(false);

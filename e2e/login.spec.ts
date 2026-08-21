@@ -24,7 +24,7 @@ test('the moderator signs in with the view-only role', async ({ page }) => {
   await expect(page.getByText('Moderator — podgląd')).toBeVisible();
 });
 
-test('sign-in fails without a key registered on this device', async ({ page }) => {
+test('says so calmly when this device holds no key', async ({ page }) => {
   // Nothing to type any more — the sign-in page carries no e-mail field, so
   // there is no wrong password to reject and no address to say "unknown"
   // about. What replaces both of the old suite's checks is the one thing a
@@ -37,19 +37,25 @@ test('sign-in fails without a key registered on this device', async ({ page }) =
   await page.goto('/login');
   await page.getByRole('button', { name: 'Zaloguj się kluczem' }).click();
 
-  // The exact text matters, not just that some alert appeared: the old
-  // password-era pair of tests this replaces both pinned that every failure
-  // renders the SAME message, so the form can never be used to learn whether
-  // an address has an account — the entire reason decoyHash existed before
-  // task 9 deleted it. LoginForm's catch shows this one generic string for
-  // every ceremony failure, with nothing about which account was involved.
+  // A notice, NOT the danger box. The browser reports "no credential here"
+  // and "the person escaped the dialog" as the same NotAllowedError, on
+  // purpose — telling them apart would let a page find out who holds a
+  // credential. Neither is a failure to shout about, and this community reads
+  // red as "I broke it", so both land in one calm role="status" line.
   //
-  // Filtered rather than matched bare: Next's own route announcer also
-  // carries role="alert" (empty, but still present in the DOM), and
-  // LoginForm has no <form> element to scope into the way other spec files'
-  // formAlert() helper does.
-  const alert = page.getByRole('alert').filter({ hasText: 'Nie udało się zalogować' });
-  await expect(alert).toHaveText('Nie udało się zalogować. Spróbuj jeszcze raz.');
+  // What the old password-era pair of tests pinned here still holds and is
+  // asserted below: every refusal that comes FROM THE SERVER renders one
+  // identical message, so the form cannot be used to learn whether an address
+  // has an account (the reason decoyHash existed before task 9 deleted it).
+  // This case never reaches the server — the browser raises it before a
+  // request is sent — so it cannot carry anything the server knows.
+  const notice = page.getByRole('status').filter({ hasText: 'Logowanie przerwane' });
+  await expect(notice).toHaveText(
+    'Logowanie przerwane — nie wybrano klucza. Możesz spróbować jeszcze raz.',
+  );
+  // And nothing red alongside it.
+  await expect(page.getByRole('alert').filter({ hasText: 'Nie udało się zalogować' }))
+    .toHaveCount(0);
   await expect(page).toHaveURL(/\/login$/);
 });
 
