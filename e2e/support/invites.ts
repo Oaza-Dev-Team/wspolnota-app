@@ -1,10 +1,12 @@
-const PORT = 3010;
+import { SUPPORT_SERVER_PORT } from './config';
 
 /**
  * Puts a fresh invitation on a seeded account and returns its raw token, via
  * the local support server (see support/testServer.ts — spec files cannot
  * import Prisma directly, since Playwright's own loader cannot require() the
- * generated client).
+ * generated client). POST, not GET: this mutates the account (a fresh token,
+ * wiped credentials), and a route that does that must not be triggerable by
+ * a GET a crawler or a prefetch could send.
  *
  * Always issues a new one rather than trusting whatever the seed (or an
  * earlier test) left behind, and always wipes the account's existing keys
@@ -22,7 +24,10 @@ const PORT = 3010;
  *    database row it wrote survives.
  */
 export async function inviteFor(email: string): Promise<string> {
-  const res = await fetch(`http://127.0.0.1:${PORT}/invite?email=${encodeURIComponent(email)}`);
+  const res = await fetch(
+    `http://127.0.0.1:${SUPPORT_SERVER_PORT}/invite?email=${encodeURIComponent(email)}`,
+    { method: 'POST' },
+  );
   if (!res.ok) {
     throw new Error(`inviteFor(${email}) failed: ${res.status} ${await res.text()}`);
   }
@@ -34,10 +39,13 @@ export async function inviteFor(email: string): Promise<string> {
  * at all — see support/testServer.ts for why this exists: every seeded
  * account starts `pending` now, and admin-views.spec.ts needs some of them to
  * already look staffed before its tests run, which is not itself a claim
- * about passkeys.
+ * about passkeys. POST for the same reason as inviteFor above.
  */
 export async function activate(email: string): Promise<void> {
-  const res = await fetch(`http://127.0.0.1:${PORT}/activate?email=${encodeURIComponent(email)}`);
+  const res = await fetch(
+    `http://127.0.0.1:${SUPPORT_SERVER_PORT}/activate?email=${encodeURIComponent(email)}`,
+    { method: 'POST' },
+  );
   if (!res.ok) {
     throw new Error(`activate(${email}) failed: ${res.status} ${await res.text()}`);
   }

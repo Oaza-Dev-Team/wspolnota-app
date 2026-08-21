@@ -28,10 +28,16 @@ export default defineConfig({
       // own TypeScript loader cannot require() the generated Prisma client (an
       // ES module). This tiny helper runs under tsx instead, outside
       // Playwright's module graph, and spec files reach it over plain HTTP.
+      //
+      // E2E_SUPPORT is the server's own opt-in gate (see its assertSafeToRun):
+      // it refuses to start without it, precisely so nothing except this one
+      // deliberate entry can ever bring up a listener that mutates accounts
+      // with no authentication at all.
       command: 'npm run e2e:support',
       url: 'http://127.0.0.1:3010/health',
       reuseExistingServer: false,
       timeout: 60_000,
+      env: { E2E_SUPPORT: '1' },
     },
   ],
 });

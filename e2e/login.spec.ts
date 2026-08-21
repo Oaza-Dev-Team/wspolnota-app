@@ -37,7 +37,19 @@ test('sign-in fails without a key registered on this device', async ({ page }) =
   await page.goto('/login');
   await page.getByRole('button', { name: 'Zaloguj się kluczem' }).click();
 
-  await expect(page.getByRole('alert')).toBeVisible();
+  // The exact text matters, not just that some alert appeared: the old
+  // password-era pair of tests this replaces both pinned that every failure
+  // renders the SAME message, so the form can never be used to learn whether
+  // an address has an account — the entire reason decoyHash existed before
+  // task 9 deleted it. LoginForm's catch shows this one generic string for
+  // every ceremony failure, with nothing about which account was involved.
+  //
+  // Filtered rather than matched bare: Next's own route announcer also
+  // carries role="alert" (empty, but still present in the DOM), and
+  // LoginForm has no <form> element to scope into the way other spec files'
+  // formAlert() helper does.
+  const alert = page.getByRole('alert').filter({ hasText: 'Nie udało się zalogować' });
+  await expect(alert).toHaveText('Nie udało się zalogować. Spróbuj jeszcze raz.');
   await expect(page).toHaveURL(/\/login$/);
 });
 
