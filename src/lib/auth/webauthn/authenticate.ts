@@ -60,10 +60,15 @@ export async function completeSignIn(
   // replay or a copied authenticator.
   checkCounter(credential.counter, newCounter);
 
-  const account = await prisma.account.findUniqueOrThrow({ where: { id: accountId } });
+  // findUnique, not findUniqueOrThrow: the GDPR permanent-deletion path
+  // (src/lib/accounts/manage.ts) really does tx.account.delete an account, so
+  // a row that vanished between the credential read and here must fail
+  // through SignInError too — never a raw Prisma not-found leaking out of
+  // this function's one-message-for-everything door.
+  const account = await prisma.account.findUnique({ where: { id: accountId } });
   // Re-checked here rather than trusted from the lookup: an account disabled
   // between the challenge and the signature must not get in.
-  if (account.status !== 'active') throw new SignInError();
+  if (!account || account.status !== 'active') throw new SignInError();
 
   await prisma.$transaction([
     prisma.credential.update({

@@ -101,6 +101,7 @@ it('refuses a disabled account holding a perfectly good key', async () => {
 it('refuses an account still holding an invitation', async () => {
   const { account, credentialId } = await accountWithKey('pending');
   await expect(completeSignIn(credentialId, account.id, 1n)).rejects.toThrow(SignInError);
+  expect(await prisma.session.count({ where: { accountId: account.id } })).toBe(0);
 });
 
 it('refuses a counter that did not advance', async () => {
