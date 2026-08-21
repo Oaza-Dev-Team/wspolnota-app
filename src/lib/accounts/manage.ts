@@ -21,8 +21,14 @@ export class InviteError extends Error {
  * salted one (the kind a password would need) because the token is 32 random
  * bytes, not a guessable secret — there is nothing here for a slow hash to
  * defend against.
+ *
+ * Exported so the command-line scripts that also issue invitations
+ * (`create-superadmin.mts`, `key-reset.mts`) and the seed use this exact
+ * function rather than a private copy — two digests that must agree tend to
+ * drift apart, and when they do, an invitation just silently fails to
+ * resolve, with nothing to say why.
  */
-function hashToken(token: string): string {
+export function hashToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 

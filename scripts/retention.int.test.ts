@@ -14,6 +14,9 @@ beforeAll(async () => {
 afterEach(async () => {
   await prisma.audit.deleteMany({ where: { description: { startsWith: MARK } } });
   await prisma.session.deleteMany({ where: { tokenHash: { startsWith: 'retention-test-' } } });
+  await prisma.webauthnChallenge.deleteMany({
+    where: { challenge: { startsWith: 'retention-test-' } },
+  });
 });
 
 function monthsAgo(n: number): Date {
@@ -76,6 +79,32 @@ describe('runRetention', () => {
     expect(left[0]!.tokenHash).toBe('retention-test-live');
   });
 
+  it('removes expired WebAuthn challenges and keeps fresh ones', async () => {
+    await prisma.webauthnChallenge.createMany({
+      data: [
+        {
+          challenge: 'retention-test-expired',
+          purpose: 'authentication',
+          expiresAt: new Date(Date.now() - 60_000),
+        },
+        {
+          challenge: 'retention-test-fresh',
+          purpose: 'authentication',
+          expiresAt: new Date(Date.now() + 60_000),
+        },
+      ],
+    });
+
+    await runRetention();
+
+    const left = await prisma.webauthnChallenge.findMany({
+      where: { challenge: { startsWith: 'retention-test-' } },
+      select: { challenge: true },
+    });
+    expect(left).toHaveLength(1);
+    expect(left[0]!.challenge).toBe('retention-test-fresh');
+  });
+
   it('reports what it removed', async () => {
     await auditAt(monthsAgo(AUDIT_RETENTION_MONTHS + 2), 'do skasowania');
 
@@ -83,5 +112,6 @@ describe('runRetention', () => {
 
     expect(result.audit).toBeGreaterThanOrEqual(1);
     expect(result.sessions).toBeGreaterThanOrEqual(0);
+    expect(result.challenges).toBeGreaterThanOrEqual(0);
   });
 });

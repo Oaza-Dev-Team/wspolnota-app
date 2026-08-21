@@ -60,10 +60,23 @@ describe('regionStats', () => {
   });
 
   it('names the responsible couple, or leaves it empty when unstaffed', async () => {
-    const stats = await regionStats(admin);
-    // The seed leaves the last region without an active account.
-    expect(stats.at(-1)!.leadName).toBeNull();
-    expect(stats[0]!.leadName).not.toBeNull();
+    // regionStats only names a lead once its account is active, and freshly
+    // seeded every account is still pending — nobody has registered a key.
+    // Activate region I's lead, exactly as registering a passkey would, to
+    // prove the name appears; region XI is left as seeded, still pending,
+    // to prove an unregistered (or truly unstaffed) lead stays hidden.
+    const leadId = (await prisma.account.findUniqueOrThrow({
+      where: { email: 'rejon1@example.pl' },
+    })).id;
+    await prisma.account.update({ where: { id: leadId }, data: { status: 'active' } });
+
+    try {
+      const stats = await regionStats(admin);
+      expect(stats.at(-1)!.leadName).toBeNull();
+      expect(stats[0]!.leadName).not.toBeNull();
+    } finally {
+      await prisma.account.update({ where: { id: leadId }, data: { status: 'pending' } });
+    }
   });
 
   it('gives the viewer the same figures as admin', async () => {

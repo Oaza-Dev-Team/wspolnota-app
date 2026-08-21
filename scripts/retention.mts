@@ -1,6 +1,6 @@
 /**
- * Retention job (spec §4.4, §12): audit entries older than 24 months and
- * sessions past their expiry.
+ * Retention job (spec §4.4, §12): audit entries older than 24 months, sessions
+ * past their expiry, and WebAuthn challenges past theirs.
  *
  * A cron job on the host, not a scheduler inside the application: several
  * container instances would each run their own timer and race each other over
@@ -24,13 +24,19 @@ export function auditCutoff(now: Date): Date {
 
 export async function runRetention(
   now: Date = new Date(),
-): Promise<{ audit: number; sessions: number }> {
+): Promise<{ audit: number; sessions: number; challenges: number }> {
   const cutoff = auditCutoff(now);
 
   const audit = await prisma.audit.deleteMany({ where: { at: { lt: cutoff } } });
   const sessions = await prisma.session.deleteMany({ where: { expiresAt: { lt: now } } });
+  // A challenge only proves freshness for the few minutes a sign-in or
+  // registration ceremony takes; one still on the table past its expiry was
+  // never redeemed and has no other cleanup path.
+  const challenges = await prisma.webauthnChallenge.deleteMany({
+    where: { expiresAt: { lt: now } },
+  });
 
-  return { audit: audit.count, sessions: sessions.count };
+  return { audit: audit.count, sessions: sessions.count, challenges: challenges.count };
 }
 
 // Only when run as a command, so the test can import the function without the
@@ -46,5 +52,6 @@ if (invokedDirectly) {
     `Retention: removed ${result.audit} audit entries older than ` +
       `${AUDIT_RETENTION_MONTHS} months and ${result.sessions} expired sessions.`,
   );
+  console.log(`Wygasłe wyzwania WebAuthn: ${result.challenges}`);
   await prisma.$disconnect();
 }

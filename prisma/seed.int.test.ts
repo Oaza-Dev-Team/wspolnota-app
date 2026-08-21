@@ -16,10 +16,26 @@ describe('seed data', () => {
   });
 
   it('creates an account per region plus admin, moderator, caretaker and a helper', async () => {
-    expect(await prisma.account.count()).toBe(REGION_COUNT + 4);
+    const total = REGION_COUNT + 4;
+    expect(await prisma.account.count()).toBe(total);
     // Exactly one responsible couple per region; the extra one is a helper.
     expect(await prisma.account.count({ where: { regionLead: true } })).toBe(REGION_COUNT);
-    expect(await prisma.account.count({ where: { status: 'pending' } })).toBe(1);
+    // Nobody has registered a key yet — there is no passkey to fake here —
+    // so every seeded account starts pending, the last region's included.
+    expect(await prisma.account.count({ where: { status: 'pending' } })).toBe(total);
+  });
+
+  it('gives every account a live invitation, since none has a key yet', async () => {
+    const accounts = await prisma.account.findMany({
+      select: { inviteTokenHash: true, inviteExpiresAt: true },
+    });
+    expect(accounts.every((a) => a.inviteTokenHash !== null)).toBe(true);
+    expect(accounts.every((a) => a.inviteExpiresAt !== null && a.inviteExpiresAt > new Date()))
+      .toBe(true);
+    // Every token is distinct: two accounts sharing a digest would let one
+    // invitation resolve to the other's account.
+    const hashes = new Set(accounts.map((a) => a.inviteTokenHash));
+    expect(hashes.size).toBe(accounts.length);
   });
 
   // The acceptance checklist requires all 17 formation filter options to

@@ -16,6 +16,7 @@
     "db:reset": "prisma migrate reset --force",
     "retention": "tsx scripts/retention.mts",
     "create-superadmin": "tsx scripts/create-superadmin.mts",
+    "key:reset": "tsx scripts/key-reset.mts",
     "e2e": "tsx prisma/seed.ts && tsx e2e/prepare.ts && playwright test"
   },
   "dependencies": {

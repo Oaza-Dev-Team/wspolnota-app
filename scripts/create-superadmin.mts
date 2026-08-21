@@ -16,15 +16,10 @@
  * with three hundred fictional couples.
  */
 import 'dotenv/config';
-import { createHash, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
+import { hashToken } from '../src/lib/accounts/manage';
 import { INVITE_DAYS } from '../src/lib/accounts/policy';
 import { prisma } from '../src/lib/db';
-
-/** Same reasoning as manage.ts's hashToken: the token is 32 random bytes, not
- * a guessable secret, so a fast digest defends it as well as a slow one would. */
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
-}
 
 async function main(): Promise<void> {
   const email = process.env['ADMIN_EMAIL'];

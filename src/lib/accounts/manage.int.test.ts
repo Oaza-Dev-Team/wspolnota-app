@@ -435,7 +435,10 @@ describe('the technical account is out of the admin reach', () => {
 
     const untouched = await prisma.account.findUniqueOrThrow({ where: { id } });
     expect(untouched.email).toBe('superadmin@example.pl');
-    expect(untouched.status).toBe('active');
+    // Freshly seeded it is still pending — nobody has registered a key for
+    // it yet — and none of the four rejected calls above may have changed
+    // that either.
+    expect(untouched.status).toBe('pending');
   });
 
   it('will not switch off the only active one, even for itself', async () => {
@@ -483,10 +486,19 @@ describe('helpers inside a region', () => {
 
   it('leaves the regions overview naming the responsible couple', async () => {
     const lead = await prisma.account.findUniqueOrThrow({ where: { email: 'rejon7@example.pl' } });
+    // regionStats only names a lead once its account is active; freshly
+    // seeded it is still pending, since nobody has registered a key for it.
+    // Activate it here, exactly as registering a passkey would, and put it
+    // back after.
+    await prisma.account.update({ where: { id: lead.id }, data: { status: 'active' } });
     await addHelper(7, 'pomoc.test.d@example.pl');
 
-    const stats = await regionStats(admin);
-    expect(stats.find((s) => s.id === 7)!.leadName).toBe(lead.name);
+    try {
+      const stats = await regionStats(admin);
+      expect(stats.find((s) => s.id === 7)!.leadName).toBe(lead.name);
+    } finally {
+      await prisma.account.update({ where: { id: lead.id }, data: { status: 'pending' } });
+    }
   });
 
   it('refuses to hand over a region through a helper account', async () => {

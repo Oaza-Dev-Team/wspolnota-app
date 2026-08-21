@@ -2,7 +2,9 @@
 // must load the environment itself — without this the client throws on the
 // missing DATABASE_URL. Keep it first: db.ts reads the variable at import time.
 import 'dotenv/config';
+import { randomBytes } from 'node:crypto';
 import type { RetreatKind } from '@/generated/prisma/enums';
+import { hashToken, INVITE_DAYS } from '@/lib/accounts/manage';
 import { prisma } from '@/lib/db';
 import { REGION_COUNT, ROMAN } from '@/lib/domain/regions';
 import { DEGREES } from '@/lib/domain/retreats';
@@ -63,6 +65,26 @@ function phoneNumber(): string {
   return `+48 ${500 + Math.floor(rnd() * 400)} ${block()} ${block()}`;
 }
 
+type Invite = { email: string; token: string };
+
+/**
+ * Every seeded account starts exactly as a freshly created one does: no key,
+ * holding a one-time invitation. There is no passkey to fake here — a working
+ * credential needs a private key held by a real authenticator — so `pending`
+ * plus an invitation is the only honest state to leave any of them in. The
+ * caller registers the invite's token so main() can print every link once
+ * the database is filled.
+ */
+function invite(email: string, invites: Invite[]) {
+  const token = randomBytes(32).toString('base64url');
+  invites.push({ email, token });
+  return {
+    status: 'pending' as const,
+    inviteTokenHash: hashToken(token),
+    inviteExpiresAt: new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000),
+  };
+}
+
 /**
  * This script empties every table before it writes, and it ships inside the
  * `migrate` image — the very container the runbook tells you to open on the
@@ -119,40 +141,41 @@ async function main() {
   }
 
   console.log('Accounts...');
+  const invites: Invite[] = [];
+
   await prisma.account.create({
     data: {
       email: 'superadmin@example.pl', name: 'Konto techniczne',
-      role: 'superadmin', status: 'active',
+      role: 'superadmin', ...invite('superadmin@example.pl', invites),
     },
   });
 
   await prisma.account.create({
     data: {
       email: 'admin@example.pl', name: 'Maria i Piotr Lewandowscy',
-      role: 'admin', status: 'active',
+      role: 'admin', ...invite('admin@example.pl', invites),
     },
   });
   await prisma.account.create({
     data: {
       email: 'moderator@example.pl', name: 'ks. Marek Górzyński',
-      role: 'viewer', status: 'active',
+      role: 'viewer', ...invite('moderator@example.pl', invites),
     },
   });
   for (let regionId = 1; regionId <= REGION_COUNT; regionId++) {
-    // The last region stays unstaffed, so the "pending" status and the
-    // "Do obsadzenia" tile both have data behind them.
-    const pending = regionId === REGION_COUNT;
+    // The last region stays unstaffed in name, so the "Do obsadzenia" tile
+    // has data behind it — every account is `pending` now, staffed or not,
+    // since none of them holds a key yet.
+    const email = `rejon${regionId}@example.pl`;
+    const unstaffed = regionId === REGION_COUNT;
     await prisma.account.create({
       data: {
-        email: `rejon${regionId}@example.pl`,
-        name: pending
+        email,
+        name: unstaffed
           ? 'Do obsadzenia'
           : `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
         role: 'region', regionId, regionLead: true,
-        status: pending ? 'pending' : 'active',
-        lastLoginAt: pending
-          ? null
-          : new Date(Date.now() - Math.floor(rnd() * 30) * 86400000),
+        ...invite(email, invites),
       },
     });
   }
@@ -164,7 +187,7 @@ async function main() {
       email: 'rejon1.pomoc@example.pl',
       name: `${pick(WIFE_NAMES)} i ${pick(HUSBAND_NAMES)} ${pick(SURNAMES)}`,
       role: 'region', regionId: 1, regionLead: false,
-      status: 'active',
+      ...invite('rejon1.pomoc@example.pl', invites),
     },
   });
 
@@ -202,10 +225,12 @@ async function main() {
     }
   }
 
-  // No sign-in key: these accounts are `active` for the views that list and
-  // filter by account, but nothing here registers a passkey for any of
-  // them — there is no password left to seed instead.
   console.log('Done.');
+  console.log('\nKonta czekają na klucz. Otwórz link i utwórz klucz w DevTools →');
+  console.log('More tools → WebAuthn → Enable virtual authenticator environment.\n');
+  for (const { email, token } of invites) {
+    console.log(`  ${email.padEnd(28)} http://localhost:3000/invite/${token}`);
+  }
 }
 
 // No top-level await: the project has no "type": "module", so tsx loads .ts

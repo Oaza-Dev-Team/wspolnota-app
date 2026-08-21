@@ -42,17 +42,31 @@ describe('accountRows', () => {
   });
 
   it('marks the technical account beyond the admin reach', async () => {
-    const rows = await accountRows(admin);
-    const caretaker = rows.find((r) => r.role === 'superadmin')!;
-    expect(caretaker.manageable).toBe(false);
-    // Load-bearing as well, being the only active one: nothing may switch off
-    // or delete the last way back into the installation.
-    expect(caretaker.loadBearing).toBe(true);
-    // The admin's own row stays editable, but it is what the admin signs in
-    // through, so it can be neither switched off nor deleted.
-    const self = rows.find((r) => r.role === 'admin')!;
-    expect(self.manageable).toBe(true);
-    expect(self.loadBearing).toBe(true);
+    // Load-bearing reads the caretaker's own `active` status, and freshly
+    // seeded it is still pending — nobody has registered a key for it yet.
+    // Activate it here, exactly as registering a passkey would, to exercise
+    // the "only active caretaker" case this test is actually about; put it
+    // back after so the shared database is left as it was found.
+    const caretakerId = (await prisma.account.findUniqueOrThrow({
+      where: { email: 'superadmin@example.pl' },
+    })).id;
+    await prisma.account.update({ where: { id: caretakerId }, data: { status: 'active' } });
+
+    try {
+      const rows = await accountRows(admin);
+      const caretaker = rows.find((r) => r.role === 'superadmin')!;
+      expect(caretaker.manageable).toBe(false);
+      // Load-bearing as well, being the only active one: nothing may switch off
+      // or delete the last way back into the installation.
+      expect(caretaker.loadBearing).toBe(true);
+      // The admin's own row stays editable, but it is what the admin signs in
+      // through, so it can be neither switched off nor deleted.
+      const self = rows.find((r) => r.role === 'admin')!;
+      expect(self.manageable).toBe(true);
+      expect(self.loadBearing).toBe(true);
+    } finally {
+      await prisma.account.update({ where: { id: caretakerId }, data: { status: 'pending' } });
+    }
   });
 
   it('puts the responsible couple ahead of the helpers in its region', async () => {
@@ -70,9 +84,9 @@ describe('accountRows', () => {
     expect(seventh.roman).toBe('VII');
   });
 
-  it('marks the unstaffed region as pending', async () => {
+  it('starts every seeded account pending — nobody has registered a key yet', async () => {
     const rows = await accountRows(admin);
-    expect(rows.filter((r) => r.status === 'pending')).toHaveLength(1);
+    expect(rows.every((r) => r.status === 'pending')).toBe(true);
   });
 
   it('refuses anyone but admin', async () => {
