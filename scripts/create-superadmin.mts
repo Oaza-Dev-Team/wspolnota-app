@@ -19,6 +19,7 @@ import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
 import { hashToken } from '../src/lib/accounts/manage';
 import { INVITE_DAYS } from '../src/lib/accounts/policy';
+import { inviteUrl } from '../src/lib/appUrl';
 import { prisma } from '../src/lib/db';
 
 async function main(): Promise<void> {
@@ -50,9 +51,11 @@ async function main(): Promise<void> {
     },
   });
 
-  const appUrl = process.env['APP_URL'] ?? 'http://localhost:3000';
   console.log(`Utworzono konto techniczne: ${account.email}`);
-  console.log(`Otwórz link i utwórz klucz: ${appUrl}/invite/${token}`);
+  // inviteUrl says on stderr when APP_URL is missing, instead of quietly
+  // printing a localhost link on a server — where it looks plausible, does
+  // not work, and cannot be re-issued by running this script again.
+  console.log(`Otwórz link i utwórz klucz: ${inviteUrl(token)}`);
 }
 
 main()

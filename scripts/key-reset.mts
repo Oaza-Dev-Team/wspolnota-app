@@ -18,6 +18,7 @@ import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
 import { hashToken } from '../src/lib/accounts/manage';
 import { INVITE_DAYS } from '../src/lib/accounts/policy';
+import { inviteUrl } from '../src/lib/appUrl';
 import { prisma } from '../src/lib/db';
 
 async function main(): Promise<void> {
@@ -53,9 +54,8 @@ async function main(): Promise<void> {
     });
   });
 
-  const appUrl = process.env['APP_URL'] ?? 'http://localhost:3000';
   console.log(`Link ważny ${INVITE_DAYS} dni — przekaż go osobiście, nie mailem:`);
-  console.log(`  ${appUrl}/invite/${token}`);
+  console.log(`  ${inviteUrl(token)}`);
 }
 
 main()

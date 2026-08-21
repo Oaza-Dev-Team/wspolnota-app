@@ -6,19 +6,11 @@ import {
   createInvite, deleteAccount, handOverRegion, renameAccount, setAccountStatus,
 } from '@/lib/accounts/manage';
 import type { Role } from '@/generated/prisma/enums';
+import { inviteUrl } from '@/lib/appUrl';
 import { Forbidden } from '@/lib/auth/permissions';
 import { requireUser } from '@/lib/auth/requireUser';
 
 export type AccountsState = { error?: string; inviteLink?: string };
-
-/**
- * The raw token exists only in the response that carries it: the database
- * keeps a digest, so the link is unrecoverable once the screen is gone.
- */
-function inviteUrl(token: string): string {
-  const base = process.env.APP_URL ?? 'http://localhost:3000';
-  return `${base}/invite/${token}`;
-}
 
 function idFrom(formData: FormData): bigint | null {
   const raw = formData.get('id');

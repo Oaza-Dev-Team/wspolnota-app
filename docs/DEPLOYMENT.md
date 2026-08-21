@@ -31,7 +31,7 @@ Wszystko poniżej jest od tych dwóch rzeczy niezależne i leży już w repozyto
 | `scripts/create-superadmin.mts` | pierwsze konto — techniczne — na pustej bazie |
 | `scripts/key-reset.mts` | jednorazowy link dla konta, które straciło wszystkie klucze |
 | `scripts/backup.sh` | szyfrowany `pg_dump` z retencją 30 dni |
-| `scripts/retention.mts` | czyszczenie audytu (24 mies.), wygasłych sesji i wygasłych wyzwań logowania kluczem |
+| `scripts/retention.mts` | czyszczenie audytu (24 mies.), wygasłych sesji, wygasłych wyzwań logowania kluczem i starych prób logowania (adresy IP) |
 
 ## Domena, zanim cokolwiek innego
 
@@ -79,6 +79,9 @@ cp .env.production.example .env
 $EDITOR .env        # wypełnij POSTGRES_PASSWORD, APP_DOMAIN, APP_URL, BACKUP_PASSPHRASE
                      # APP_URL musi się zgadzać z domeną z DNS-u (krok 1 wyżej) —
                      # to z niej wyprowadzany jest zakres każdego klucza dostępu
+                     # APP_DOMAIN to ta sama domena bez protokołu: certyfikat
+                     # wystawiony dla innego hosta niż ten z APP_URL oznacza
+                     # klucze przywiązane do adresu, pod którym nikt nie wejdzie
 
 docker compose -f docker-compose.prod.yml up -d --build
 ```
@@ -95,9 +98,22 @@ docker compose -f docker-compose.prod.yml ps
 curl -sf https://TWOJA-DOMENA/health      # {"status":"ok"}
 ```
 
-`/health` nie dotyka logowania i odpowie „ok" nawet z brakującą albo błędną
-`APP_URL` — patrz „Domena, zanim cokolwiek innego" wyżej. Pierwszym prawdziwym
-sprawdzeniem `APP_URL` jest rejestracja klucza w kroku poniżej.
+**Brak `APP_URL` albo wartość, która nie jest adresem, zatrzymuje aplikację przy
+starcie** — sprawdza to `src/instrumentation.ts`, zanim kontener przyjmie pierwsze
+żądanie. W logu widać wtedy nazwę zmiennej i wartość, która ją zepsuła, zamiast
+„logowanie nie działa" kilka godzin później. Najczęstsza literówka to adres bez
+protokołu (`kartoteka.oazagdansk.pl` zamiast `https://kartoteka.oazagdansk.pl`) —
+jest odrzucana tak samo jak brak zmiennej.
+
+```bash
+docker compose -f docker-compose.prod.yml logs app   # gdy kontener nie wstaje
+```
+
+`/health` odpowiada „ok" na sam fakt, że serwer stoi — a stoi tylko wtedy, gdy
+`APP_URL` przeszła kontrolę przy starcie. To nie zwalnia z ostrożności co do
+**treści** tej zmiennej: adres poprawny składniowo, ale wskazujący inną domenę niż
+ta z DNS-u, wstanie bez słowa i przywiąże klucze do domeny, której nie ma. Patrz
+„Domena, zanim cokolwiek innego" wyżej.
 
 ### Pierwsze konto
 
@@ -121,7 +137,15 @@ Otwórz link i utwórz klucz: https://kartoteka.oazagdansk.pl/invite/<token>
 ```
 
 Skrypt odmawia, jeśli konto techniczne już istnieje — jest do postawienia pustej
-instalacji, a przypadkowe drugie to problem bezpieczeństwa.
+instalacji, a przypadkowe drugie to problem bezpieczeństwa. **Ma to znaczenie
+praktyczne przy linku:** gdyby wypisany adres wyglądał na błędny, nie da się po
+prostu uruchomić skryptu ponownie — konto już jest i drugiego nie utworzy. Nowy
+link dla tego samego konta wydaje `npm run key:reset` (patrz niżej).
+
+Usługa `migrate`, w której to polecenie działa, dostaje `APP_URL` z tego samego
+`.env` co aplikacja — dlatego w linku widnieje prawdziwa domena. Gdyby zamiast niej
+pojawił się `localhost`, zmiennej w środowisku nie ma: skrypt mówi o tym wprost na
+stderr, a naprawą jest uzupełnienie `.env` i `npm run key:reset` na tym koncie.
 
 **Danych testowych na produkcji nie ma i nie będzie.** Usługa `migrate` wykonuje
 wyłącznie `prisma migrate deploy`, czyli zakłada schemat — `prisma.config.ts` nie ma
@@ -278,7 +302,7 @@ nie działa w tle.
 # kopia zapasowa, 03:15 UTC
 15 3 * * *  cd /srv/kartoteka && ./scripts/backup.sh /var/backups/kartoteka >> /var/log/kartoteka-backup.log 2>&1
 
-# retencja audytu i sesji, 03:45 UTC
+# retencja audytu, sesji, wyzwań i prób logowania, 03:45 UTC
 45 3 * * *  cd /srv/kartoteka && docker compose -f docker-compose.prod.yml run --rm migrate npm run retention >> /var/log/kartoteka-retention.log 2>&1
 ```
 
@@ -291,7 +315,7 @@ KARTOTEKA=/data/coolify/applications/<UUID>
 # kopia zapasowa, 03:15 UTC
 15 3 * * * root cd $KARTOTEKA && COMPOSE_FILE=docker-compose.yaml /usr/local/bin/kartoteka-backup /var/backups/kartoteka >> /var/log/kartoteka-backup.log 2>&1
 
-# retencja audytu i sesji, 03:45 UTC
+# retencja audytu, sesji, wyzwań i prób logowania, 03:45 UTC
 45 3 * * * root cd $KARTOTEKA && docker compose run --rm migrate npm run retention >> /var/log/kartoteka-retention.log 2>&1
 ```
 

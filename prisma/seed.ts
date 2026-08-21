@@ -5,6 +5,7 @@ import 'dotenv/config';
 import { randomBytes } from 'node:crypto';
 import type { RetreatKind } from '@/generated/prisma/enums';
 import { hashToken, INVITE_DAYS } from '@/lib/accounts/manage';
+import { inviteUrl } from '@/lib/appUrl';
 import { prisma } from '@/lib/db';
 import { REGION_COUNT, ROMAN } from '@/lib/domain/regions';
 import { DEGREES } from '@/lib/domain/retreats';
@@ -229,7 +230,9 @@ async function main() {
   console.log('\nKonta czekają na klucz. Otwórz link i utwórz klucz w DevTools →');
   console.log('More tools → WebAuthn → Enable virtual authenticator environment.\n');
   for (const { email, token } of invites) {
-    console.log(`  ${email.padEnd(28)} http://localhost:3000/invite/${token}`);
+    // The same helper the application and both server scripts use, so a
+    // developer who moved APP_URL gets links that actually open.
+    console.log(`  ${email.padEnd(28)} ${inviteUrl(token)}`);
   }
 }
 
