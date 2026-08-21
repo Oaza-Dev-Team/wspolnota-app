@@ -1,6 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { prisma } from '../src/lib/db';
-import { AUDIT_RETENTION_MONTHS, auditCutoff, runRetention } from './retention.mts';
+import { AUDIT_RETENTION_MONTHS, WINDOW_MINUTES, auditCutoff, runRetention } from './retention.mts';
 
 const MARK = 'Wpis retencyjny';
 
@@ -17,6 +17,7 @@ afterEach(async () => {
   await prisma.webauthnChallenge.deleteMany({
     where: { challenge: { startsWith: 'retention-test-' } },
   });
+  await prisma.loginAttempt.deleteMany({ where: { key: { startsWith: 'retention-test-' } } });
 });
 
 function monthsAgo(n: number): Date {
@@ -105,13 +106,45 @@ describe('runRetention', () => {
     expect(left[0]!.challenge).toBe('retention-test-fresh');
   });
 
+  // Nothing else empties this table: clearAttempts only clears the bucket
+  // that has just signed in, and the key is an IP address — so without this
+  // sweep the registry would store addresses for ever, in the one application
+  // whose whole justification is careful handling of special-category data.
+  it('removes sign-in attempts older than the window and keeps recent ones', async () => {
+    await prisma.loginAttempt.createMany({
+      data: [
+        {
+          key: 'retention-test-old',
+          at: new Date(Date.now() - (WINDOW_MINUTES + 1) * 60 * 1000),
+        },
+        { key: 'retention-test-recent', at: new Date() },
+      ],
+    });
+
+    await runRetention();
+
+    const left = await prisma.loginAttempt.findMany({
+      where: { key: { startsWith: 'retention-test-' } },
+      select: { key: true },
+    });
+    expect(left).toHaveLength(1);
+    expect(left[0]!.key).toBe('retention-test-recent');
+  });
+
   it('reports what it removed', async () => {
     await auditAt(monthsAgo(AUDIT_RETENTION_MONTHS + 2), 'do skasowania');
+    await prisma.loginAttempt.create({
+      data: {
+        key: 'retention-test-old',
+        at: new Date(Date.now() - (WINDOW_MINUTES + 1) * 60 * 1000),
+      },
+    });
 
     const result = await runRetention();
 
     expect(result.audit).toBeGreaterThanOrEqual(1);
     expect(result.sessions).toBeGreaterThanOrEqual(0);
     expect(result.challenges).toBeGreaterThanOrEqual(0);
+    expect(result.attempts).toBeGreaterThanOrEqual(1);
   });
 });
