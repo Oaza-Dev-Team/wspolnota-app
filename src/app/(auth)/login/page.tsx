@@ -5,14 +5,8 @@ import { currentUser } from '@/lib/auth/requireUser';
 import { LoginForm } from './LoginForm';
 import style from './login.module.css';
 
-export default async function LoginPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default async function LoginPage() {
   if (await currentUser()) redirect('/couples');
-
-  const invited = (await searchParams).invited === '1';
 
   return (
     <div className={style.screen}>
@@ -45,11 +39,6 @@ export default async function LoginPage({
 
       <section className={style.right}>
         <h2 className={style.formHeading}>Zaloguj się</h2>
-        {invited && (
-          <p className={style.notice} role="status">
-            Hasło ustawione — możesz się zalogować.
-          </p>
-        )}
         <LoginForm />
         <p className={style.formFooter}>
           Dostęp nadaje para odpowiedzialna za wspólnotę.

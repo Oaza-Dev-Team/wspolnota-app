@@ -1,25 +1,17 @@
 'use client';
 
 import { startRegistration } from '@simplewebauthn/browser';
-import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
 import { useRouter } from 'next/navigation';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
+import { useWebAuthnSupport } from '@/hooks/useWebAuthnSupport';
 import { beginEnrollment, finishEnrollment } from './actions';
 import style from '../../login/login.module.css';
-
-// Support never changes while the page is open, so there is nothing to
-// subscribe to — this is a one-time client-only read, not a value that needs
-// watching. useSyncExternalStore is what lets that read happen without
-// setState inside an effect: getServerSnapshot answers "unknown" for the
-// first paint (there is no `window` on the server to ask), and the real
-// answer appears the moment React reconciles on the client.
-const noSubscription = () => () => {};
 
 export function InviteForm({ token }: { token: string }) {
   const router = useRouter();
   // Asked before anything is offered: a button that cannot work is worse than
   // a sentence explaining why, and this is the moment we can tell.
-  const supported = useSyncExternalStore(noSubscription, browserSupportsWebAuthn, () => null);
+  const supported = useWebAuthnSupport();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 

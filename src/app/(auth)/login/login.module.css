@@ -94,41 +94,6 @@
   gap: 13px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.label {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
-.input {
-  background: var(--surface);
-  border: 1px solid var(--border-input);
-  border-radius: var(--r-8);
-  padding: 12px;
-  font-size: 15px;
-  color: var(--text);
-  min-height: 44px;
-  width: 100%;
-}
-
-.input:focus {
-  border-color: var(--blue-500);
-  box-shadow: var(--focus-ring);
-  outline: none;
-}
-
-/* The soft ring reads as "active" for the mouse; the keyboard needs an actual
-   outline, and this rule has to outrank the :focus above to get one. */
-.input:focus-visible {
-  outline: 2px solid var(--blue-500);
-  outline-offset: 2px;
-}
-
 .button {
   background: var(--navy-700);
   color: var(--surface);
@@ -171,18 +136,16 @@
   .right { padding: 26px 20px 40px; }
 }
 
-.notice {
-  background: var(--success-bg);
-  border-radius: var(--r-8);
-  padding: 11px 13px;
-  font-size: 14px;
-  color: var(--success-fg);
-  margin: 0 0 14px;
-}
-
 .noticeLink {
   display: inline-block;
   margin-top: 6px;
   color: var(--navy-700);
   font-size: 13px;
+}
+
+.hint {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
