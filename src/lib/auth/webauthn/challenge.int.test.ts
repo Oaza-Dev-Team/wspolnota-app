@@ -1,11 +1,25 @@
 import { randomBytes } from 'node:crypto';
-import { expect, it } from 'vitest';
+import { afterEach, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
 import { ChallengeError, consumeChallenge, rememberChallenge } from './challenge';
 
+// Every value handed out is tracked here, whether or not the test under it
+// expects consumeChallenge to have already deleted the row itself — a
+// challenge refused for the wrong purpose or already expired is never
+// reachable by the DELETE ... RETURNING in consumeChallenge, so it would
+// otherwise outlive the test. Tracking unconditionally, rather than only in
+// the tests known to need it, also covers whatever gets added here later.
+const created: string[] = [];
+
 function value() {
-  return randomBytes(32).toString('base64url');
+  const v = randomBytes(32).toString('base64url');
+  created.push(v);
+  return v;
 }
+
+afterEach(async () => {
+  await prisma.webauthnChallenge.deleteMany({ where: { challenge: { in: created.splice(0) } } });
+});
 
 it('gives back what was remembered', async () => {
   const c = value();
