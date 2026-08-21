@@ -1,12 +1,11 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Forbidden, type User, canEdit, listScope } from '@/lib/auth/permissions';
-import { verifyPassword } from '@/lib/auth/password';
 import { createSession, userFromToken } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { regionStats } from '@/lib/regions/stats';
 import {
-  AccountRegionError, EmailError, changeEmail, createAccount, createInvite,
-  deleteAccount, handOverRegion, redeemInvite, renameAccount, setAccountStatus,
+  AccountRegionError, EmailError, InviteError, accountForInvite, changeEmail,
+  createAccount, createInvite, deleteAccount, handOverRegion, renameAccount, setAccountStatus,
 } from './manage';
 
 const TARGET_NAME = 'Konto testowe zarządzania';
@@ -137,7 +136,7 @@ describe('createInvite', () => {
     const first = await createInvite(admin, targetId);
     const second = await createInvite(admin, targetId);
     expect(first).not.toBe(second);
-    await expect(redeemInvite(first, 'nowe-haslo-123')).rejects.toThrow();
+    await expect(accountForInvite(first)).rejects.toThrow(InviteError);
   });
 
   it('refuses anyone but admin', async () => {
@@ -145,24 +144,12 @@ describe('createInvite', () => {
   });
 });
 
-describe('redeemInvite', () => {
-  it('sets the password and activates the account', async () => {
+describe('accountForInvite', () => {
+  it('resolves a valid token to the account id', async () => {
     await prisma.account.update({ where: { id: targetId }, data: { status: 'pending' } });
     const token = await createInvite(admin, targetId);
 
-    await redeemInvite(token, 'nowe-haslo-123');
-
-    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
-    expect(account.status).toBe('active');
-    expect(await verifyPassword(account.passwordHash!, 'nowe-haslo-123')).toBe(true);
-    // A one-time link: the token is consumed.
-    expect(account.inviteTokenHash).toBeNull();
-  });
-
-  it('refuses a token that was already used', async () => {
-    const token = await createInvite(admin, targetId);
-    await redeemInvite(token, 'nowe-haslo-123');
-    await expect(redeemInvite(token, 'inne-haslo-456')).rejects.toThrow();
+    await expect(accountForInvite(token)).resolves.toBe(targetId);
   });
 
   it('refuses an expired token', async () => {
@@ -171,16 +158,11 @@ describe('redeemInvite', () => {
       where: { id: targetId },
       data: { inviteExpiresAt: new Date(Date.now() - 1000) },
     });
-    await expect(redeemInvite(token, 'nowe-haslo-123')).rejects.toThrow();
+    await expect(accountForInvite(token)).rejects.toThrow(InviteError);
   });
 
   it('refuses an unknown token', async () => {
-    await expect(redeemInvite('zmyslony-token', 'nowe-haslo-123')).rejects.toThrow();
-  });
-
-  it('refuses a password that is too short', async () => {
-    const token = await createInvite(admin, targetId);
-    await expect(redeemInvite(token, 'krotkie')).rejects.toThrow();
+    await expect(accountForInvite('zmyslony-token')).rejects.toThrow(InviteError);
   });
 });
 
@@ -292,13 +274,9 @@ describe('handOverRegion', () => {
     expect(await userFromToken(token)).toBeNull();
   });
 
-  it('returns an invite the incoming couple can redeem', async () => {
+  it('returns an invite that resolves to the incoming couple', async () => {
     const token = await handOverRegion(admin, targetId, 'Kolejna Para', 'kolejna@example.pl');
-    await redeemInvite(token, 'hasloNowejPary1');
-
-    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
-    expect(account.status).toBe('active');
-    expect(await verifyPassword(account.passwordHash!, 'hasloNowejPary1')).toBe(true);
+    await expect(accountForInvite(token)).resolves.toBe(targetId);
   });
 
   it('records both couples in the audit trail', async () => {
@@ -358,11 +336,8 @@ describe('creating accounts', () => {
     expect(account.regionId).toBeNull();
     expect(token).toHaveLength(43);
 
-    // The invite is what makes the account usable, so it has to actually work.
-    await redeemInvite(token, 'dostatecznie-dlugie');
-    const after = await prisma.account.findUniqueOrThrow({ where: { id: account.id } });
-    expect(after.status).toBe('active');
-    expect(await verifyPassword(after.passwordHash!, 'dostatecznie-dlugie')).toBe(true);
+    // The invite is what makes the account usable, so it has to actually resolve.
+    await expect(accountForInvite(token)).resolves.toBe(account.id);
   });
 
   it('records the creation in the audit, in the same transaction', async () => {

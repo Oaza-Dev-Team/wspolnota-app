@@ -41,8 +41,8 @@ export default async function InvitePage({
             <em>Kartoteki</em>
           </h1>
           <p className={style.lead}>
-            {`Ustaw hasło, a potem zaloguj się swoim adresem e-mail. Link działa raz
-            i wygasa po ${INVITE_DAYS} dniach.`}
+            {`Utwórz klucz dostępu — potwierdzisz go odciskiem palca albo PIN-em
+            urządzenia. Hasła nie będzie. Link działa raz i wygasa po ${INVITE_DAYS} dniach.`}
           </p>
         </div>
 
@@ -50,11 +50,11 @@ export default async function InvitePage({
       </section>
 
       <section className={style.right}>
-        <h2 className={style.formHeading}>Ustaw hasło</h2>
+        <h2 className={style.formHeading}>Utwórz klucz dostępu</h2>
         <InviteForm token={token} />
         <p className={style.formFooter}>
           Jeśli to zaproszenie trafiło tu przez pomyłkę — wystarczy zamknąć tę stronę.
-          Bez ustawienia hasła nic się nie zmienia.
+          Bez utworzenia klucza nic się nie zmienia.
         </p>
       </section>
     </div>

@@ -1,67 +1,75 @@
 'use client';
 
-import { useActionState } from 'react';
-import { useFormStatus } from 'react-dom';
-import { MIN_PASSWORD_LENGTH } from '@/lib/accounts/policy';
+import { startRegistration } from '@simplewebauthn/browser';
+import { browserSupportsWebAuthn } from '@simplewebauthn/browser';
+import { useRouter } from 'next/navigation';
+import { useState, useSyncExternalStore } from 'react';
+import { beginEnrollment, finishEnrollment } from './actions';
 import style from '../../login/login.module.css';
-import { type InviteState, redeemAction } from './actions';
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <button type="submit" className={style.button} disabled={pending}>
-      {pending ? 'Zapisywanie…' : 'Ustaw hasło'}
-    </button>
-  );
-}
+// Support never changes while the page is open, so there is nothing to
+// subscribe to — this is a one-time client-only read, not a value that needs
+// watching. useSyncExternalStore is what lets that read happen without
+// setState inside an effect: getServerSnapshot answers "unknown" for the
+// first paint (there is no `window` on the server to ask), and the real
+// answer appears the moment React reconciles on the client.
+const noSubscription = () => () => {};
 
 export function InviteForm({ token }: { token: string }) {
-  const [state, action] = useActionState<InviteState, FormData>(redeemAction, {});
+  const router = useRouter();
+  // Asked before anything is offered: a button that cannot work is worse than
+  // a sentence explaining why, and this is the moment we can tell.
+  const supported = useSyncExternalStore(noSubscription, browserSupportsWebAuthn, () => null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function enrol() {
+    setBusy(true);
+    setError(null);
+    try {
+      const begun = await beginEnrollment(token);
+      if (!('options' in begun)) {
+        setError(begun.error ?? 'Nie udało się rozpocząć');
+        return;
+      }
+      const response = await startRegistration({ optionsJSON: begun.options });
+      const done = await finishEnrollment(token, response);
+      if (done.error) {
+        setError(done.error);
+        return;
+      }
+      router.push('/account?welcome=1');
+    } catch {
+      // Includes the person closing the system dialog, which is not an error
+      // worth alarming them about.
+      setError('Nie udało się utworzyć klucza. Spróbuj jeszcze raz.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (supported === null) return null;
+
+  if (!supported) {
+    return (
+      <p className={style.error} role="alert">
+        Ta przeglądarka nie obsługuje kluczy dostępu. Otwórz ten link w telefonie
+        albo w aktualnej wersji Chrome lub Edge. Jeśli to nie pomoże, skontaktuj
+        się z administratorem kartoteki.
+      </p>
+    );
+  }
 
   return (
-    <form action={action} className={style.form}>
-      {state.error && (
+    <div className={style.form}>
+      {error && (
         <p className={style.error} role="alert">
-          {state.error}
+          {error}
         </p>
       )}
-
-      {/* The token travels in the body, not in the action URL: request paths
-          end up in server logs and browser history, and this one is a
-          credential. */}
-      <input type="hidden" name="token" value={token} />
-
-      <div className={style.field}>
-        <label className={style.label} htmlFor="password">
-          {`Nowe hasło — co najmniej ${MIN_PASSWORD_LENGTH} znaków`}
-        </label>
-        <input
-          className={style.input}
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-        />
-      </div>
-
-      <div className={style.field}>
-        <label className={style.label} htmlFor="repeat">
-          Powtórz hasło
-        </label>
-        <input
-          className={style.input}
-          id="repeat"
-          name="repeat"
-          type="password"
-          autoComplete="new-password"
-          minLength={MIN_PASSWORD_LENGTH}
-          required
-        />
-      </div>
-
-      <SubmitButton />
-    </form>
+      <button type="button" className={style.button} onClick={enrol} disabled={busy}>
+        {busy ? 'Tworzenie klucza…' : 'Utwórz klucz'}
+      </button>
+    </div>
   );
 }

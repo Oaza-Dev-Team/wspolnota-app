@@ -1,32 +1,90 @@
 'use server';
 
-import { redirect } from 'next/navigation';
-import { InviteError, redeemInvite } from '@/lib/accounts/manage';
-import { MIN_PASSWORD_LENGTH } from '@/lib/accounts/policy';
+import type {
+  PublicKeyCredentialCreationOptionsJSON,
+  RegistrationResponseJSON,
+} from '@simplewebauthn/server';
+import { verifyRegistrationResponse } from '@simplewebauthn/server';
+import { isoBase64URL } from '@simplewebauthn/server/helpers';
+import { InviteError, accountForInvite } from '@/lib/accounts/manage';
+import { setSessionCookie } from '@/lib/auth/requireUser';
+import { createSession } from '@/lib/auth/session';
+import { ChallengeError, consumeChallenge } from '@/lib/auth/webauthn/challenge';
+import { rpConfig } from '@/lib/auth/webauthn/config';
+import { labelFor, registrationOptions, saveCredential } from '@/lib/auth/webauthn/register';
 
-export type InviteState = { error?: string };
+export type EnrollState = { error?: string };
 
-export async function redeemAction(
-  _state: InviteState,
-  formData: FormData,
-): Promise<InviteState> {
-  const token = String(formData.get('token') ?? '');
-  const password = String(formData.get('password') ?? '');
-  const repeat = String(formData.get('repeat') ?? '');
+/** The challenge the browser actually signed, read back out of the response so
+ * the server can look up the row it issued. */
+function challengeOf(clientDataJSON: string): string {
+  const data = JSON.parse(isoBase64URL.toUTF8String(clientDataJSON)) as { challenge: string };
+  return data.challenge;
+}
 
-  if (password !== repeat) return { error: 'Hasła nie są takie same' };
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    return { error: `Hasło musi mieć co najmniej ${MIN_PASSWORD_LENGTH} znaków` };
-  }
-
+export async function beginEnrollment(
+  token: string,
+): Promise<{ options: PublicKeyCredentialCreationOptionsJSON } | EnrollState> {
   try {
-    await redeemInvite(token, password);
+    const accountId = await accountForInvite(token);
+    return { options: await registrationOptions(accountId) };
   } catch (e) {
     if (e instanceof InviteError) return { error: e.message };
     throw e;
   }
+}
 
-  // Redeeming does not sign anyone in: the new password should be typed once
-  // more before it is trusted, and the login screen is where that belongs.
-  redirect('/login?invited=1');
+export async function finishEnrollment(
+  token: string,
+  response: RegistrationResponseJSON,
+): Promise<EnrollState> {
+  const { rpID, origin } = rpConfig();
+  const challenge = challengeOf(response.response.clientDataJSON);
+
+  try {
+    const accountId = await accountForInvite(token);
+
+    const { accountId: challengeOwner } = await consumeChallenge(challenge, 'registration');
+    // The challenge was issued for one account; a response carrying somebody
+    // else's is not a registration we asked for.
+    if (challengeOwner !== accountId) return { error: 'Nie udało się zarejestrować klucza' };
+
+    const verification = await verifyRegistrationResponse({
+      response,
+      expectedChallenge: challenge,
+      expectedOrigin: origin,
+      expectedRPID: rpID,
+      // The whole design rests on this: without user verification a passkey is
+      // possession alone, not two factors.
+      requireUserVerification: true,
+    });
+
+    if (!verification.verified || !verification.registrationInfo) {
+      return { error: 'Nie udało się zarejestrować klucza' };
+    }
+
+    const { credential } = verification.registrationInfo;
+    await saveCredential(accountId, {
+      id: credential.id,
+      publicKey: credential.publicKey,
+      counter: BigInt(credential.counter),
+      transports: credential.transports ?? [],
+      label: labelFor(response.authenticatorAttachment, credential.transports ?? []),
+    });
+
+    // createSession directly, NOT completeSignIn: that one guards against a
+    // counter which failed to advance, and a key registered a line ago has by
+    // definition not advanced past the value just stored. The signature has
+    // already been verified here, so there is nothing left for it to check.
+    //
+    // Signed in at all because the old flow's reasoning is gone: it made the
+    // person type the new password once more before trusting it, and a
+    // signature repeated proves nothing. This is also the only moment we know
+    // they are at the screen, which is where the second-key prompt belongs.
+    await setSessionCookie(await createSession(accountId));
+    return {};
+  } catch (e) {
+    if (e instanceof InviteError || e instanceof ChallengeError) return { error: e.message };
+    throw e;
+  }
 }

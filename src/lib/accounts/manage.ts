@@ -1,13 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type { AccountStatus, Role } from '@/generated/prisma/enums';
-import { hashPassword } from '@/lib/auth/password';
 import { Forbidden, type User, canManageAccounts, canManageRole } from '@/lib/auth/permissions';
 import { deleteAccountSessions } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { REGION_COUNT, romanNumeral } from '@/lib/domain/regions';
-import { INVITE_DAYS, MAX_ACCOUNT_NAME, MIN_PASSWORD_LENGTH } from './policy';
+import { INVITE_DAYS, MAX_ACCOUNT_NAME } from './policy';
 
-export { INVITE_DAYS, MAX_ACCOUNT_NAME, MIN_PASSWORD_LENGTH };
+export { INVITE_DAYS, MAX_ACCOUNT_NAME };
 
 export class InviteError extends Error {
   constructor(message: string) {
@@ -434,11 +433,12 @@ export async function deleteAccount(u: User, id: bigint): Promise<void> {
   await deleteAccountSessions(id);
 }
 
-export async function redeemInvite(token: string, password: string): Promise<void> {
-  if (password.length < MIN_PASSWORD_LENGTH) {
-    throw new InviteError(`Hasło musi mieć co najmniej ${MIN_PASSWORD_LENGTH} znaków`);
-  }
-
+/**
+ * Checks the invitation and says whose it is. It no longer activates anything:
+ * the account becomes usable at the moment a key is stored, and that has to be
+ * one transaction with the key itself.
+ */
+export async function accountForInvite(token: string): Promise<bigint> {
   const account = await prisma.account.findFirst({
     where: { inviteTokenHash: hashToken(token) },
     select: { id: true, inviteExpiresAt: true },
@@ -447,17 +447,5 @@ export async function redeemInvite(token: string, password: string): Promise<voi
   if (!account.inviteExpiresAt || account.inviteExpiresAt <= new Date()) {
     throw new InviteError('Zaproszenie wygasło — poproś o nowe');
   }
-
-  const passwordHash = await hashPassword(password);
-
-  await prisma.account.update({
-    where: { id: account.id },
-    data: {
-      passwordHash,
-      status: 'active',
-      // One-time link: consumed on use.
-      inviteTokenHash: null,
-      inviteExpiresAt: null,
-    },
-  });
+  return account.id;
 }
