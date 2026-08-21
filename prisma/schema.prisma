@@ -155,7 +155,7 @@ model Account {
   /// spec forbids putting anything personal in it — no e-mail, no surname.
   /// It is also what a sign-in resolves to an account by, since the login
   /// screen asks for no address.
-  webauthnUserId   String        @unique @map("webauthn_user_id")
+  webauthnUserId   String        @unique @default(uuid(4)) @map("webauthn_user_id")
 
   region      Region?      @relation(fields: [regionId], references: [id])
   sessions    Session[]
