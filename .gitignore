@@ -50,3 +50,6 @@ next-env.d.ts
 # Playwright
 /test-results
 /playwright-report
+
+# Scratch workspace for subagent-driven plan execution
+.superpowers/
