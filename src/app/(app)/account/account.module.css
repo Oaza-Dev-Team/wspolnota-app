@@ -48,23 +48,6 @@
   margin: 0 0 16px;
 }
 
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 13px;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.label {
-  font-size: 13px;
-  color: var(--text-muted);
-}
-
 .input {
   background: var(--surface);
   border: 1px solid var(--border-input);
@@ -115,15 +98,110 @@
   margin: 0;
 }
 
-.done {
-  background: var(--success-bg);
-  border-radius: var(--r-8);
-  padding: 11px 13px;
-  font-size: 13px;
-  color: var(--success-fg);
-  margin: 0;
-}
-
 @media (max-width: 860px) {
   .panel { padding: 18px 16px; }
+}
+
+.notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn-border);
+  border-radius: var(--r-8);
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  font-size: 13px;
+}
+
+.keys {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--divider);
+}
+
+.key:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.keyInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.keyLabel {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.keyMeta {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+.keyActions {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.rename {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.renameButtons {
+  display: flex;
+  gap: 14px;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 13px;
+  color: var(--text-faint);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkButton:hover { color: var(--navy-700); }
+.linkButton:disabled { opacity: .6; cursor: progress; text-decoration: none; }
+
+/* The handoff requires 44px for anything tappable; on a wide screen the link
+   stays tight so it does not stretch the row. */
+@media (max-width: 860px) {
+  .linkButton {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }

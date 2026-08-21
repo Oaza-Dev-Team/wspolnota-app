@@ -1,22 +1,32 @@
 import { requireUser } from '@/lib/auth/requireUser';
+import { listCredentials } from '@/lib/auth/webauthn/credentials';
 import { prisma } from '@/lib/db';
 import { romanNumeral } from '@/lib/domain/regions';
 import { ROLE_LABELS } from '@/lib/domain/roles';
 import { ViewHeader } from '../ViewHeader';
 import style from './account.module.css';
-import { PasswordForm } from './PasswordForm';
+import { KeyList } from './KeyList';
 
 /**
- * Every role reaches this page: it is the only place an account can change its
- * own password, and the invitation link that set the first one is single use.
+ * Every role reaches this page: it is the only place an account can manage
+ * its own passkeys, and the invitation link that registered the first one is
+ * single use.
  */
-export default async function AccountPage() {
+export default async function AccountPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ welcome?: string; crossDevice?: string }>;
+}) {
   const u = await requireUser();
+  const { welcome, crossDevice } = await searchParams;
 
-  const account = await prisma.account.findUniqueOrThrow({
-    where: { id: u.id },
-    select: { name: true, email: true },
-  });
+  const [account, keys] = await Promise.all([
+    prisma.account.findUniqueOrThrow({
+      where: { id: u.id },
+      select: { name: true, email: true },
+    }),
+    listCredentials(u.id),
+  ]);
 
   const role = u.role === 'region' && u.regionId !== null
     ? `${ROLE_LABELS[u.role]} · rejon ${romanNumeral(u.regionId)}`
@@ -48,10 +58,7 @@ export default async function AccountPage() {
         </p>
       </div>
 
-      <div className={style.panel}>
-        <h2 className={style.heading}>Zmiana hasła</h2>
-        <PasswordForm />
-      </div>
+      <KeyList keys={keys} welcome={welcome === '1'} crossDevice={crossDevice === '1'} />
     </>
   );
 }
