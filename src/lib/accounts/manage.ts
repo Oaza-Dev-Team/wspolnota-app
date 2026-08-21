@@ -80,7 +80,21 @@ export async function setAccountStatus(
   if (status === 'disabled') await assertNotLastCaretaker(account.role, id);
 
   await prisma.$transaction(async (tx) => {
-    await tx.account.update({ where: { id }, data: { status } });
+    await tx.account.update({
+      where: { id },
+      data: {
+        status,
+        // Disabling withdraws an outstanding invitation too. Without this,
+        // "Wyłącz" ends the sessions and leaves the way back in: whoever was
+        // handed the link — the invitation lives seven days, and "odbierz
+        // dostęp na jakiś czas" is exactly the overlapping case — could redeem
+        // it, register a key, and be signed in on an account an administrator
+        // had just switched off. accountForInvite refuses a disabled account as
+        // well; both halves, because either one alone leaves a live token or a
+        // token that outlives the reason it was withdrawn.
+        ...(status === 'disabled' ? { inviteTokenHash: null, inviteExpiresAt: null } : {}),
+      },
+    });
 
     await tx.audit.create({
       data: {
@@ -451,9 +465,19 @@ export async function deleteAccount(u: User, id: bigint): Promise<void> {
 export async function accountForInvite(token: string): Promise<bigint> {
   const account = await prisma.account.findFirst({
     where: { inviteTokenHash: hashToken(token) },
-    select: { id: true, inviteExpiresAt: true },
+    select: { id: true, inviteExpiresAt: true, status: true },
   });
   if (!account) throw new InviteError('Zaproszenie jest nieprawidłowe lub zostało już użyte');
+  // Redeeming activates the account and signs the person in, so a disabled
+  // account must not be reachable this way — otherwise "Wyłącz" would be
+  // undone by a link handed over before it. Word for word the message an
+  // unknown token gets: whoever holds the token is not owed the difference
+  // between "no such invitation" and "that account is switched off".
+  // setAccountStatus already clears the token when disabling; this is the
+  // half that also covers an account disabled straight in the database.
+  if (account.status === 'disabled') {
+    throw new InviteError('Zaproszenie jest nieprawidłowe lub zostało już użyte');
+  }
   if (!account.inviteExpiresAt || account.inviteExpiresAt <= new Date()) {
     throw new InviteError('Zaproszenie wygasło — poproś o nowe');
   }

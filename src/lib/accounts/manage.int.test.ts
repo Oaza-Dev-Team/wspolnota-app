@@ -112,6 +112,41 @@ describe('setAccountStatus', () => {
     ).toBe('active');
   });
 
+  // "Wyłącz" is what the delete dialog offers as the reversible way to take
+  // access away for a while — so an invitation handed over before it must not
+  // be a way back in. Redeeming one registers a key, flips the account to
+  // `active` and signs the holder straight in, which is the whole of the hole.
+  it('withdraws an outstanding invitation when it disables', async () => {
+    const token = await createInvite(admin, targetId);
+
+    await setAccountStatus(admin, targetId, 'disabled');
+
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.inviteTokenHash).toBeNull();
+    expect(account.inviteExpiresAt).toBeNull();
+    await expect(accountForInvite(token)).rejects.toThrow(InviteError);
+  });
+
+  // Re-enabling does not bring the invitation back: the way in is a fresh
+  // "Nowy klucz…", not a link issued before the account was switched off.
+  it('does not restore the invitation when it re-enables', async () => {
+    await createInvite(admin, targetId);
+    await setAccountStatus(admin, targetId, 'disabled');
+    await setAccountStatus(admin, targetId, 'active');
+
+    const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
+    expect(account.inviteTokenHash).toBeNull();
+  });
+
+  it('leaves an invitation alone when it enables', async () => {
+    await setAccountStatus(admin, targetId, 'disabled');
+    const token = await createInvite(admin, targetId);
+
+    await setAccountStatus(admin, targetId, 'active');
+
+    await expect(accountForInvite(token)).resolves.toBe(targetId);
+  });
+
   it('refuses anyone but admin', async () => {
     await expect(setAccountStatus(regionVII, targetId, 'disabled')).rejects.toThrow(Forbidden);
   });
@@ -163,6 +198,20 @@ describe('accountForInvite', () => {
 
   it('refuses an unknown token', async () => {
     await expect(accountForInvite('zmyslony-token')).rejects.toThrow(InviteError);
+  });
+
+  // Redeeming activates the account and signs the holder in, so a token that
+  // outlived a "Wyłącz" — issued straight in the database, say, or by a
+  // version of setAccountStatus that did not clear it — must still not
+  // resolve. Word for word what an unknown token gets: the message must not
+  // tell whoever holds the token that the account exists but is switched off.
+  it('refuses a token belonging to a disabled account, with nothing to distinguish it', async () => {
+    const token = await createInvite(admin, targetId);
+    await prisma.account.update({ where: { id: targetId }, data: { status: 'disabled' } });
+
+    await expect(accountForInvite(token)).rejects.toThrow(
+      'Zaproszenie jest nieprawidłowe lub zostało już użyte',
+    );
   });
 });
 
