@@ -64,6 +64,9 @@ export function AccountRow({ row }: { row: Row }) {
     toggleState.error ?? inviteState.error ?? renameState.error
     ?? emailState.error ?? handOverState.error ?? deleteState.error;
   const inviteLink = inviteState.inviteLink ?? handOverState.inviteLink;
+  // The same link means two different things: a first invitation for an
+  // account that has no password, and a reset for one that has.
+  const isReset = inviteState.inviteLink !== undefined && row.status !== 'pending';
 
   // Who may do what was decided in list.ts, where the permission rules live.
   // An account can be editable and still not removable: the caller's own, or
@@ -153,12 +156,15 @@ export function AccountRow({ row }: { row: Row }) {
 
       {manageable && (
         <span className={style.buttons}>
-          {row.status === 'pending' ? (
-            <form action={invite}>
-              <input type="hidden" name="id" value={row.id} />
-              <ActionButton label="Zaproś" />
-            </form>
-          ) : removable && (
+          {/* An invitation is a password reset in everything but name, so the
+              same button serves an account that never had one and an account
+              whose couple has forgotten theirs. Only the wording differs. */}
+          <form action={invite}>
+            <input type="hidden" name="id" value={row.id} />
+            <ActionButton label={row.status === 'pending' ? 'Zaproś' : 'Nowe hasło…'} />
+          </form>
+
+          {removable && (
             <form action={toggle}>
               <input type="hidden" name="id" value={row.id} />
               <input
@@ -258,8 +264,14 @@ export function AccountRow({ row }: { row: Row }) {
 
       {inviteLink && (
         <p className={style.invite} role="status">
-          {`Link zaproszenia — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`}
+          {isReset
+            ? `Link do ustawienia nowego hasła — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`
+            : `Link zaproszenia — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`}
           <code className={style.inviteLink}>{inviteLink}</code>
+          {/* A handover revokes as it goes, and a pending account has nothing
+              to revoke; a reset leaves the old password standing, and whoever
+              passes the link on has to know that. */}
+          {isReset && ' Do czasu jego użycia dotychczasowe hasło nadal działa.'}
         </p>
       )}
     </li>

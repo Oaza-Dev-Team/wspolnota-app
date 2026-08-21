@@ -193,6 +193,22 @@ test.describe('accounts', () => {
     await expect(row.getByText(/Link zaproszenia/)).toBeVisible();
     await expect(row.getByText(/\/invite\//)).toBeVisible();
   });
+
+  // The account whose password is reset here stays `active` and keeps that
+  // password, so the invite test above still finds exactly one `oczekuje` row.
+  test('resetting an account that already has a password issues a link', async ({ page }) => {
+    await signIn(page, 'admin@example.pl');
+    await page.goto('/accounts');
+
+    const row = accountRow(page, 'moderator@example.pl');
+    await expect(row.getByText('aktywne')).toBeVisible();
+
+    await row.getByRole('button', { name: /^Nowe hasło/ }).click();
+
+    await expect(row.getByText(/\/invite\//)).toBeVisible();
+    // Whoever hands the link on has to know the old password still works.
+    await expect(row.getByText(/dotychczasowe hasło/)).toBeVisible();
+  });
 });
 
 test.describe('invitation', () => {

@@ -49,10 +49,13 @@ tylko dwóch Twoich decyzji: dostawcy VPS i domeny — patrz `docs/DEPLOYMENT.md
   (`kartoteka-rejon-VII-2026-08-20.xlsx`)
 - import XLSX z podglądem przed zapisem i szablonem do pobrania
 - kafelki rejonów ze statystykami, konta (utwórz / usuń / włącz / wyłącz / zaproś /
-  zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
+  nowe hasło / zmień nazwę / popraw adres / przekaż rejon), historia zmian z paginacją
 - rejon może mieć **parę odpowiedzialną i pomocników** — uprawnienia takie same,
   różnią się tylko kafelkiem rejonu i tym, czyje konto da się przekazać
 - strona ustawienia hasła z jednorazowego linku zaproszenia
+- **reset hasła cudzego konta** to „Nowe hasło…" na `/accounts`: ten sam
+  jednorazowy link co zaproszenie. Dotychczasowe hasło działa do chwili jego użycia
+  — żeby zabrać dostęp od razu, najpierw „Wyłącz"
 - trwałe usunięcie na żądanie RODO z anonimizacją audytu, przełącznik „Usunięte"
   dla admina, retencja audytu i sesji jako `npm run retention`
 - klauzula informacyjna pod `/privacy` — rusztowanie z jawnymi lukami
