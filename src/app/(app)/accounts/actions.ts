@@ -137,7 +137,7 @@ export async function handOverAction(
 
   revalidatePath('/accounts');
   revalidatePath('/regions');
-  // The incoming couple has no password yet, so the invite is the whole point
+  // The incoming couple has no key yet, so the invite is the whole point
   // of the operation and has to come back to the screen.
   return { inviteLink: inviteUrl(token) };
 }

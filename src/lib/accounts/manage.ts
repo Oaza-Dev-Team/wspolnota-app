@@ -133,7 +133,7 @@ export async function renameAccount(u: User, id: bigint, name: string): Promise<
  * adding one for fifteen accounts created once would cost more than it saves.
  */
 export async function createInvite(u: User, id: bigint): Promise<string> {
-  // An invitation sets a password, so it is a reset in everything but name:
+  // An invitation enrols a key, so it is a reset in everything but name:
   // whoever may issue one to an account may take it over. assertMayManage is
   // what keeps that inside the boundary.
   const account = await assertMayManage(u, id);
@@ -188,7 +188,7 @@ async function assertEmailFree(email: string, exceptId?: bigint): Promise<void> 
 
 /**
  * Corrects the address on an existing account — a typo, a changed domain. The
- * password and the sessions survive on purpose: it is the same people, reached
+ * key and the sessions survive on purpose: it is the same people, reached
  * at a different address. Handing the region to a different couple is
  * handOverRegion, which revokes instead.
  */
@@ -214,7 +214,7 @@ export async function changeEmail(u: User, id: bigint, rawEmail: string): Promis
 
 /**
  * A different couple takes over the region. Everything the outgoing couple
- * could use to get back in is revoked — password and sessions — and the
+ * could use to get back in is revoked — the key and every session — and the
  * incoming one receives a fresh invite. Returns the raw token, the only
  * moment it exists.
  */
@@ -243,14 +243,16 @@ export async function handOverRegion(
   const token = randomBytes(32).toString('base64url');
 
   await prisma.$transaction(async (tx) => {
+    // A different couple takes over this account. The outgoing couple's key
+    // would otherwise keep working at the new address — the same reasoning
+    // that used to clear the password hash, which no longer exists.
+    await tx.credential.deleteMany({ where: { accountId: id } });
+
     await tx.account.update({
       where: { id },
       data: {
         name,
         email,
-        // The outgoing couple knows the old password; leaving it would let
-        // them sign in at the new address.
-        passwordHash: null,
         status: 'pending',
         inviteTokenHash: hashToken(token),
         inviteExpiresAt: new Date(Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000),
@@ -285,7 +287,7 @@ export type NewAccount = {
 
 /**
  * Brings an account into being in the state every account starts in: no
- * password, `pending`, holding a one-time invitation. Returns the raw token,
+ * key, `pending`, holding a one-time invitation. Returns the raw token,
  * the only moment it exists — the same contract as createInvite, because this
  * is the first invitation rather than a different kind of thing.
  *

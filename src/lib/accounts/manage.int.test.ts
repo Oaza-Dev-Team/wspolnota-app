@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { Forbidden, type User, canEdit, listScope } from '@/lib/auth/permissions';
 import { createSession, userFromToken } from '@/lib/auth/session';
@@ -259,19 +260,39 @@ describe('handOverRegion', () => {
   });
 
   // Everything the outgoing couple could use to get back in has to go.
-  it('revokes the password and every session of the outgoing couple', async () => {
+  it('revokes every session of the outgoing couple', async () => {
     await prisma.account.update({
       where: { id: targetId },
-      data: { passwordHash: 'stare-haslo', status: 'active' },
+      data: { status: 'active' },
     });
     const token = await createSession(targetId);
 
     await handOverRegion(admin, targetId, 'Nowa Para', 'nowa.para@example.pl');
 
     const account = await prisma.account.findUniqueOrThrow({ where: { id: targetId } });
-    expect(account.passwordHash).toBeNull();
     expect(account.status).toBe('pending');
     expect(await userFromToken(token)).toBeNull();
+  });
+
+  // The one case in this file where a missed line fails silently: no test
+  // goes red on its own, no build breaks, access simply stays with the
+  // outgoing couple. Hence a dedicated test rather than folding this into
+  // the one above.
+  it('takes the outgoing couple\'s keys away, or they would still sign in', async () => {
+    // The account stays; a different couple sits down at it. A key left
+    // behind is the outgoing couple keeping the region's records.
+    await prisma.credential.create({
+      data: {
+        id: randomBytes(16).toString('base64url'),
+        accountId: targetId,
+        publicKey: randomBytes(64),
+        label: 'Telefon ustępującej pary',
+      },
+    });
+
+    await handOverRegion(admin, targetId, 'Nowacy', 'nowacy@example.pl');
+
+    expect(await prisma.credential.count({ where: { accountId: targetId } })).toBe(0);
   });
 
   it('returns an invite that resolves to the incoming couple', async () => {

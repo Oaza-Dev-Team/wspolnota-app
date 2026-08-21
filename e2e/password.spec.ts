@@ -23,7 +23,7 @@ function formAlert(page: Page) {
 
 async function changePassword(page: Page, current: string, next: string) {
   await page.getByLabel('Obecne hasło').fill(current);
-  await page.getByLabel(/^Nowe hasło/).fill(next);
+  await page.getByLabel(/^Nowy klucz/).fill(next);
   await page.getByLabel('Powtórz nowe hasło').fill(next);
   await page.getByRole('button', { name: 'Zmień hasło' }).click();
 }
@@ -51,7 +51,7 @@ test('rejects two new passwords that differ', async ({ page }) => {
   await page.goto('/account');
 
   await page.getByLabel('Obecne hasło').fill(PASSWORD);
-  await page.getByLabel(/^Nowe hasło/).fill('noweHaslo-123456');
+  await page.getByLabel(/^Nowy klucz/).fill('noweHaslo-123456');
   await page.getByLabel('Powtórz nowe hasło').fill('inneHaslo-123456');
   await page.getByRole('button', { name: 'Zmień hasło' }).click();
 

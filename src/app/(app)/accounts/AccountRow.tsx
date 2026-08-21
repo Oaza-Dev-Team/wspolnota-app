@@ -65,7 +65,7 @@ export function AccountRow({ row }: { row: Row }) {
     ?? emailState.error ?? handOverState.error ?? deleteState.error;
   const inviteLink = inviteState.inviteLink ?? handOverState.inviteLink;
   // The same link means two different things: a first invitation for an
-  // account that has no password, and a reset for one that has.
+  // account that has no key, and a reset for one that has.
   const isReset = inviteState.inviteLink !== undefined && row.status !== 'pending';
 
   // Who may do what was decided in list.ts, where the permission rules live.
@@ -156,12 +156,12 @@ export function AccountRow({ row }: { row: Row }) {
 
       {manageable && (
         <span className={style.buttons}>
-          {/* An invitation is a password reset in everything but name, so the
+          {/* An invitation is a key reset in everything but name, so the
               same button serves an account that never had one and an account
-              whose couple has forgotten theirs. Only the wording differs. */}
+              whose couple has lost access to theirs. Only the wording differs. */}
           <form action={invite}>
             <input type="hidden" name="id" value={row.id} />
-            <ActionButton label={row.status === 'pending' ? 'Zaproś' : 'Nowe hasło…'} />
+            <ActionButton label={row.status === 'pending' ? 'Zaproś' : 'Nowy klucz…'} />
           </form>
 
           {removable && (
@@ -205,7 +205,7 @@ export function AccountRow({ row }: { row: Row }) {
         <form action={handOver} className={style.handover} onSubmit={() => setMode(null)}>
           <input type="hidden" name="id" value={row.id} />
           <p className={style.handoverNote}>
-            Nowa para przejmuje rejon. Hasło ustępującej pary przestaje działać, jej
+            Nowa para przejmuje rejon. Klucz ustępującej pary przestaje działać, jej
             sesje kończą się natychmiast, a Ty dostajesz link zaproszenia do przekazania.
           </p>
           <label className={style.editField}>
@@ -265,13 +265,13 @@ export function AccountRow({ row }: { row: Row }) {
       {inviteLink && (
         <p className={style.invite} role="status">
           {isReset
-            ? `Link do ustawienia nowego hasła — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`
+            ? `Link do zarejestrowania nowego klucza — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`
             : `Link zaproszenia — skopiuj i przekaż tej parze. Jest ważny ${INVITE_DAYS} dni i działa raz:`}
           <code className={style.inviteLink}>{inviteLink}</code>
           {/* A handover revokes as it goes, and a pending account has nothing
-              to revoke; a reset leaves the old password standing, and whoever
+              to revoke; a reset leaves the old key standing, and whoever
               passes the link on has to know that. */}
-          {isReset && ' Do czasu jego użycia dotychczasowe hasło nadal działa.'}
+          {isReset && ' Dotychczasowy klucz działa do chwili użycia linku — żeby zabrać dostęp od razu, najpierw „Wyłącz”.'}
         </p>
       )}
     </li>

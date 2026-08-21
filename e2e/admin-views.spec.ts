@@ -194,20 +194,20 @@ test.describe('accounts', () => {
     await expect(row.getByText(/\/invite\//)).toBeVisible();
   });
 
-  // The account whose password is reset here stays `active` and keeps that
-  // password, so the invite test above still finds exactly one `oczekuje` row.
-  test('resetting an account that already has a password issues a link', async ({ page }) => {
+  // The account whose key is reset here stays `active` and keeps that
+  // key, so the invite test above still finds exactly one `oczekuje` row.
+  test('resetting an account that already has a key issues a link', async ({ page }) => {
     await signIn(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = accountRow(page, 'moderator@example.pl');
     await expect(row.getByText('aktywne')).toBeVisible();
 
-    await row.getByRole('button', { name: /^Nowe hasło/ }).click();
+    await row.getByRole('button', { name: /^Nowy klucz/ }).click();
 
     await expect(row.getByText(/\/invite\//)).toBeVisible();
-    // Whoever hands the link on has to know the old password still works.
-    await expect(row.getByText(/dotychczasowe hasło/)).toBeVisible();
+    // Whoever hands the link on has to know the old key still works.
+    await expect(row.getByText(/dotychczasowy klucz/)).toBeVisible();
   });
 });
 
@@ -216,7 +216,7 @@ test.describe('invitation', () => {
     await page.goto('/invite/nieistniejacy-token');
     await expect(page.getByRole('heading', { name: 'Ustaw hasło' })).toBeVisible();
 
-    await page.getByLabel(/Nowe hasło/).fill('haslo-testowe-1');
+    await page.getByLabel(/Nowy klucz/).fill('haslo-testowe-1');
     await page.getByLabel('Powtórz hasło').fill('haslo-testowe-1');
     await page.getByRole('button', { name: 'Ustaw hasło' }).click();
 
@@ -225,7 +225,7 @@ test.describe('invitation', () => {
 
   test('rejects two passwords that differ', async ({ page }) => {
     await page.goto('/invite/nieistniejacy-token');
-    await page.getByLabel(/Nowe hasło/).fill('haslo-testowe-1');
+    await page.getByLabel(/Nowy klucz/).fill('haslo-testowe-1');
     await page.getByLabel('Powtórz hasło').fill('haslo-testowe-2');
     await page.getByRole('button', { name: 'Ustaw hasło' }).click();
 
