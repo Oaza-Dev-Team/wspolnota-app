@@ -207,7 +207,7 @@ test.describe('accounts', () => {
 
     await expect(row.getByText(/\/invite\//)).toBeVisible();
     // Whoever hands the link on has to know the old key still works.
-    await expect(row.getByText(/dotychczasowy klucz/)).toBeVisible();
+    await expect(row.getByText(/Dotychczasowy klucz/)).toBeVisible();
   });
 });
 
@@ -289,7 +289,7 @@ test.describe('accounts — handover', () => {
 
     const handed = page.getByRole('listitem').filter({ hasText: 'cichy.nowi@example.pl' });
     await expect(handed.getByText('Ewa i Jan Cichy')).toBeVisible();
-    // No password yet, so the account waits for the invite to be redeemed.
+    // No key yet, so the account waits for the invite to be redeemed.
     await expect(handed.getByText('oczekuje')).toBeVisible();
     await expect(handed.getByText('/invite/')).toBeVisible();
   });
