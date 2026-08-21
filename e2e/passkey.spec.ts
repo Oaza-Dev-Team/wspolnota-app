@@ -78,6 +78,19 @@ test('a key that answers from off this device offers to add one here', async ({ 
 });
 
 test('refuses an authenticator that does not verify its user', async ({ page }) => {
+  // Proves ONE half of the property its name claims — the half the BROWSER
+  // enforces. Measured, not assumed: with setUserVerified(false) exactly one
+  // POST leaves the page (beginSignIn, asking for the challenge) and no
+  // second one follows, because navigator.credentials.get rejects on the
+  // spot. So this test would still pass with requireUserVerification deleted
+  // from all three server call sites — nothing it does ever reaches them.
+  //
+  // The server flag is pinned by unit tests instead, one per ceremony:
+  // login/actions.test.ts, invite/[token]/actions.test.ts and
+  // account/actions.test.ts each assert it is passed to SimpleWebAuthn. Both
+  // halves are needed: this one says the person is stopped and told, those
+  // say a response that did reach the server would be refused anyway.
+  //
   // The load-bearing test of the whole design. A passkey counts as two
   // factors because the key is unlocked by a PIN or a fingerprint; an
   // authenticator that skips that step is possession alone, and must not get
@@ -104,6 +117,16 @@ test('refuses an authenticator that does not verify its user', async ({ page }) 
   await page.goto('/login');
   await page.getByRole('button', { name: 'Zaloguj się kluczem' }).click();
 
-  await expect(page.getByRole('alert')).toBeVisible();
+  // Filtered by its text, and role="status" rather than "alert": a bare
+  // getByRole('alert') here matched Next's own route announcer — present on
+  // every page, empty, and counted as visible — so it passed no matter what
+  // the page said. Confirmed by hand: the announcer is the ONLY role="alert"
+  // element on /login in this scenario. What the browser's refusal actually
+  // produces is the calm notice, the same one an empty authenticator gets
+  // (see login.spec.ts): WebAuthn reports both as NotAllowedError and refuses
+  // to distinguish them, so the interface cannot either.
+  await expect(page.getByRole('status').filter({ hasText: 'Logowanie przerwane' }))
+    .toBeVisible();
+  // The point of the test: no session was created.
   await expect(page).toHaveURL(/\/login/);
 });

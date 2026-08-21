@@ -71,6 +71,13 @@ function fakeResponse(): AuthenticationResponseJSON {
   } as unknown as AuthenticationResponseJSON;
 }
 
+// The timeout is generous because of what this test spends its time on: the
+// dynamic import below pulls in the whole server-action graph — Next's
+// internals plus @simplewebauthn/server — for the first time, and on a cold
+// module cache that alone can pass Vitest's 5 s default on a slower machine.
+// Confirmed to predate the fix wave of 21.08: the three user-verification
+// tests time out on the untouched branch too. The work being measured is an
+// import, not the assertion, so raising the ceiling here loses nothing.
 it('asks SimpleWebAuthn to require user verification on sign-in', async () => {
   verifyAuthenticationResponse.mockResolvedValue({ verified: false });
   const { finishSignIn } = await import('./actions');
@@ -86,4 +93,4 @@ it('asks SimpleWebAuthn to require user verification on sign-in', async () => {
   expect(verifyAuthenticationResponse.mock.calls[0]?.[0]).toMatchObject({
     requireUserVerification: true,
   });
-});
+}, 30_000);
