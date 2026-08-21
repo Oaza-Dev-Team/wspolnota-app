@@ -42,6 +42,11 @@ enum AuditKind {
   account
 }
 
+enum ChallengePurpose {
+  registration
+  authentication
+}
+
 model Region {
   id            Int    @id @db.SmallInt
   romanNumeral  String @map("roman_numeral")
@@ -145,10 +150,17 @@ model Account {
   lastLoginAt      DateTime?     @map("last_login_at") @db.Timestamptz(6)
   inviteTokenHash  String?       @map("invite_token_hash")
   inviteExpiresAt  DateTime?     @map("invite_expires_at") @db.Timestamptz(6)
+  /// Opaque, random, and stable for the life of the account. Sent to the
+  /// authenticator as `user.id` and stored there, which is why the WebAuthn
+  /// spec forbids putting anything personal in it — no e-mail, no surname.
+  /// It is also what a sign-in resolves to an account by, since the login
+  /// screen asks for no address.
+  webauthnUserId   String        @unique @map("webauthn_user_id")
 
-  region   Region?   @relation(fields: [regionId], references: [id])
-  sessions Session[]
-  audit    Audit[]
+  region      Region?      @relation(fields: [regionId], references: [id])
+  sessions    Session[]
+  audit       Audit[]
+  credentials Credential[]
 
   @@map("account")
 }
@@ -167,6 +179,43 @@ model Session {
 
   @@index([accountId])
   @@map("session")
+}
+
+model Credential {
+  /// The identifier the authenticator itself assigned, base64url. Unique by
+  /// construction and the value a sign-in looks the key up by, so a second
+  /// surrogate id would earn nothing.
+  id         String    @id
+  accountId  BigInt    @map("account_id")
+  /// The only half we hold. Useless to whoever dumps the database.
+  publicKey  Bytes     @map("public_key")
+  counter    BigInt    @default(0)
+  /// The browser's hint for the next sign-in: internal, hybrid, usb, nfc, ble.
+  transports String[]  @default([])
+  label      String
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(6)
+
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@map("credential")
+}
+
+/// A signature only proves freshness against a challenge the server issued and
+/// has not seen used. Storing it client-side would let a recorded response be
+/// replayed, so the row lives here and is deleted the moment it is spent.
+model WebauthnChallenge {
+  id        BigInt           @id @default(autoincrement())
+  challenge String           @unique
+  /// Filled for a registration, empty for a sign-in: at the moment a sign-in
+  /// challenge is issued nobody has said who they are yet, and that is the point.
+  accountId BigInt?          @map("account_id")
+  purpose   ChallengePurpose
+  expiresAt DateTime         @map("expires_at") @db.Timestamptz(6)
+
+  @@index([expiresAt])
+  @@map("webauthn_challenge")
 }
 
 model Audit {
