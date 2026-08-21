@@ -38,6 +38,22 @@ mamy: czy te konkretne piętnaście osób ma konta Google. Wariant z linkiem zap
 jest neutralny — działa tak samo przy haśle i przy Google — więc odłożenie nic nie
 kosztuje. **Pytanie otwarte do zamawiającego.**
 
+**Rozstrzygnięte 21.08.2026: nie, i to bezprzedmiotowo.** Logowanie przechodzi na
+klucze dostępu (passkey), a hasło znika z aplikacji całkowicie — nie jako droga
+zapasowa, nie jako pierwszy etap. Passkey nie potrzebuje konta u żadnego dostawcy,
+więc pytanie „czy te osoby mają konta Google" przestaje mieć znaczenie; przy okazji
+Google nie dochodzi jako odbiorca danych do klauzuli informacyjnej, a dostęp do
+kartoteki przestaje zależeć od cudzej usługi.
+
+Powodem zmiany nie była teoria, tylko trzy fakty od zamawiającego: we wspólnocie
+zdarzały się wycieki haseł do skrzynek, przekrój użytkowników sięga od osób młodych
+po emerytalne, a system nie działa jeszcze produkcyjnie — istnieje jedno konto
+techniczne, więc nie ma nikogo do przeprowadzania przez zmianę.
+
+Projekt: `docs/superpowers/specs/2026-08-21-passkey-login-design.md`. Trafna okazała
+się przewidziana w §6.1 architektura szwu: obie metody schodzą się
+w `createSession(accountId)` i za tym punktem nie zmienia się nic.
+
 ### 1.5 Usuwanie dwustopniowe
 
 Handoff pytał: soft-delete czy trwałe usunięcie? Odpowiedź: **oba**, bo służą różnym
