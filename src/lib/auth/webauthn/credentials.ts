@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/db';
-
-export const MAX_LABEL = 60;
+import { MAX_LABEL } from './policy';
 
 export type CredentialSummary = {
   id: string;

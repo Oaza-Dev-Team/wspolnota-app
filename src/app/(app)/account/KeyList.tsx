@@ -1,18 +1,16 @@
 'use client';
 
 import { startRegistration } from '@simplewebauthn/browser';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useWebAuthnSupport } from '@/hooks/useWebAuthnSupport';
 import type { CredentialSummary } from '@/lib/auth/webauthn/credentials';
+// policy.ts is pure (no Prisma, no I/O — see its own doc comment), so this
+// Client Component can import the real constant instead of mirroring it.
+import { MAX_LABEL } from '@/lib/auth/webauthn/policy';
 import { formatDate } from '@/lib/pl';
 import { beginAddKey, finishAddKey, removeKeyAction, renameKeyAction } from './actions';
 import style from './account.module.css';
-
-// Mirrors MAX_LABEL in credentials.ts. Not imported: that module also pulls
-// in Prisma, and this is a Client Component — a value import (unlike the
-// type-only one above, which TypeScript erases entirely) would drag the
-// database driver into the browser bundle.
-const MAX_LABEL = 60;
 
 type Props = {
   keys: CredentialSummary[];
@@ -27,6 +25,7 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
   // worse than a sentence explaining why. Renaming and removing need nothing
   // from the browser's WebAuthn API, so they stay available either way.
   const supported = useWebAuthnSupport();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -55,6 +54,11 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
       setError('Nie udało się dodać klucza. Spróbuj jeszcze raz.');
     } finally {
       setBusy(false);
+      // A defensive refresh rather than resting on Next's implicit
+      // revalidatePath timing: a concurrent-removal race was observed to
+      // leave this list stale for a full second even though the database
+      // and audit log were already correct (see the Task 10 report).
+      router.refresh();
     }
   }
 
@@ -66,25 +70,40 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
       if (done.error) setError(done.error);
     } finally {
       setRemovingId(null);
+      router.refresh();
     }
   }
 
   async function rename(id: string, label: string) {
     setEditing(null);
     setError(null);
-    const done = await renameKeyAction(id, label);
-    if (done.error) setError(done.error);
+    try {
+      const done = await renameKeyAction(id, label);
+      if (done.error) setError(done.error);
+    } finally {
+      router.refresh();
+    }
   }
 
   // role="status" rather than role="alert": this is advice, not a failure —
   // a screen reader interrupting for it would be wrong. Errors below stay
-  // role="alert". Checked in this order because more than one can be true at
-  // once (a fresh invitation always leaves exactly one key), and the most
-  // specific, most urgent explanation should win.
+  // role="alert".
+  //
+  // crossDevice and a lone key are not mutually exclusive — signing in with a
+  // QR-scanned phone is exactly how an account enrolled with a single
+  // credential typically reaches a second browser, so that phone IS the
+  // account's only key at that moment. Neither fact may be dropped: the
+  // combined branch below says both, rather than crossDevice's convenience
+  // framing silently hiding that losing the phone means admin-only recovery.
   const notice = crossDevice
-    ? 'Zalogowano kodem QR z telefonu — na tym urządzeniu nie masz jeszcze własnego '
-      + 'klucza. Dodaj go teraz, a następnym razem zalogujesz się tutaj jednym '
-      + 'dotknięciem, bez telefonu pod ręką.'
+    ? keys.length === 1
+      ? 'Zalogowano kodem QR z telefonu — na tym urządzeniu nie masz jeszcze '
+        + 'własnego klucza, a to zarazem jedyny klucz na koncie. Dodaj drugi '
+        + 'teraz: następnym razem obejdzie się bez kodu QR, a zgubienie telefonu '
+        + 'nie zostawi Cię bez dostępu do kartoteki.'
+      : 'Zalogowano kodem QR z telefonu — na tym urządzeniu nie masz jeszcze własnego '
+        + 'klucza. Dodaj go teraz, a następnym razem zalogujesz się tutaj jednym '
+        + 'dotknięciem, bez telefonu pod ręką.'
     : welcome
       ? 'Klucz dostępu utworzony. Dodaj teraz drugi, na przykład na telefonie — jeśli '
         + 'zgubisz to jedyne urządzenie, dostęp do kartoteki przywróci już tylko '
@@ -135,7 +154,7 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
                 action={(data) => rename(key.id, String(data.get('label') ?? ''))}
               >
                 <label className={style.srOnly} htmlFor={`label-${key.id}`}>
-                  {`Nazwa klucza „${key.label}"`}
+                  {`Nazwa klucza „${key.label}”`}
                 </label>
                 <input
                   className={style.input}
@@ -174,7 +193,7 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
                     type="button"
                     className={style.linkButton}
                     onClick={() => setEditing(key.id)}
-                    aria-label={`Zmień nazwę klucza „${key.label}"`}
+                    aria-label={`Zmień nazwę klucza „${key.label}”`}
                   >
                     Zmień nazwę
                   </button>
@@ -189,8 +208,8 @@ export function KeyList({ keys, welcome, crossDevice }: Props) {
                       disabled={removingId === key.id}
                       aria-label={
                         removingId === key.id
-                          ? `Usuwanie klucza „${key.label}"…`
-                          : `Usuń klucz „${key.label}"`
+                          ? `Usuwanie klucza „${key.label}”…`
+                          : `Usuń klucz „${key.label}”`
                       }
                     >
                       {removingId === key.id ? 'Usuwanie…' : 'Usuń'}

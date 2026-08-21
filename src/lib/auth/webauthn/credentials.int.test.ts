@@ -3,12 +3,12 @@ import { afterEach, expect, it } from 'vitest';
 import { prisma } from '@/lib/db';
 import {
   LastKeyError,
-  MAX_LABEL,
   UnknownKeyError,
   listCredentials,
   removeCredential,
   renameCredential,
 } from './credentials';
+import { MAX_LABEL } from './policy';
 
 const created: bigint[] = [];
 
