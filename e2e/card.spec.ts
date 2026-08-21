@@ -1,14 +1,5 @@
 import { type Page, expect, test } from '@playwright/test';
-
-const PASSWORD = 'kartoteka123';
-
-async function signIn(page: Page, email: string) {
-  await page.goto('/login');
-  await page.getByLabel('Adres e-mail').fill(email);
-  await page.getByLabel('Hasło').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/couples/);
-}
+import { signInAs } from './support/signIn';
 
 /**
  * Next injects its own role="alert" route announcer, so the drawer error has
@@ -24,7 +15,7 @@ async function openFirstCard(page: Page) {
 }
 
 test('the drawer opens from the list and closes with Escape', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
   await expect(page).toHaveURL(/card=\d+/);
 
@@ -33,14 +24,14 @@ test('the drawer opens from the list and closes with Escape', async ({ page }) =
 });
 
 test('the drawer closes on the close button and returns to the list', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
   await page.getByRole('button', { name: 'Zamknij' }).click();
   await expect(page).toHaveURL(/\/couples$/);
 });
 
 test('a card can be opened directly by link', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
   const url = page.url();
 
@@ -49,7 +40,7 @@ test('a card can be opened directly by link', async ({ page }) => {
 });
 
 test('saving a change updates the list and shows a toast', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
 
   const surname = `Testowi${Date.now() % 100000}`;
@@ -62,7 +53,7 @@ test('saving a change updates the list and shows a toast', async ({ page }) => {
 });
 
 test('cancelling discards the change', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
 
   const before = await page.getByLabel('Nazwisko').inputValue();
@@ -74,7 +65,7 @@ test('cancelling discards the change', async ({ page }) => {
 });
 
 test('an empty surname blocks the save', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await openFirstCard(page);
   await page.getByLabel('Nazwisko').fill('   ');
   await page.getByRole('button', { name: 'Zapisz' }).click();
@@ -82,7 +73,7 @@ test('an empty surname blocks the save', async ({ page }) => {
 });
 
 test('adding a retreat suggests the first missing degree', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples?formation=none');
   await openFirstCard(page);
 
@@ -92,7 +83,7 @@ test('adding a retreat suggests the first missing degree', async ({ page }) => {
 });
 
 test('the name field appears only for INNE and is then required', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples?formation=none');
   await openFirstCard(page);
 
@@ -108,13 +99,13 @@ test('the name field appears only for INNE and is then required', async ({ page 
 });
 
 test('a region account cannot move a couple to another region', async ({ page }) => {
-  await signIn(page, 'rejon7@example.pl');
+  await signInAs(page, 'rejon7@example.pl');
   await openFirstCard(page);
   await expect(page.getByLabel('Rejon')).toBeDisabled();
 });
 
 test('the viewer gets no add button and no save', async ({ page }) => {
-  await signIn(page, 'moderator@example.pl');
+  await signInAs(page, 'moderator@example.pl');
   await expect(page.getByRole('link', { name: '+ Dodaj parę' })).toHaveCount(0);
 
   await openFirstCard(page);
@@ -123,7 +114,7 @@ test('the viewer gets no add button and no save', async ({ page }) => {
 });
 
 test('adding a couple works end to end', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   await expect(page.getByRole('heading', { name: 'Dodaj parę' })).toBeVisible();
 
@@ -147,7 +138,7 @@ test('adding a couple works end to end', async ({ page }) => {
 });
 
 test('deleting a couple removes it from the list', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   const surname = `DoUsuniecia${Date.now() % 100000}`;
   await page.getByLabel('Nazwisko').fill(surname);
@@ -165,7 +156,7 @@ test('deleting a couple removes it from the list', async ({ page }) => {
 });
 
 test('creating a couple can introduce a parish and a circle that do not exist yet', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   await expect(page.getByRole('heading', { name: 'Dodaj parę' })).toBeVisible();
 
@@ -208,7 +199,7 @@ test('creating a couple can introduce a parish and a circle that do not exist ye
 });
 
 test('a new circle without a parish is refused with a message, not a crash', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
 
   const drawer = page.getByRole('dialog');
@@ -227,7 +218,7 @@ function parishValue(page: Page) {
 }
 
 test('searching narrows the parish list without losing what is already chosen', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
   await openFirstCard(page);
 
@@ -247,7 +238,7 @@ test('searching narrows the parish list without losing what is already chosen', 
 });
 
 test('a couple that takes its parish from the circle says so rather than looking empty', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
   await openFirstCard(page);
 
@@ -263,7 +254,7 @@ test('a couple that takes its parish from the circle says so rather than looking
 });
 
 test('keyboard alone can pick a parish', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
   await openFirstCard(page);
 
@@ -279,7 +270,7 @@ test('keyboard alone can pick a parish', async ({ page }) => {
 });
 
 test('Escape closes the list without changing the choice', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
   await openFirstCard(page);
 
@@ -297,7 +288,7 @@ test('Escape closes the list without changing the choice', async ({ page }) => {
 });
 
 test('a deleted couple can be found again and put back', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   const surname = `DoPrzywrocenia${Date.now() % 100000}`;
   await page.getByLabel('Nazwisko').fill(surname);
@@ -329,7 +320,7 @@ test('a deleted couple can be found again and put back', async ({ page }) => {
 });
 
 test('a region account undoes its own deletion without asking the admin', async ({ page }) => {
-  await signIn(page, 'rejon7@example.pl');
+  await signInAs(page, 'rejon7@example.pl');
   await page.getByRole('link', { name: '+ Dodaj parę' }).click();
   const surname = `RejonowaPomylka${Date.now() % 100000}`;
   await page.getByLabel('Nazwisko').fill(surname);
@@ -357,7 +348,7 @@ test('a region account undoes its own deletion without asking the admin', async 
 });
 
 test('the moderator is offered no deleted records at all', async ({ page }) => {
-  await signIn(page, 'moderator@example.pl');
+  await signInAs(page, 'moderator@example.pl');
   await expect(page.getByLabel('Usunięte')).toHaveCount(0);
   // A query string is not a permission: it gets its ordinary list, not an error.
   await page.goto('/couples?deleted=1');

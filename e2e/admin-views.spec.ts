@@ -1,23 +1,27 @@
 import { type Page, expect, test } from '@playwright/test';
-
-const PASSWORD = 'kartoteka123';
+import { activate } from './support/invites';
+import { signInAs } from './support/signIn';
 
 // Region V is the account these tests switch off and on again. No other spec
 // signs in as it, so a failure here cannot lock another suite out.
 const TOGGLED = 'rejon5@example.pl';
 
-async function signIn(page: Page, email: string) {
-  await page.goto('/login');
-  await page.getByLabel('Adres e-mail').fill(email);
-  await page.getByLabel('Hasło').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/couples/);
-}
-
-/** Scoped to the form — Next renders its own route announcer with role=alert. */
-function formAlert(page: Page) {
-  return page.locator('form').getByRole('alert');
-}
+// Every seeded account starts `pending` now (prisma/seed.ts) — none of them
+// holds a key yet, region XI included, which is the one seed comment says is
+// deliberately left that way. The tests below assume the OTHER ten regions
+// already read as staffed and every other account as active, the baseline a
+// password-era seed used to hand them for free. Restoring it directly is
+// a fixture concern, not a passkey one — see support/testServer.ts's activate().
+test.beforeAll(async () => {
+  const staffed = [
+    'admin@example.pl',
+    'moderator@example.pl',
+    'superadmin@example.pl',
+    'rejon1.pomoc@example.pl',
+    ...Array.from({ length: 10 }, (_, i) => `rejon${i + 1}@example.pl`),
+  ];
+  await Promise.all(staffed.map((email) => activate(email)));
+});
 
 function accountRow(page: Page, email: string) {
   return page.getByRole('listitem').filter({ hasText: email });
@@ -25,7 +29,7 @@ function accountRow(page: Page, email: string) {
 
 test.describe('regions', () => {
   test('shows one tile per region, with inflected statistics', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.getByRole('link', { name: 'Rejony' }).click();
 
     await expect(page).toHaveURL(/\/regions/);
@@ -34,13 +38,13 @@ test.describe('regions', () => {
   });
 
   test('marks the unstaffed region and names the others', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/regions');
     await expect(page.getByText('Do obsadzenia')).toHaveCount(1);
   });
 
   test('a tile leads to the list filtered to that region', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/regions');
     await page.getByRole('link', { name: /^Rejon III/ }).click();
 
@@ -49,12 +53,12 @@ test.describe('regions', () => {
   });
 
   test('the moderator may look, a region account is sent back to its list', async ({ page }) => {
-    await signIn(page, 'moderator@example.pl');
+    await signInAs(page, 'moderator@example.pl');
     await page.goto('/regions');
     await expect(page.getByRole('heading', { name: 'Rejony I–XI' })).toBeVisible();
 
     await page.getByRole('button', { name: 'Wyloguj' }).click();
-    await signIn(page, 'rejon7@example.pl');
+    await signInAs(page, 'rejon7@example.pl');
     await page.goto('/regions');
     await expect(page).toHaveURL(/\/couples/);
   });
@@ -77,7 +81,7 @@ function newAccountPanel(page: Page) {
 
 test.describe('accounts', () => {
   test('lists every account, admin included, and only for the admin', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await expect(page.getByRole('heading', { name: 'Konta', exact: true })).toBeVisible();
@@ -91,7 +95,7 @@ test.describe('accounts', () => {
   // Disabling it would need database access to undo, so the row keeps its
   // identity editable and nothing else.
   test('offers the admin no way to disable or hand over its own account', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const adminRow = page.getByRole('listitem').filter({ hasText: 'admin@example.pl' });
@@ -106,7 +110,7 @@ test.describe('accounts', () => {
   // The one boundary the roles draw: renaming the technical account or moving
   // its address would be a takeover, since the next invite goes to the new one.
   test('shows the admin the technical account but hands it no control over it', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = page.getByRole('listitem').filter({ hasText: 'superadmin@example.pl' });
@@ -116,7 +120,7 @@ test.describe('accounts', () => {
   });
 
   test('offers the admin no technical account to create', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
@@ -128,7 +132,7 @@ test.describe('accounts', () => {
   });
 
   test('the technical account signs in and reaches every view', async ({ page }) => {
-    await signIn(page, 'superadmin@example.pl');
+    await signInAs(page, 'superadmin@example.pl');
     await expect(
       page.getByRole('navigation', { name: 'Nawigacja główna' }).getByRole('link'),
     ).toHaveCount(5);
@@ -142,7 +146,7 @@ test.describe('accounts', () => {
   });
 
   test('correcting an address keeps the couple signed in', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     // Filtered on the scope, not the address: opening the editor turns the
@@ -159,18 +163,18 @@ test.describe('accounts', () => {
   });
 
   test('is closed to the moderator and to a region account', async ({ page }) => {
-    await signIn(page, 'moderator@example.pl');
+    await signInAs(page, 'moderator@example.pl');
     await page.goto('/accounts');
     await expect(page).toHaveURL(/\/couples/);
 
     await page.getByRole('button', { name: 'Wyloguj' }).click();
-    await signIn(page, 'rejon7@example.pl');
+    await signInAs(page, 'rejon7@example.pl');
     await page.goto('/accounts');
     await expect(page).toHaveURL(/\/couples/);
   });
 
   test('switching an account off and on again changes its status badge', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = accountRow(page, TOGGLED);
@@ -184,7 +188,7 @@ test.describe('accounts', () => {
   });
 
   test('inviting an unstaffed account shows a one-time link', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = page.getByRole('listitem').filter({ hasText: 'oczekuje' });
@@ -197,7 +201,7 @@ test.describe('accounts', () => {
   // The account whose key is reset here stays `active` and keeps that
   // key, so the invite test above still finds exactly one `oczekuje` row.
   test('resetting an account that already has a key issues a link', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = accountRow(page, 'moderator@example.pl');
@@ -212,30 +216,25 @@ test.describe('accounts', () => {
 });
 
 test.describe('invitation', () => {
-  test('the page is reachable without a session and refuses a bad token', async ({ page }) => {
+  // The password-era version of this block also checked two passwords that
+  // differ; that check has no equivalent left to test — InviteForm carries
+  // no fields at all now, just the one "Utwórz klucz" button, so there is
+  // nothing left to mismatch.
+  test('the page is reachable without a session and refuses an invalid token', async ({ page }) => {
     await page.goto('/invite/nieistniejacy-token');
-    await expect(page.getByRole('heading', { name: 'Ustaw hasło' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Utwórz klucz dostępu' })).toBeVisible();
 
-    await page.getByLabel(/Nowy klucz/).fill('haslo-testowe-1');
-    await page.getByLabel('Powtórz hasło').fill('haslo-testowe-1');
-    await page.getByRole('button', { name: 'Ustaw hasło' }).click();
+    // beginEnrollment fails on the server before any WebAuthn ceremony
+    // starts, so no virtual authenticator is needed for this one.
+    await page.getByRole('button', { name: 'Utwórz klucz' }).click();
 
-    await expect(formAlert(page)).toContainText(/nieprawidłowe|użyte/);
-  });
-
-  test('rejects two passwords that differ', async ({ page }) => {
-    await page.goto('/invite/nieistniejacy-token');
-    await page.getByLabel(/Nowy klucz/).fill('haslo-testowe-1');
-    await page.getByLabel('Powtórz hasło').fill('haslo-testowe-2');
-    await page.getByRole('button', { name: 'Ustaw hasło' }).click();
-
-    await expect(formAlert(page)).toContainText('Hasła nie są takie same');
+    await expect(page.getByRole('alert').filter({ hasText: /nieprawidłowe|użyte/ })).toBeVisible();
   });
 });
 
 test.describe('history', () => {
   test('lists entries with a kind badge and an author', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.getByRole('link', { name: 'Historia zmian' }).click();
 
     await expect(page).toHaveURL(/\/history/);
@@ -244,7 +243,7 @@ test.describe('history', () => {
   });
 
   test('pages through the entries', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/history');
 
     const first = await page.getByRole('listitem').first().textContent();
@@ -260,12 +259,12 @@ test.describe('history', () => {
   });
 
   test('is closed to everyone but the admin', async ({ page }) => {
-    await signIn(page, 'moderator@example.pl');
+    await signInAs(page, 'moderator@example.pl');
     await page.goto('/history');
     await expect(page).toHaveURL(/\/couples/);
 
     await page.getByRole('button', { name: 'Wyloguj' }).click();
-    await signIn(page, 'rejon7@example.pl');
+    await signInAs(page, 'rejon7@example.pl');
     await page.goto('/history');
     await expect(page).toHaveURL(/\/couples/);
   });
@@ -278,7 +277,7 @@ test.describe('history', () => {
  */
 test.describe('accounts — handover', () => {
   test('handing over a region revokes the outgoing couple and offers an invite', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = page.getByRole('listitem').filter({ hasText: 'Rejon IV ·' });
@@ -303,7 +302,7 @@ test.describe('accounts — handover', () => {
  */
 test.describe('accounts — creating', () => {
   test('the admin creates a moderator and gets the only copy of its invite', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
@@ -321,7 +320,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('refuses an address that already signs somebody in', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
@@ -335,7 +334,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('offers no second responsible couple for a region, but any number of helpers', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
     const form = newAccountForm(page);
 
@@ -353,7 +352,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('a helper joins a region without displacing its responsible couple', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/regions');
     // Whatever the tile says now, it has to keep saying after the helper joins.
     const tile = page.getByRole('link', { name: /^Rejon IV/ });
@@ -378,7 +377,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('an account can be created and then removed for good', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     await page.getByRole('button', { name: '+ Dodaj konto' }).click();
@@ -405,7 +404,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('offers the admin no way to delete the account it signs in through', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const row = page.getByRole('listitem').filter({ hasText: 'Cała wspólnota · zarządzanie' });
@@ -413,7 +412,7 @@ test.describe('accounts — creating', () => {
   });
 
   test('the technical account appoints a second one and may then step down', async ({ page }) => {
-    await signIn(page, 'superadmin@example.pl');
+    await signInAs(page, 'superadmin@example.pl');
     await page.goto('/accounts');
 
     // Until a second one exists the only caretaker cannot be switched off.

@@ -17,7 +17,8 @@
     "retention": "tsx scripts/retention.mts",
     "create-superadmin": "tsx scripts/create-superadmin.mts",
     "key:reset": "tsx scripts/key-reset.mts",
-    "e2e": "tsx prisma/seed.ts && tsx e2e/prepare.ts && playwright test"
+    "e2e:support": "tsx e2e/support/testServer.ts",
+    "e2e": "tsx prisma/seed.ts && playwright test"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",

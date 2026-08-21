@@ -1,16 +1,7 @@
 import ExcelJS from 'exceljs';
 import { type Page, expect, test } from '@playwright/test';
 import { COLUMNS } from '../src/lib/couples/columns';
-
-const PASSWORD = 'kartoteka123';
-
-async function signIn(page: Page, email: string) {
-  await page.goto('/login');
-  await page.getByLabel('Adres e-mail').fill(email);
-  await page.getByLabel('Hasło').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/couples/);
-}
+import { signInAs } from './support/signIn';
 
 /** A workbook in memory, handed straight to the file input as bytes. */
 async function sheetWith(rows: string[][]): Promise<Buffer> {
@@ -41,7 +32,7 @@ async function upload(page: Page, buffer: Buffer) {
 }
 
 test('the export downloads an xlsx carrying the current filters', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples?region=3');
 
   const [download] = await Promise.all([
@@ -54,7 +45,7 @@ test('the export downloads an xlsx carrying the current filters', async ({ page 
 });
 
 test('an export of the whole community carries no region in its name', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
 
   const [download] = await Promise.all([
@@ -66,7 +57,7 @@ test('an export of the whole community carries no region in its name', async ({ 
 });
 
 test('a region account gets its own region in the name without filtering for it', async ({ page }) => {
-  await signIn(page, 'rejon7@example.pl');
+  await signInAs(page, 'rejon7@example.pl');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
@@ -79,7 +70,7 @@ test('a region account gets its own region in the name without filtering for it'
 });
 
 test('the export link keeps the filters in its address', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples?region=3&formation=ONZ_I');
   const href = await page.getByRole('link', { name: 'Eksport XLSX' }).getAttribute('href');
   expect(href).toContain('region=3');
@@ -87,7 +78,7 @@ test('the export link keeps the filters in its address', async ({ page }) => {
 });
 
 test('a region account may export', async ({ page }) => {
-  await signIn(page, 'rejon7@example.pl');
+  await signInAs(page, 'rejon7@example.pl');
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.getByRole('link', { name: 'Eksport XLSX' }).click(),
@@ -96,14 +87,14 @@ test('a region account may export', async ({ page }) => {
 });
 
 test('import is admin-only', async ({ page }) => {
-  await signIn(page, 'rejon7@example.pl');
+  await signInAs(page, 'rejon7@example.pl');
   await expect(page.getByRole('link', { name: 'Import' })).toHaveCount(0);
   await page.goto('/import');
   await expect(page).toHaveURL(/\/couples/);
 });
 
 test('the template downloads for admin', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/import');
 
   const [download] = await Promise.all([
@@ -118,7 +109,7 @@ test('the template downloads for admin', async ({ page }) => {
 // until it has been read, so these tests stop short of confirming and leave
 // the seeded 300 couples untouched. Applying is covered in import.int.test.ts.
 test('a valid file previews as ready to import', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/import');
   await upload(page, await sheetWith([row('Podgladowi1'), row('Podgladowi2')]));
 
@@ -127,7 +118,7 @@ test('a valid file previews as ready to import', async ({ page }) => {
 });
 
 test('a broken row is reported with its number and blocks the import', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/import');
   await upload(page, await sheetWith([row('Podgladowi3'), row('')]));
 
@@ -139,7 +130,7 @@ test('a broken row is reported with its number and blocks the import', async ({ 
 // The export register is a GDPR obligation, so it gets a test rather than a
 // line in a document claiming it works.
 test('an export leaves an entry in the change history', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples?region=3');
 
   await Promise.all([

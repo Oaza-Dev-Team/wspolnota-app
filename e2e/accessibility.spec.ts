@@ -1,15 +1,7 @@
 import { type Page, expect, test } from '@playwright/test';
+import { signInAs } from './support/signIn';
 
-const PASSWORD = 'kartoteka123';
 const PHONE = { width: 390, height: 844 };
-
-async function signIn(page: Page, email: string) {
-  await page.goto('/login');
-  await page.getByLabel('Adres e-mail').fill(email);
-  await page.getByLabel('Hasło').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Zaloguj się' }).click();
-  await expect(page).toHaveURL(/\/couples/);
-}
 
 /**
  * Every control on the page that a finger has to hit, with its height.
@@ -43,7 +35,7 @@ async function controlHeights(page: Page): Promise<{ label: string; height: numb
 test.describe('touch targets', () => {
   test('no control on the list is shorter than 44px on a phone', async ({ page }) => {
     await page.setViewportSize(PHONE);
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
 
     const small = (await controlHeights(page)).filter((c) => c.height < 44);
     expect(small, JSON.stringify(small)).toEqual([]);
@@ -53,7 +45,7 @@ test.describe('touch targets', () => {
     // Below 860px the table gives way to cards, and the row link lives in the
     // table — so the card is opened at desktop width and the window shrinks
     // around the open dialog.
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.getByRole('link', { name: /^(Edytuj|Podgląd) →$/ }).first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.setViewportSize(PHONE);
@@ -64,7 +56,7 @@ test.describe('touch targets', () => {
 
   test('no control on the accounts view is shorter than 44px on a phone', async ({ page }) => {
     await page.setViewportSize(PHONE);
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     await page.goto('/accounts');
 
     const small = (await controlHeights(page)).filter((c) => c.height < 44);
@@ -92,7 +84,7 @@ test.describe('keyboard', () => {
   });
 
   test('the list is reachable and operable from the keyboard alone', async ({ page }) => {
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
 
     // Tab until the search field has focus, then type into it without a mouse.
     for (let i = 0; i < 30; i++) {
@@ -117,7 +109,7 @@ test.describe('console', () => {
     });
     page.on('pageerror', (e) => errors.push(e.message));
 
-    await signIn(page, 'admin@example.pl');
+    await signInAs(page, 'admin@example.pl');
     for (const path of ['/couples', '/regions', '/accounts', '/history', '/import']) {
       await page.goto(path);
       await expect(page.getByRole('heading').first()).toBeVisible();
@@ -128,7 +120,7 @@ test.describe('console', () => {
 });
 
 test('the parish combobox tells assistive technology what it is doing', async ({ page }) => {
-  await signIn(page, 'admin@example.pl');
+  await signInAs(page, 'admin@example.pl');
   await page.goto('/couples');
   await page.getByRole('link', { name: /^(Edytuj|Podgląd) →$/ }).first().click();
 
