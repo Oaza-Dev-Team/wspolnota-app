@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { prisma } from '@/lib/db';
 import { labelFor, registrationOptions, saveCredential } from './register';
@@ -12,9 +12,12 @@ beforeEach(() => {
 afterEach(async () => {
   vi.unstubAllEnvs();
   const ids = created.splice(0);
-  // audit.account_id is ON DELETE SET NULL, not CASCADE — deleting the
-  // account first would leave the row this test creates orphaned forever.
+  // audit.account_id is ON DELETE SET NULL, not CASCADE, and
+  // webauthn_challenge.account_id carries no foreign key at all — neither
+  // table is swept by deleting the account, so both need an explicit sweep
+  // scoped to the accounts this file created.
   await prisma.audit.deleteMany({ where: { accountId: { in: ids } } });
+  await prisma.webauthnChallenge.deleteMany({ where: { accountId: { in: ids } } });
   await prisma.account.deleteMany({ where: { id: { in: ids } } });
 });
 
@@ -28,7 +31,12 @@ async function pendingAccount() {
       // account_region_matches_role requires a region for this role.
       regionId: 7,
       status: 'pending',
-      webauthnUserId: randomBytes(32).toString('base64url'),
+      // The real column holds a hyphenated v4 UUID (see
+      // Account.webauthnUserId's @default(uuid(4))); using that shape here,
+      // rather than a base64url value that would also happen to decode, is
+      // what makes this fixture able to catch a regression back to
+      // isoBase64URL.toBuffer(...) in registrationOptions.
+      webauthnUserId: randomUUID(),
       inviteTokenHash: token,
       inviteExpiresAt: new Date(Date.now() + 60_000),
     },
